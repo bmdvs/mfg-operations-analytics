@@ -1,0 +1,1201 @@
+item_id,description,item_type,material,thickness,sheet_size,min_qty,max_qty,on_hand,abc_class
+CRS-20GA-48X120,CRS sheet 20ga 48x120,sheet,crs,20ga,48x120,15,45,61,C
+CRS-20GA-60X120,CRS sheet 20ga 60x120,sheet,crs,20ga,60x120,35,105,58,B
+CRS-18GA-48X120,CRS sheet 18ga 48x120,sheet,crs,18ga,48x120,34,102,90,A
+CRS-18GA-60X120,CRS sheet 18ga 60x120,sheet,crs,18ga,60x120,20,60,160,C
+CRS-16GA-48X120,CRS sheet 16ga 48x120,sheet,crs,16ga,48x120,7,21,19,A
+CRS-16GA-60X120,CRS sheet 16ga 60x120,sheet,crs,16ga,60x120,28,84,172,C
+CRS-14GA-48X120,CRS sheet 14ga 48x120,sheet,crs,14ga,48x120,14,42,56,C
+CRS-14GA-60X120,CRS sheet 14ga 60x120,sheet,crs,14ga,60x120,14,42,5,A
+CRS-12GA-48X120,CRS sheet 12ga 48x120,sheet,crs,12ga,48x120,31,93,30,A
+CRS-12GA-60X120,CRS sheet 12ga 60x120,sheet,crs,12ga,60x120,6,18,23,C
+CRS-11GA-48X120,CRS sheet 11ga 48x120,sheet,crs,11ga,48x120,19,57,90,B
+CRS-11GA-60X120,CRS sheet 11ga 60x120,sheet,crs,11ga,60x120,6,18,21,B
+CRS-.125IN-48X120,CRS sheet 0.125in 48x120,sheet,crs,0.125in,48x120,29,87,86,C
+CRS-.125IN-60X120,CRS sheet 0.125in 60x120,sheet,crs,0.125in,60x120,27,81,7,B
+CRS-.250IN-48X120,CRS sheet 0.250in 48x120,sheet,crs,0.250in,48x120,36,108,166,A
+CRS-.250IN-60X120,CRS sheet 0.250in 60x120,sheet,crs,0.250in,60x120,10,30,40,C
+GALV-20GA-48X120,GALV sheet 20ga 48x120,sheet,galvanneal,20ga,48x120,11,33,77,B
+GALV-20GA-60X120,GALV sheet 20ga 60x120,sheet,galvanneal,20ga,60x120,32,96,162,C
+GALV-18GA-48X120,GALV sheet 18ga 48x120,sheet,galvanneal,18ga,48x120,33,99,10,B
+GALV-18GA-60X120,GALV sheet 18ga 60x120,sheet,galvanneal,18ga,60x120,16,48,29,A
+GALV-16GA-48X120,GALV sheet 16ga 48x120,sheet,galvanneal,16ga,48x120,30,90,211,B
+GALV-16GA-60X120,GALV sheet 16ga 60x120,sheet,galvanneal,16ga,60x120,28,84,212,C
+GALV-14GA-48X120,GALV sheet 14ga 48x120,sheet,galvanneal,14ga,48x120,31,93,130,C
+GALV-14GA-60X120,GALV sheet 14ga 60x120,sheet,galvanneal,14ga,60x120,15,45,116,B
+GALV-12GA-48X120,GALV sheet 12ga 48x120,sheet,galvanneal,12ga,48x120,19,57,17,C
+GALV-12GA-60X120,GALV sheet 12ga 60x120,sheet,galvanneal,12ga,60x120,8,24,59,B
+GALV-11GA-48X120,GALV sheet 11ga 48x120,sheet,galvanneal,11ga,48x120,12,36,90,C
+GALV-11GA-60X120,GALV sheet 11ga 60x120,sheet,galvanneal,11ga,60x120,22,66,50,C
+GALV-.125IN-48X120,GALV sheet 0.125in 48x120,sheet,galvanneal,0.125in,48x120,21,63,10,B
+GALV-.125IN-60X120,GALV sheet 0.125in 60x120,sheet,galvanneal,0.125in,60x120,31,93,201,B
+GALV-.250IN-48X120,GALV sheet 0.250in 48x120,sheet,galvanneal,0.250in,48x120,11,33,33,C
+GALV-.250IN-60X120,GALV sheet 0.250in 60x120,sheet,galvanneal,0.250in,60x120,37,111,33,A
+SS304-20GA-48X120,SS304 sheet 20ga 48x120,sheet,stainless,20ga,48x120,14,42,19,A
+SS304-20GA-60X120,SS304 sheet 20ga 60x120,sheet,stainless,20ga,60x120,20,60,119,B
+SS304-18GA-48X120,SS304 sheet 18ga 48x120,sheet,stainless,18ga,48x120,25,75,197,B
+SS304-18GA-60X120,SS304 sheet 18ga 60x120,sheet,stainless,18ga,60x120,7,21,6,C
+SS304-16GA-48X120,SS304 sheet 16ga 48x120,sheet,stainless,16ga,48x120,11,33,23,C
+SS304-16GA-60X120,SS304 sheet 16ga 60x120,sheet,stainless,16ga,60x120,29,87,2,A
+SS304-14GA-48X120,SS304 sheet 14ga 48x120,sheet,stainless,14ga,48x120,39,117,78,C
+SS304-14GA-60X120,SS304 sheet 14ga 60x120,sheet,stainless,14ga,60x120,5,15,28,C
+SS304-12GA-48X120,SS304 sheet 12ga 48x120,sheet,stainless,12ga,48x120,6,18,2,C
+SS304-12GA-60X120,SS304 sheet 12ga 60x120,sheet,stainless,12ga,60x120,22,66,92,A
+SS304-11GA-48X120,SS304 sheet 11ga 48x120,sheet,stainless,11ga,48x120,33,99,19,C
+SS304-11GA-60X120,SS304 sheet 11ga 60x120,sheet,stainless,11ga,60x120,8,24,42,A
+SS304-.125IN-48X120,SS304 sheet 0.125in 48x120,sheet,stainless,0.125in,48x120,29,87,207,B
+SS304-.125IN-60X120,SS304 sheet 0.125in 60x120,sheet,stainless,0.125in,60x120,5,15,28,C
+SS304-.250IN-48X120,SS304 sheet 0.250in 48x120,sheet,stainless,0.250in,48x120,21,63,110,B
+SS304-.250IN-60X120,SS304 sheet 0.250in 60x120,sheet,stainless,0.250in,60x120,39,117,252,A
+AL5052-20GA-48X120,AL5052 sheet 20ga 48x120,sheet,aluminum,20ga,48x120,13,39,58,C
+AL5052-20GA-60X120,AL5052 sheet 20ga 60x120,sheet,aluminum,20ga,60x120,24,72,8,B
+AL5052-18GA-48X120,AL5052 sheet 18ga 48x120,sheet,aluminum,18ga,48x120,35,105,280,A
+AL5052-18GA-60X120,AL5052 sheet 18ga 60x120,sheet,aluminum,18ga,60x120,36,108,319,B
+AL5052-16GA-48X120,AL5052 sheet 16ga 48x120,sheet,aluminum,16ga,48x120,34,102,93,A
+AL5052-16GA-60X120,AL5052 sheet 16ga 60x120,sheet,aluminum,16ga,60x120,33,99,144,B
+AL5052-14GA-48X120,AL5052 sheet 14ga 48x120,sheet,aluminum,14ga,48x120,35,105,90,B
+AL5052-14GA-60X120,AL5052 sheet 14ga 60x120,sheet,aluminum,14ga,60x120,10,30,27,C
+AL5052-12GA-48X120,AL5052 sheet 12ga 48x120,sheet,aluminum,12ga,48x120,24,72,189,C
+AL5052-12GA-60X120,AL5052 sheet 12ga 60x120,sheet,aluminum,12ga,60x120,20,60,168,B
+AL5052-11GA-48X120,AL5052 sheet 11ga 48x120,sheet,aluminum,11ga,48x120,19,57,105,C
+AL5052-11GA-60X120,AL5052 sheet 11ga 60x120,sheet,aluminum,11ga,60x120,36,108,169,C
+AL5052-.125IN-48X120,AL5052 sheet 0.125in 48x120,sheet,aluminum,0.125in,48x120,9,27,29,C
+AL5052-.125IN-60X120,AL5052 sheet 0.125in 60x120,sheet,aluminum,0.125in,60x120,10,30,80,C
+AL5052-.250IN-48X120,AL5052 sheet 0.250in 48x120,sheet,aluminum,0.250in,48x120,29,87,12,C
+AL5052-.250IN-60X120,AL5052 sheet 0.250in 60x120,sheet,aluminum,0.250in,60x120,39,117,173,B
+HW-20000,rivet nut M4,hardware,,,,28,84,168,B
+HW-20001,PEM stud 10-32,hardware,,,,13,39,53,C
+HW-20002,latch 1/4-20,hardware,,,,18,54,159,B
+HW-20003,latch 8-32,hardware,,,,39,117,159,C
+HW-20004,rivet nut M4,hardware,,,,16,48,140,C
+HW-20005,PEM standoff M5,hardware,,,,17,51,20,C
+HW-20006,PEM stud 6-32,hardware,,,,38,114,187,B
+HW-20007,PEM stud M4,hardware,,,,30,90,82,A
+HW-20008,PEM stud 6-32,hardware,,,,33,99,22,C
+HW-20009,captive screw M4,hardware,,,,37,111,92,C
+HW-20010,PEM stud 10-32,hardware,,,,22,66,110,C
+HW-20011,rivet nut M5,hardware,,,,22,66,179,B
+HW-20012,PEM standoff M3,hardware,,,,17,51,40,A
+HW-20013,captive screw 1/4-20,hardware,,,,28,84,213,C
+HW-20014,PEM standoff M4,hardware,,,,39,117,200,B
+HW-20015,PEM standoff 10-32,hardware,,,,18,54,105,B
+HW-20016,PEM stud M4,hardware,,,,5,15,34,B
+HW-20017,hinge M4,hardware,,,,20,60,138,C
+HW-20018,captive screw M3,hardware,,,,12,36,50,C
+HW-20019,latch 10-32,hardware,,,,28,84,56,A
+HW-20020,hinge M4,hardware,,,,27,81,62,C
+HW-20021,PEM nut 8-32,hardware,,,,13,39,28,B
+HW-20022,PEM nut 1/4-20,hardware,,,,35,105,300,C
+HW-20023,rivet nut 6-32,hardware,,,,12,36,87,C
+HW-20024,PEM stud 10-32,hardware,,,,10,30,26,C
+HW-20025,PEM stud 10-32,hardware,,,,31,93,184,B
+HW-20026,PEM nut 8-32,hardware,,,,26,78,121,C
+HW-20027,rivet nut M4,hardware,,,,18,54,86,C
+HW-20028,PEM nut M4,hardware,,,,35,105,195,B
+HW-20029,PEM stud M6,hardware,,,,34,102,75,C
+HW-20030,hinge 10-32,hardware,,,,38,114,313,A
+HW-20031,PEM standoff 6-32,hardware,,,,39,117,189,B
+HW-20032,PEM stud 1/4-20,hardware,,,,35,105,167,C
+HW-20033,captive screw 8-32,hardware,,,,36,108,286,C
+HW-20034,rivet nut M3,hardware,,,,38,114,114,B
+HW-20035,latch M6,hardware,,,,39,117,156,C
+HW-20036,captive screw M5,hardware,,,,32,96,80,B
+HW-20037,captive screw 1/4-20,hardware,,,,14,42,81,B
+HW-20038,PEM stud M3,hardware,,,,20,60,140,A
+HW-20039,PEM standoff M4,hardware,,,,15,45,48,C
+HW-20040,PEM standoff M6,hardware,,,,38,114,110,C
+HW-20041,latch M5,hardware,,,,19,57,118,B
+HW-20042,hinge 6-32,hardware,,,,28,84,209,C
+HW-20043,latch M4,hardware,,,,22,66,1,B
+HW-20044,PEM stud 6-32,hardware,,,,15,45,8,A
+HW-20045,hinge M3,hardware,,,,33,99,94,C
+HW-20046,captive screw 6-32,hardware,,,,21,63,98,B
+HW-20047,captive screw 6-32,hardware,,,,36,108,37,C
+HW-20048,PEM nut M5,hardware,,,,21,63,159,A
+HW-20049,rivet nut M5,hardware,,,,14,42,101,C
+HW-20050,PEM stud 8-32,hardware,,,,29,87,204,B
+HW-20051,PEM nut 8-32,hardware,,,,10,30,86,C
+HW-20052,PEM nut M4,hardware,,,,32,96,201,C
+HW-20053,rivet nut 8-32,hardware,,,,11,33,54,A
+HW-20054,PEM standoff M6,hardware,,,,30,90,19,B
+HW-20055,captive screw M4,hardware,,,,20,60,42,B
+HW-20056,PEM standoff 10-32,hardware,,,,17,51,75,B
+HW-20057,latch 6-32,hardware,,,,35,105,270,B
+HW-20058,captive screw 8-32,hardware,,,,20,60,126,C
+HW-20059,latch M5,hardware,,,,27,81,52,A
+HW-20060,hinge M4,hardware,,,,18,54,160,B
+HW-20061,captive screw 6-32,hardware,,,,7,21,45,B
+HW-20062,PEM stud 8-32,hardware,,,,20,60,55,B
+HW-20063,PEM nut 6-32,hardware,,,,28,84,185,A
+HW-20064,latch M3,hardware,,,,20,60,40,C
+HW-20065,rivet nut M5,hardware,,,,38,114,232,C
+HW-20066,rivet nut M3,hardware,,,,18,54,74,C
+HW-20067,PEM stud M4,hardware,,,,13,39,113,C
+HW-20068,rivet nut 6-32,hardware,,,,33,99,131,C
+HW-20069,hinge 6-32,hardware,,,,22,66,99,C
+HW-20070,latch M4,hardware,,,,34,102,44,B
+HW-20071,PEM standoff M4,hardware,,,,28,84,147,B
+HW-20072,PEM nut M5,hardware,,,,37,111,275,C
+HW-20073,latch M5,hardware,,,,14,42,39,B
+HW-20074,PEM standoff 6-32,hardware,,,,26,78,149,A
+HW-20075,captive screw M4,hardware,,,,7,21,34,B
+HW-20076,hinge 6-32,hardware,,,,14,42,38,A
+HW-20077,PEM nut 10-32,hardware,,,,38,114,238,C
+HW-20078,rivet nut M6,hardware,,,,24,72,27,B
+HW-20079,captive screw 10-32,hardware,,,,27,81,61,B
+HW-20080,rivet nut 10-32,hardware,,,,39,117,26,C
+HW-20081,latch M6,hardware,,,,13,39,84,A
+HW-20082,rivet nut 8-32,hardware,,,,19,57,37,C
+HW-20083,PEM standoff 1/4-20,hardware,,,,29,87,218,A
+HW-20084,latch 10-32,hardware,,,,25,75,218,C
+HW-20085,rivet nut M4,hardware,,,,38,114,274,B
+HW-20086,latch M4,hardware,,,,29,87,118,A
+HW-20087,rivet nut M5,hardware,,,,13,39,63,C
+HW-20088,hinge M3,hardware,,,,8,24,69,C
+HW-20089,latch M5,hardware,,,,5,15,3,B
+HW-20090,rivet nut 1/4-20,hardware,,,,36,108,198,C
+HW-20091,rivet nut M3,hardware,,,,27,81,33,C
+HW-20092,latch 10-32,hardware,,,,23,69,175,C
+HW-20093,latch 10-32,hardware,,,,5,15,27,B
+HW-20094,rivet nut M3,hardware,,,,19,57,93,B
+HW-20095,PEM stud M4,hardware,,,,6,18,41,B
+HW-20096,hinge M6,hardware,,,,24,72,183,B
+HW-20097,hinge 6-32,hardware,,,,37,111,125,A
+HW-20098,latch 8-32,hardware,,,,10,30,69,C
+HW-20099,hinge 6-32,hardware,,,,38,114,150,C
+HW-20100,rivet nut 1/4-20,hardware,,,,34,102,195,A
+HW-20101,rivet nut M3,hardware,,,,16,48,23,B
+HW-20102,PEM standoff 1/4-20,hardware,,,,25,75,173,B
+HW-20103,PEM standoff 8-32,hardware,,,,14,42,23,A
+HW-20104,PEM nut 1/4-20,hardware,,,,14,42,114,C
+HW-20105,latch M6,hardware,,,,10,30,13,A
+HW-20106,hinge 1/4-20,hardware,,,,22,66,123,B
+HW-20107,latch M3,hardware,,,,28,84,145,B
+HW-20108,rivet nut M3,hardware,,,,34,102,183,B
+HW-20109,rivet nut 10-32,hardware,,,,37,111,155,B
+HW-20110,PEM stud M4,hardware,,,,26,78,190,C
+HW-20111,hinge M5,hardware,,,,5,15,38,C
+HW-20112,captive screw 6-32,hardware,,,,9,27,27,B
+HW-20113,hinge 10-32,hardware,,,,28,84,233,A
+HW-20114,PEM standoff M6,hardware,,,,14,42,111,C
+HW-20115,PEM stud 6-32,hardware,,,,17,51,109,C
+HW-20116,captive screw M3,hardware,,,,12,36,26,B
+HW-20117,hinge M3,hardware,,,,6,18,31,C
+HW-20118,rivet nut 1/4-20,hardware,,,,10,30,65,A
+HW-20119,PEM nut 10-32,hardware,,,,29,87,126,B
+HW-20120,PEM standoff M3,hardware,,,,34,102,235,C
+HW-20121,latch 8-32,hardware,,,,22,66,170,B
+HW-20122,PEM stud 8-32,hardware,,,,38,114,311,C
+HW-20123,rivet nut M6,hardware,,,,39,117,70,C
+HW-20124,latch M6,hardware,,,,5,15,38,B
+HW-20125,PEM stud M6,hardware,,,,34,102,137,C
+HW-20126,PEM stud 1/4-20,hardware,,,,22,66,106,B
+HW-20127,hinge M4,hardware,,,,21,63,174,B
+HW-20128,PEM standoff M4,hardware,,,,13,39,49,C
+HW-20129,captive screw M6,hardware,,,,21,63,58,C
+HW-20130,PEM stud 6-32,hardware,,,,26,78,139,A
+HW-20131,PEM standoff 6-32,hardware,,,,36,108,289,B
+HW-20132,PEM stud M6,hardware,,,,32,96,125,B
+HW-20133,PEM stud M3,hardware,,,,20,60,171,B
+HW-20134,PEM standoff M5,hardware,,,,36,108,107,C
+HW-20135,PEM standoff M4,hardware,,,,38,114,255,C
+HW-20136,rivet nut M4,hardware,,,,34,102,241,B
+HW-20137,PEM stud M3,hardware,,,,13,39,108,C
+HW-20138,PEM stud M3,hardware,,,,13,39,90,C
+HW-20139,hinge 6-32,hardware,,,,6,18,29,C
+HW-20140,PEM standoff M6,hardware,,,,10,30,32,A
+HW-20141,captive screw M6,hardware,,,,29,87,248,B
+HW-20142,captive screw M4,hardware,,,,17,51,123,A
+HW-20143,PEM stud 10-32,hardware,,,,21,63,169,A
+HW-20144,captive screw 10-32,hardware,,,,33,99,170,A
+HW-20145,hinge 8-32,hardware,,,,28,84,142,C
+HW-20146,PEM stud 8-32,hardware,,,,34,102,34,A
+HW-20147,PEM nut M6,hardware,,,,16,48,21,B
+HW-20148,PEM standoff M4,hardware,,,,23,69,49,C
+HW-20149,rivet nut M5,hardware,,,,28,84,19,C
+HW-20150,PEM standoff M5,hardware,,,,21,63,84,C
+HW-20151,PEM standoff M6,hardware,,,,9,27,66,B
+HW-20152,rivet nut 8-32,hardware,,,,27,81,61,C
+HW-20153,captive screw 10-32,hardware,,,,32,96,285,A
+HW-20154,PEM stud M4,hardware,,,,11,33,86,C
+HW-20155,PEM standoff 8-32,hardware,,,,16,48,88,C
+HW-20156,PEM nut M6,hardware,,,,34,102,295,C
+HW-20157,latch 6-32,hardware,,,,37,111,210,C
+HW-20158,rivet nut 8-32,hardware,,,,30,90,167,B
+HW-20159,PEM standoff M5,hardware,,,,14,42,9,C
+HW-20160,captive screw M5,hardware,,,,25,75,67,B
+HW-20161,PEM standoff 8-32,hardware,,,,29,87,12,C
+HW-20162,PEM stud M4,hardware,,,,27,81,196,C
+HW-20163,latch M3,hardware,,,,14,42,70,C
+HW-20164,rivet nut M5,hardware,,,,5,15,12,C
+HW-20165,hinge 6-32,hardware,,,,37,111,251,B
+HW-20166,hinge M5,hardware,,,,11,33,1,C
+HW-20167,hinge M5,hardware,,,,17,51,95,B
+HW-20168,captive screw 8-32,hardware,,,,6,18,3,B
+HW-20169,captive screw M3,hardware,,,,8,24,45,C
+HW-20170,PEM stud 1/4-20,hardware,,,,28,84,38,C
+HW-20171,PEM nut 8-32,hardware,,,,35,105,20,B
+HW-20172,latch M3,hardware,,,,37,111,61,B
+HW-20173,PEM standoff M3,hardware,,,,26,78,63,C
+HW-20174,PEM nut M3,hardware,,,,14,42,90,C
+HW-20175,hinge M3,hardware,,,,35,105,298,C
+HW-20176,PEM nut 1/4-20,hardware,,,,36,108,283,C
+HW-20177,PEM nut M6,hardware,,,,28,84,173,B
+HW-20178,latch M3,hardware,,,,6,18,43,A
+HW-20179,PEM nut 10-32,hardware,,,,12,36,15,A
+HW-20180,rivet nut 8-32,hardware,,,,28,84,201,B
+HW-20181,hinge 8-32,hardware,,,,34,102,81,A
+HW-20182,PEM stud M5,hardware,,,,30,90,141,C
+HW-20183,PEM standoff 6-32,hardware,,,,14,42,62,C
+HW-20184,rivet nut M5,hardware,,,,35,105,130,A
+HW-20185,captive screw M4,hardware,,,,8,24,66,C
+HW-20186,PEM standoff 6-32,hardware,,,,15,45,61,C
+HW-20187,PEM standoff 6-32,hardware,,,,13,39,73,C
+HW-20188,hinge M4,hardware,,,,36,108,245,C
+HW-20189,PEM nut 10-32,hardware,,,,9,27,70,C
+HW-20190,latch 8-32,hardware,,,,21,63,33,A
+HW-20191,PEM stud M5,hardware,,,,15,45,19,B
+HW-20192,hinge 6-32,hardware,,,,15,45,60,C
+HW-20193,PEM standoff 8-32,hardware,,,,31,93,236,A
+HW-20194,latch M6,hardware,,,,5,15,35,B
+HW-20195,PEM nut 10-32,hardware,,,,29,87,165,B
+HW-20196,PEM stud M4,hardware,,,,22,66,173,C
+HW-20197,latch 8-32,hardware,,,,19,57,3,B
+HW-20198,rivet nut M4,hardware,,,,31,93,193,C
+HW-20199,captive screw M6,hardware,,,,22,66,116,A
+HW-20200,rivet nut M3,hardware,,,,25,75,154,C
+HW-20201,PEM standoff M3,hardware,,,,32,96,107,C
+HW-20202,PEM standoff 1/4-20,hardware,,,,10,30,48,C
+HW-20203,PEM stud M6,hardware,,,,24,72,82,C
+HW-20204,captive screw 6-32,hardware,,,,10,30,3,C
+HW-20205,PEM nut 8-32,hardware,,,,33,99,220,C
+HW-20206,rivet nut 6-32,hardware,,,,31,93,142,B
+HW-20207,latch M5,hardware,,,,36,108,35,C
+HW-20208,PEM standoff M4,hardware,,,,25,75,161,B
+HW-20209,PEM nut 8-32,hardware,,,,15,45,32,C
+HW-20210,hinge M3,hardware,,,,34,102,199,C
+HW-20211,PEM standoff 10-32,hardware,,,,11,33,90,C
+HW-20212,captive screw M3,hardware,,,,28,84,202,B
+HW-20213,hinge 1/4-20,hardware,,,,29,87,125,C
+HW-20214,rivet nut M3,hardware,,,,21,63,164,C
+HW-20215,PEM standoff M3,hardware,,,,16,48,138,A
+HW-20216,rivet nut 8-32,hardware,,,,20,60,159,C
+HW-20217,rivet nut M5,hardware,,,,23,69,97,C
+HW-20218,latch M3,hardware,,,,34,102,62,A
+HW-20219,PEM standoff 6-32,hardware,,,,34,102,102,B
+HW-20220,PEM stud M3,hardware,,,,18,54,73,A
+HW-20221,PEM stud M4,hardware,,,,25,75,102,B
+HW-20222,PEM nut M6,hardware,,,,11,33,29,C
+HW-20223,PEM nut 10-32,hardware,,,,36,108,22,A
+HW-20224,latch 10-32,hardware,,,,31,93,162,C
+HW-20225,latch 8-32,hardware,,,,14,42,57,C
+HW-20226,latch M4,hardware,,,,17,51,40,C
+HW-20227,captive screw 8-32,hardware,,,,37,111,317,B
+HW-20228,rivet nut M6,hardware,,,,30,90,264,C
+HW-20229,hinge M4,hardware,,,,22,66,89,C
+HW-20230,PEM stud 10-32,hardware,,,,22,66,1,A
+HW-20231,PEM standoff 10-32,hardware,,,,37,111,142,B
+HW-20232,captive screw M5,hardware,,,,6,18,31,C
+HW-20233,hinge M4,hardware,,,,34,102,276,B
+HW-20234,hinge 10-32,hardware,,,,7,21,34,B
+HW-20235,PEM standoff 1/4-20,hardware,,,,26,78,42,C
+HW-20236,PEM nut 1/4-20,hardware,,,,15,45,59,C
+HW-20237,PEM nut M6,hardware,,,,16,48,113,C
+HW-20238,rivet nut 10-32,hardware,,,,15,45,96,C
+HW-20239,captive screw 6-32,hardware,,,,7,21,41,C
+HW-20240,PEM nut M3,hardware,,,,10,30,11,C
+HW-20241,PEM standoff M6,hardware,,,,9,27,37,A
+HW-20242,PEM standoff 8-32,hardware,,,,28,84,65,C
+HW-20243,rivet nut M4,hardware,,,,9,27,57,C
+HW-20244,PEM nut M4,hardware,,,,36,108,14,C
+HW-20245,rivet nut 8-32,hardware,,,,31,93,236,C
+HW-20246,PEM nut M5,hardware,,,,39,117,214,C
+HW-20247,hinge 10-32,hardware,,,,31,93,82,B
+HW-20248,PEM nut M5,hardware,,,,20,60,4,C
+HW-20249,PEM nut M3,hardware,,,,25,75,174,C
+HW-20250,captive screw 10-32,hardware,,,,22,66,108,B
+HW-20251,PEM standoff M6,hardware,,,,6,18,36,C
+HW-20252,latch 6-32,hardware,,,,5,15,24,B
+HW-20253,PEM standoff M4,hardware,,,,26,78,131,A
+HW-20254,PEM standoff M5,hardware,,,,22,66,79,C
+HW-20255,PEM nut 8-32,hardware,,,,11,33,46,C
+HW-20256,PEM nut M6,hardware,,,,6,18,42,A
+HW-20257,PEM nut 6-32,hardware,,,,32,96,267,C
+HW-20258,PEM standoff 1/4-20,hardware,,,,13,39,103,B
+HW-20259,PEM stud 8-32,hardware,,,,25,75,2,C
+HW-20260,hinge 6-32,hardware,,,,7,21,46,C
+HW-20261,PEM stud 8-32,hardware,,,,6,18,36,B
+HW-20262,hinge 1/4-20,hardware,,,,37,111,37,C
+HW-20263,PEM stud 6-32,hardware,,,,27,81,221,C
+HW-20264,captive screw 6-32,hardware,,,,13,39,55,A
+HW-20265,PEM standoff M3,hardware,,,,22,66,102,C
+HW-20266,rivet nut 1/4-20,hardware,,,,11,33,39,C
+HW-20267,rivet nut M6,hardware,,,,10,30,62,A
+HW-20268,latch M4,hardware,,,,31,93,71,C
+HW-20269,PEM standoff 10-32,hardware,,,,9,27,34,B
+HW-20270,latch 1/4-20,hardware,,,,9,27,26,C
+HW-20271,latch M5,hardware,,,,16,48,65,B
+HW-20272,latch M5,hardware,,,,36,108,155,B
+HW-20273,rivet nut 6-32,hardware,,,,28,84,164,B
+HW-20274,captive screw M5,hardware,,,,26,78,108,C
+HW-20275,PEM nut M5,hardware,,,,37,111,133,C
+HW-20276,PEM stud M3,hardware,,,,15,45,104,B
+HW-20277,captive screw 10-32,hardware,,,,34,102,37,C
+HW-20278,PEM standoff 10-32,hardware,,,,25,75,113,C
+HW-20279,PEM stud M6,hardware,,,,18,54,36,C
+HW-20280,PEM nut 1/4-20,hardware,,,,26,78,112,C
+HW-20281,PEM stud M6,hardware,,,,10,30,81,C
+HW-20282,rivet nut 8-32,hardware,,,,11,33,56,A
+HW-20283,PEM nut 6-32,hardware,,,,7,21,51,C
+HW-20284,hinge M4,hardware,,,,26,78,154,B
+HW-20285,PEM nut 6-32,hardware,,,,28,84,55,C
+HW-20286,PEM standoff 10-32,hardware,,,,36,108,3,C
+HW-20287,PEM stud M3,hardware,,,,23,69,127,C
+HW-20288,latch M4,hardware,,,,8,24,33,B
+HW-20289,latch M5,hardware,,,,12,36,18,C
+HW-20290,PEM stud 8-32,hardware,,,,28,84,54,B
+HW-20291,latch 6-32,hardware,,,,30,90,51,C
+HW-20292,captive screw M3,hardware,,,,39,117,269,C
+HW-20293,PEM stud M6,hardware,,,,19,57,169,C
+HW-20294,captive screw M6,hardware,,,,12,36,30,B
+HW-20295,latch M5,hardware,,,,30,90,210,B
+HW-20296,PEM stud M6,hardware,,,,18,54,1,C
+HW-20297,latch 6-32,hardware,,,,18,54,100,C
+HW-20298,captive screw M5,hardware,,,,33,99,63,C
+HW-20299,hinge 8-32,hardware,,,,19,57,160,B
+HW-20300,rivet nut M5,hardware,,,,10,30,20,A
+HW-20301,captive screw M4,hardware,,,,8,24,23,A
+HW-20302,PEM stud M5,hardware,,,,20,60,153,C
+HW-20303,rivet nut M4,hardware,,,,22,66,84,B
+HW-20304,PEM standoff 1/4-20,hardware,,,,6,18,53,B
+HW-20305,latch M5,hardware,,,,16,48,126,C
+HW-20306,PEM nut 1/4-20,hardware,,,,30,90,190,C
+HW-20307,hinge 1/4-20,hardware,,,,20,60,41,C
+HW-20308,PEM stud M3,hardware,,,,16,48,93,C
+HW-20309,latch 10-32,hardware,,,,6,18,10,C
+HW-20310,PEM standoff 10-32,hardware,,,,38,114,31,A
+HW-20311,hinge 8-32,hardware,,,,19,57,156,C
+HW-20312,PEM stud 10-32,hardware,,,,10,30,76,B
+HW-20313,PEM standoff M3,hardware,,,,9,27,19,B
+HW-20314,PEM stud M6,hardware,,,,19,57,163,B
+HW-20315,rivet nut M3,hardware,,,,39,117,152,C
+HW-20316,captive screw M4,hardware,,,,28,84,14,C
+HW-20317,PEM standoff M5,hardware,,,,6,18,38,C
+HW-20318,rivet nut M6,hardware,,,,30,90,93,B
+HW-20319,PEM nut M4,hardware,,,,33,99,137,B
+HW-20320,rivet nut 1/4-20,hardware,,,,11,33,43,B
+HW-20321,PEM nut M4,hardware,,,,10,30,6,C
+HW-20322,rivet nut M4,hardware,,,,32,96,122,C
+HW-20323,latch 6-32,hardware,,,,36,108,307,C
+HW-20324,PEM stud M6,hardware,,,,19,57,107,A
+HW-20325,PEM stud M6,hardware,,,,38,114,30,B
+HW-20326,PEM nut 1/4-20,hardware,,,,19,57,100,B
+HW-20327,rivet nut 1/4-20,hardware,,,,12,36,44,C
+HW-20328,PEM stud M5,hardware,,,,5,15,41,C
+HW-20329,PEM nut 10-32,hardware,,,,10,30,85,A
+HW-20330,hinge 8-32,hardware,,,,15,45,56,B
+HW-20331,PEM standoff 1/4-20,hardware,,,,36,108,101,A
+HW-20332,PEM standoff 1/4-20,hardware,,,,38,114,34,C
+HW-20333,PEM stud 8-32,hardware,,,,8,24,6,C
+HW-20334,hinge 1/4-20,hardware,,,,5,15,29,C
+HW-20335,PEM stud M4,hardware,,,,11,33,57,C
+HW-20336,latch 1/4-20,hardware,,,,31,93,168,C
+HW-20337,PEM standoff M6,hardware,,,,19,57,33,B
+HW-20338,latch M5,hardware,,,,7,21,44,B
+HW-20339,PEM stud 6-32,hardware,,,,35,105,66,C
+HW-20340,latch M4,hardware,,,,12,36,84,B
+HW-20341,captive screw M4,hardware,,,,39,117,22,C
+HW-20342,captive screw M6,hardware,,,,20,60,127,B
+HW-20343,PEM stud M3,hardware,,,,15,45,26,C
+HW-20344,PEM standoff M5,hardware,,,,9,27,43,C
+HW-20345,latch 6-32,hardware,,,,29,87,248,A
+HW-20346,PEM stud M5,hardware,,,,7,21,33,C
+HW-20347,PEM nut 10-32,hardware,,,,8,24,57,C
+HW-20348,PEM nut 10-32,hardware,,,,31,93,236,B
+HW-20349,rivet nut M6,hardware,,,,38,114,327,C
+HW-20350,hinge M5,hardware,,,,21,63,82,C
+HW-20351,PEM stud M6,hardware,,,,8,24,48,A
+HW-20352,PEM nut 8-32,hardware,,,,24,72,103,B
+HW-20353,PEM stud M6,hardware,,,,13,39,40,B
+HW-20354,hinge M6,hardware,,,,29,87,123,B
+HW-20355,captive screw M3,hardware,,,,10,30,35,C
+HW-20356,hinge M5,hardware,,,,21,63,74,B
+HW-20357,captive screw M5,hardware,,,,10,30,45,C
+HW-20358,rivet nut M6,hardware,,,,39,117,73,C
+HW-20359,latch M4,hardware,,,,19,57,17,A
+HW-20360,PEM stud 6-32,hardware,,,,8,24,36,C
+HW-20361,PEM stud M3,hardware,,,,29,87,180,C
+HW-20362,PEM nut M6,hardware,,,,34,102,172,B
+HW-20363,hinge 8-32,hardware,,,,36,108,319,A
+HW-20364,latch M5,hardware,,,,14,42,35,C
+HW-20365,PEM standoff M4,hardware,,,,5,15,15,B
+HW-20366,latch M5,hardware,,,,24,72,18,B
+HW-20367,latch M6,hardware,,,,15,45,78,C
+HW-20368,rivet nut 10-32,hardware,,,,16,48,67,A
+HW-20369,latch 8-32,hardware,,,,10,30,73,C
+HW-20370,hinge M4,hardware,,,,28,84,105,C
+HW-20371,PEM standoff M3,hardware,,,,25,75,116,A
+HW-20372,PEM nut 1/4-20,hardware,,,,10,30,43,B
+HW-20373,rivet nut 6-32,hardware,,,,39,117,229,C
+HW-20374,latch M6,hardware,,,,23,69,26,B
+HW-20375,hinge M5,hardware,,,,33,99,252,B
+HW-20376,PEM stud M5,hardware,,,,5,15,28,B
+HW-20377,captive screw M3,hardware,,,,36,108,32,B
+HW-20378,latch M3,hardware,,,,36,108,22,C
+HW-20379,PEM stud 6-32,hardware,,,,29,87,62,B
+HW-20380,PEM standoff 6-32,hardware,,,,21,63,69,C
+HW-20381,rivet nut M5,hardware,,,,10,30,47,C
+HW-20382,rivet nut 8-32,hardware,,,,31,93,105,A
+HW-20383,PEM stud M4,hardware,,,,39,117,191,B
+HW-20384,latch M6,hardware,,,,21,63,6,C
+HW-20385,rivet nut M4,hardware,,,,27,81,110,C
+HW-20386,PEM stud M4,hardware,,,,25,75,53,B
+HW-20387,hinge 8-32,hardware,,,,26,78,73,C
+HW-20388,PEM stud M4,hardware,,,,27,81,90,C
+HW-20389,latch 8-32,hardware,,,,10,30,36,A
+HW-20390,PEM standoff 8-32,hardware,,,,24,72,0,C
+HW-20391,captive screw M5,hardware,,,,5,15,24,C
+HW-20392,hinge 10-32,hardware,,,,26,78,40,C
+HW-20393,hinge 6-32,hardware,,,,27,81,155,B
+HW-20394,captive screw 10-32,hardware,,,,31,93,89,C
+HW-20395,rivet nut 1/4-20,hardware,,,,17,51,65,A
+HW-20396,PEM standoff 10-32,hardware,,,,14,42,77,A
+HW-20397,PEM nut 8-32,hardware,,,,32,96,178,C
+HW-20398,PEM stud 6-32,hardware,,,,33,99,119,B
+HW-20399,rivet nut 6-32,hardware,,,,13,39,107,B
+HW-20400,captive screw 1/4-20,hardware,,,,22,66,107,C
+HW-20401,rivet nut 10-32,hardware,,,,36,108,73,C
+HW-20402,latch 10-32,hardware,,,,19,57,138,A
+HW-20403,PEM standoff M5,hardware,,,,26,78,9,B
+HW-20404,PEM standoff M6,hardware,,,,6,18,20,B
+HW-20405,PEM nut 8-32,hardware,,,,28,84,194,A
+HW-20406,latch M4,hardware,,,,16,48,118,C
+HW-20407,PEM nut 8-32,hardware,,,,32,96,49,C
+HW-20408,hinge M5,hardware,,,,22,66,44,B
+HW-20409,rivet nut M5,hardware,,,,10,30,40,A
+HW-20410,hinge 6-32,hardware,,,,12,36,58,C
+HW-20411,rivet nut 10-32,hardware,,,,26,78,93,C
+HW-20412,PEM nut 10-32,hardware,,,,39,117,194,C
+HW-20413,rivet nut 10-32,hardware,,,,5,15,3,C
+HW-20414,captive screw M3,hardware,,,,37,111,284,C
+HW-20415,PEM stud 8-32,hardware,,,,7,21,14,B
+HW-20416,rivet nut M3,hardware,,,,35,105,46,B
+HW-20417,PEM standoff 8-32,hardware,,,,12,36,104,C
+HW-20418,captive screw 1/4-20,hardware,,,,29,87,166,B
+HW-20419,PEM standoff M6,hardware,,,,16,48,95,B
+HW-20420,rivet nut M3,hardware,,,,16,48,13,C
+HW-20421,rivet nut 6-32,hardware,,,,7,21,12,C
+HW-20422,PEM stud 10-32,hardware,,,,11,33,29,C
+HW-20423,PEM nut M5,hardware,,,,16,48,34,B
+HW-20424,rivet nut M5,hardware,,,,15,45,115,C
+HW-20425,rivet nut M3,hardware,,,,10,30,5,C
+HW-20426,PEM nut 6-32,hardware,,,,36,108,261,B
+HW-20427,rivet nut M3,hardware,,,,34,102,20,C
+HW-20428,rivet nut 10-32,hardware,,,,28,84,143,C
+HW-20429,PEM stud M4,hardware,,,,7,21,30,C
+HW-20430,hinge M4,hardware,,,,8,24,71,B
+HW-20431,latch M6,hardware,,,,39,117,325,C
+HW-20432,PEM standoff M4,hardware,,,,33,99,293,B
+HW-20433,rivet nut M5,hardware,,,,13,39,91,B
+HW-20434,PEM standoff M5,hardware,,,,27,81,64,C
+HW-20435,PEM standoff 1/4-20,hardware,,,,36,108,319,B
+HW-20436,PEM nut M5,hardware,,,,5,15,26,B
+HW-20437,captive screw 10-32,hardware,,,,31,93,135,B
+HW-20438,PEM stud 8-32,hardware,,,,32,96,171,B
+HW-20439,PEM standoff 1/4-20,hardware,,,,14,42,52,C
+HW-20440,captive screw 8-32,hardware,,,,25,75,192,C
+HW-20441,PEM nut 8-32,hardware,,,,23,69,94,C
+HW-20442,hinge 1/4-20,hardware,,,,20,60,118,C
+HW-20443,latch M4,hardware,,,,9,27,0,B
+HW-20444,rivet nut M6,hardware,,,,7,21,13,C
+HW-20445,PEM nut 1/4-20,hardware,,,,15,45,89,B
+HW-20446,PEM stud M3,hardware,,,,22,66,140,A
+HW-20447,PEM standoff 8-32,hardware,,,,28,84,140,C
+HW-20448,latch M4,hardware,,,,21,63,41,C
+HW-20449,latch M5,hardware,,,,11,33,10,A
+HW-20450,rivet nut 6-32,hardware,,,,26,78,47,C
+HW-20451,PEM stud 6-32,hardware,,,,36,108,0,C
+HW-20452,PEM stud M5,hardware,,,,9,27,9,C
+HW-20453,PEM nut M6,hardware,,,,11,33,29,C
+HW-20454,captive screw M5,hardware,,,,8,24,28,C
+HW-20455,captive screw M3,hardware,,,,36,108,130,C
+HW-20456,PEM nut 6-32,hardware,,,,36,108,138,B
+HW-20457,PEM standoff 6-32,hardware,,,,33,99,229,C
+HW-20458,PEM standoff 8-32,hardware,,,,9,27,6,C
+HW-20459,latch 1/4-20,hardware,,,,16,48,76,C
+HW-20460,hinge M3,hardware,,,,35,105,308,B
+HW-20461,latch 1/4-20,hardware,,,,37,111,146,C
+HW-20462,latch 6-32,hardware,,,,38,114,263,B
+HW-20463,hinge M4,hardware,,,,24,72,140,C
+HW-20464,hinge M5,hardware,,,,32,96,262,C
+HW-20465,PEM nut 1/4-20,hardware,,,,38,114,294,C
+HW-20466,hinge M3,hardware,,,,39,117,204,B
+HW-20467,PEM nut M3,hardware,,,,6,18,47,C
+HW-20468,latch 8-32,hardware,,,,11,33,70,C
+HW-20469,latch M3,hardware,,,,35,105,70,C
+HW-20470,PEM standoff M3,hardware,,,,28,84,190,C
+HW-20471,rivet nut 8-32,hardware,,,,26,78,83,A
+HW-20472,latch M6,hardware,,,,9,27,68,C
+HW-20473,PEM standoff 10-32,hardware,,,,35,105,242,B
+HW-20474,rivet nut 6-32,hardware,,,,32,96,117,C
+HW-20475,PEM stud M4,hardware,,,,32,96,82,C
+HW-20476,PEM stud M5,hardware,,,,16,48,110,C
+HW-20477,rivet nut 1/4-20,hardware,,,,37,111,53,A
+HW-20478,PEM standoff M6,hardware,,,,14,42,58,C
+HW-20479,hinge 1/4-20,hardware,,,,33,99,156,B
+HW-20480,latch 8-32,hardware,,,,6,18,29,A
+HW-20481,hinge 10-32,hardware,,,,10,30,12,A
+HW-20482,PEM nut M6,hardware,,,,29,87,127,A
+HW-20483,PEM nut 8-32,hardware,,,,10,30,61,A
+HW-20484,PEM standoff M5,hardware,,,,20,60,117,C
+HW-20485,hinge 6-32,hardware,,,,5,15,18,C
+HW-20486,captive screw 10-32,hardware,,,,26,78,185,B
+HW-20487,hinge M3,hardware,,,,8,24,0,B
+HW-20488,PEM nut M4,hardware,,,,11,33,40,A
+HW-20489,PEM nut 6-32,hardware,,,,25,75,87,C
+HW-20490,latch 6-32,hardware,,,,36,108,41,A
+HW-20491,PEM standoff M3,hardware,,,,34,102,5,C
+HW-20492,rivet nut 10-32,hardware,,,,16,48,65,B
+HW-20493,hinge M6,hardware,,,,7,21,57,B
+HW-20494,PEM nut M3,hardware,,,,12,36,64,C
+HW-20495,rivet nut M6,hardware,,,,21,63,0,C
+HW-20496,PEM nut M6,hardware,,,,5,15,34,B
+HW-20497,latch 6-32,hardware,,,,12,36,79,C
+HW-20498,latch 8-32,hardware,,,,12,36,34,B
+HW-20499,captive screw 1/4-20,hardware,,,,31,93,239,C
+HW-20500,PEM nut 10-32,hardware,,,,38,114,269,C
+HW-20501,latch M4,hardware,,,,24,72,26,C
+HW-20502,captive screw M3,hardware,,,,8,24,33,C
+HW-20503,PEM standoff 10-32,hardware,,,,26,78,148,A
+HW-20504,rivet nut 10-32,hardware,,,,10,30,19,C
+HW-20505,PEM nut M4,hardware,,,,9,27,30,B
+HW-20506,hinge M5,hardware,,,,17,51,145,B
+HW-20507,hinge 10-32,hardware,,,,37,111,249,C
+HW-20508,hinge 8-32,hardware,,,,9,27,16,B
+HW-20509,captive screw M5,hardware,,,,31,93,64,B
+HW-20510,PEM stud M5,hardware,,,,7,21,1,A
+HW-20511,captive screw M5,hardware,,,,36,108,12,B
+HW-20512,latch 1/4-20,hardware,,,,21,63,131,B
+HW-20513,PEM standoff 1/4-20,hardware,,,,31,93,28,B
+HW-20514,PEM standoff 8-32,hardware,,,,25,75,122,C
+HW-20515,latch M3,hardware,,,,32,96,101,B
+HW-20516,latch 1/4-20,hardware,,,,8,24,21,C
+HW-20517,latch 6-32,hardware,,,,25,75,125,C
+HW-20518,rivet nut 6-32,hardware,,,,32,96,137,C
+HW-20519,PEM stud M5,hardware,,,,10,30,73,B
+HW-20520,captive screw M5,hardware,,,,23,69,45,C
+HW-20521,latch M3,hardware,,,,28,84,30,B
+HW-20522,PEM standoff M3,hardware,,,,26,78,195,B
+HW-20523,captive screw M3,hardware,,,,36,108,201,A
+HW-20524,latch 6-32,hardware,,,,14,42,98,A
+HW-20525,PEM nut M4,hardware,,,,17,51,8,B
+HW-20526,PEM stud 10-32,hardware,,,,35,105,222,C
+HW-20527,PEM stud 10-32,hardware,,,,14,42,16,B
+HW-20528,latch M3,hardware,,,,25,75,158,C
+HW-20529,latch M4,hardware,,,,26,78,143,B
+HW-20530,latch 1/4-20,hardware,,,,28,84,65,B
+HW-20531,rivet nut M3,hardware,,,,16,48,127,B
+HW-20532,hinge M4,hardware,,,,28,84,112,C
+HW-20533,hinge M6,hardware,,,,17,51,105,B
+HW-20534,latch 8-32,hardware,,,,19,57,2,A
+HW-20535,PEM standoff M3,hardware,,,,14,42,16,C
+HW-20536,latch 1/4-20,hardware,,,,30,90,267,C
+HW-20537,hinge M3,hardware,,,,36,108,246,B
+HW-20538,PEM standoff M6,hardware,,,,5,15,9,C
+HW-20539,PEM standoff 8-32,hardware,,,,37,111,23,A
+HW-20540,PEM standoff 8-32,hardware,,,,32,96,138,B
+HW-20541,rivet nut M6,hardware,,,,37,111,48,A
+HW-20542,PEM stud 8-32,hardware,,,,29,87,50,B
+HW-20543,PEM nut M5,hardware,,,,21,63,137,B
+HW-20544,latch M6,hardware,,,,21,63,102,A
+HW-20545,latch M3,hardware,,,,39,117,322,B
+HW-20546,latch M3,hardware,,,,18,54,75,C
+HW-20547,captive screw 1/4-20,hardware,,,,18,54,37,C
+HW-20548,PEM stud 1/4-20,hardware,,,,22,66,52,C
+HW-20549,PEM standoff 1/4-20,hardware,,,,19,57,33,C
+HW-20550,hinge M4,hardware,,,,13,39,64,C
+HW-20551,hinge M4,hardware,,,,19,57,168,B
+HW-20552,captive screw M6,hardware,,,,11,33,41,A
+HW-20553,PEM nut 6-32,hardware,,,,19,57,144,C
+HW-20554,hinge M6,hardware,,,,29,87,3,B
+HW-20555,PEM stud M4,hardware,,,,5,15,22,C
+HW-20556,rivet nut M6,hardware,,,,19,57,24,C
+HW-20557,PEM nut 6-32,hardware,,,,17,51,85,C
+HW-20558,latch M6,hardware,,,,37,111,325,C
+HW-20559,PEM standoff M6,hardware,,,,17,51,9,C
+HW-20560,captive screw M3,hardware,,,,16,48,33,C
+HW-20561,rivet nut 6-32,hardware,,,,16,48,7,A
+HW-20562,PEM stud M5,hardware,,,,25,75,92,B
+HW-20563,rivet nut M4,hardware,,,,25,75,104,C
+HW-20564,captive screw M6,hardware,,,,29,87,228,C
+HW-20565,captive screw M4,hardware,,,,10,30,76,C
+HW-20566,PEM standoff 6-32,hardware,,,,10,30,55,A
+HW-20567,PEM standoff M4,hardware,,,,30,90,68,B
+HW-20568,hinge 8-32,hardware,,,,23,69,58,C
+HW-20569,captive screw M6,hardware,,,,14,42,25,C
+HW-20570,PEM nut 1/4-20,hardware,,,,35,105,64,B
+HW-20571,PEM standoff M6,hardware,,,,30,90,87,C
+HW-20572,latch M3,hardware,,,,14,42,6,B
+HW-20573,hinge 8-32,hardware,,,,33,99,209,C
+HW-20574,PEM stud M5,hardware,,,,19,57,60,B
+HW-20575,hinge M4,hardware,,,,23,69,10,C
+HW-20576,PEM stud M4,hardware,,,,25,75,188,C
+HW-20577,rivet nut M6,hardware,,,,6,18,4,B
+HW-20578,PEM nut M3,hardware,,,,33,99,81,C
+HW-20579,hinge M3,hardware,,,,15,45,117,B
+HW-20580,PEM standoff 8-32,hardware,,,,15,45,30,B
+HW-20581,PEM standoff M3,hardware,,,,36,108,182,B
+HW-20582,PEM nut 6-32,hardware,,,,28,84,37,C
+HW-20583,captive screw 6-32,hardware,,,,24,72,17,C
+HW-20584,captive screw M3,hardware,,,,36,108,44,C
+HW-20585,PEM stud 8-32,hardware,,,,12,36,54,C
+HW-20586,rivet nut M4,hardware,,,,15,45,43,C
+HW-20587,PEM stud 1/4-20,hardware,,,,9,27,74,B
+HW-20588,rivet nut M3,hardware,,,,19,57,73,A
+HW-20589,latch M4,hardware,,,,32,96,66,C
+HW-20590,captive screw M5,hardware,,,,12,36,30,C
+HW-20591,hinge 10-32,hardware,,,,9,27,34,C
+HW-20592,hinge 10-32,hardware,,,,35,105,198,C
+HW-20593,latch 10-32,hardware,,,,34,102,134,A
+HW-20594,PEM nut 8-32,hardware,,,,25,75,71,C
+HW-20595,rivet nut M4,hardware,,,,20,60,30,A
+HW-20596,PEM nut M6,hardware,,,,28,84,29,A
+HW-20597,hinge M3,hardware,,,,26,78,133,C
+HW-20598,hinge 10-32,hardware,,,,9,27,79,C
+HW-20599,captive screw 6-32,hardware,,,,15,45,107,B
+HW-20600,PEM nut 6-32,hardware,,,,21,63,182,B
+HW-20601,captive screw 6-32,hardware,,,,23,69,147,C
+HW-20602,PEM nut M3,hardware,,,,22,66,8,C
+HW-20603,hinge 8-32,hardware,,,,35,105,292,B
+HW-20604,latch M6,hardware,,,,26,78,182,B
+HW-20605,rivet nut 1/4-20,hardware,,,,19,57,89,C
+HW-20606,PEM stud 6-32,hardware,,,,10,30,76,C
+HW-20607,captive screw M5,hardware,,,,35,105,291,C
+HW-20608,PEM stud 6-32,hardware,,,,30,90,39,B
+HW-20609,captive screw 6-32,hardware,,,,23,69,186,A
+HW-20610,latch 10-32,hardware,,,,23,69,50,A
+HW-20611,PEM stud 10-32,hardware,,,,34,102,225,A
+HW-20612,PEM stud 6-32,hardware,,,,11,33,53,B
+HW-20613,hinge M5,hardware,,,,27,81,88,B
+HW-20614,PEM nut M6,hardware,,,,6,18,41,B
+HW-20615,latch 6-32,hardware,,,,19,57,55,B
+HW-20616,PEM standoff M4,hardware,,,,13,39,47,C
+HW-20617,PEM standoff M3,hardware,,,,28,84,25,A
+HW-20618,PEM standoff M4,hardware,,,,11,33,1,A
+HW-20619,hinge 6-32,hardware,,,,13,39,17,A
+HW-20620,PEM standoff 6-32,hardware,,,,18,54,130,C
+HW-20621,PEM nut M6,hardware,,,,30,90,57,B
+HW-20622,PEM standoff 1/4-20,hardware,,,,30,90,8,B
+HW-20623,rivet nut 6-32,hardware,,,,6,18,31,C
+HW-20624,PEM nut 6-32,hardware,,,,25,75,209,C
+HW-20625,hinge 8-32,hardware,,,,13,39,77,C
+HW-20626,latch M4,hardware,,,,24,72,112,C
+HW-20627,captive screw 1/4-20,hardware,,,,10,30,20,B
+HW-20628,captive screw M3,hardware,,,,23,69,156,C
+HW-20629,PEM standoff 1/4-20,hardware,,,,5,15,43,A
+HW-20630,PEM standoff M4,hardware,,,,9,27,2,B
+HW-20631,hinge M6,hardware,,,,35,105,10,B
+HW-20632,captive screw M6,hardware,,,,18,54,34,C
+HW-20633,latch 10-32,hardware,,,,31,93,278,C
+HW-20634,PEM stud M4,hardware,,,,13,39,105,B
+HW-20635,PEM standoff M5,hardware,,,,30,90,50,C
+HW-20636,PEM nut 1/4-20,hardware,,,,12,36,41,B
+HW-20637,PEM nut M6,hardware,,,,10,30,81,C
+HW-20638,rivet nut 8-32,hardware,,,,35,105,126,C
+HW-20639,PEM stud 6-32,hardware,,,,16,48,14,C
+HW-20640,captive screw 8-32,hardware,,,,13,39,24,C
+HW-20641,latch 1/4-20,hardware,,,,35,105,29,B
+HW-20642,hinge 6-32,hardware,,,,27,81,17,B
+HW-20643,PEM stud M3,hardware,,,,5,15,12,C
+HW-20644,PEM nut M3,hardware,,,,13,39,13,C
+HW-20645,PEM standoff M4,hardware,,,,39,117,35,C
+HW-20646,PEM nut M6,hardware,,,,14,42,39,B
+HW-20647,PEM stud M5,hardware,,,,15,45,34,C
+HW-20648,PEM stud 10-32,hardware,,,,23,69,109,C
+HW-20649,rivet nut 10-32,hardware,,,,17,51,56,A
+HW-20650,latch 8-32,hardware,,,,17,51,9,C
+HW-20651,PEM nut 8-32,hardware,,,,18,54,42,A
+HW-20652,hinge M5,hardware,,,,36,108,231,C
+HW-20653,rivet nut 6-32,hardware,,,,25,75,29,B
+HW-20654,PEM nut 10-32,hardware,,,,17,51,135,C
+HW-20655,latch 8-32,hardware,,,,16,48,120,A
+HW-20656,latch 8-32,hardware,,,,27,81,50,B
+HW-20657,PEM stud 8-32,hardware,,,,29,87,45,C
+HW-20658,latch 6-32,hardware,,,,23,69,0,C
+HW-20659,captive screw 1/4-20,hardware,,,,29,87,104,A
+HW-20660,PEM nut M6,hardware,,,,21,63,111,B
+HW-20661,latch 6-32,hardware,,,,15,45,2,B
+HW-20662,PEM stud M4,hardware,,,,31,93,65,C
+HW-20663,hinge M3,hardware,,,,33,99,54,C
+HW-20664,hinge 10-32,hardware,,,,36,108,31,A
+HW-20665,latch M3,hardware,,,,34,102,25,C
+HW-20666,captive screw M6,hardware,,,,36,108,172,C
+HW-20667,PEM nut 8-32,hardware,,,,9,27,17,B
+HW-20668,captive screw 1/4-20,hardware,,,,32,96,157,C
+HW-20669,captive screw 6-32,hardware,,,,31,93,10,C
+HW-20670,PEM nut M4,hardware,,,,26,78,31,C
+HW-20671,rivet nut M6,hardware,,,,18,54,5,C
+HW-20672,rivet nut 6-32,hardware,,,,17,51,109,A
+HW-20673,rivet nut M4,hardware,,,,32,96,143,C
+HW-20674,rivet nut 1/4-20,hardware,,,,34,102,151,C
+HW-20675,PEM standoff M3,hardware,,,,28,84,155,C
+HW-20676,PEM nut 1/4-20,hardware,,,,24,72,93,C
+HW-20677,PEM stud M6,hardware,,,,36,108,125,B
+HW-20678,PEM nut 8-32,hardware,,,,15,45,75,C
+HW-20679,latch 8-32,hardware,,,,25,75,47,C
+HW-20680,rivet nut M6,hardware,,,,20,60,11,C
+HW-20681,hinge 1/4-20,hardware,,,,31,93,22,C
+HW-20682,latch 1/4-20,hardware,,,,32,96,119,C
+HW-20683,hinge 8-32,hardware,,,,31,93,154,B
+HW-20684,hinge 6-32,hardware,,,,35,105,63,C
+HW-20685,rivet nut 6-32,hardware,,,,21,63,115,C
+HW-20686,rivet nut M5,hardware,,,,33,99,189,A
+HW-20687,captive screw 6-32,hardware,,,,24,72,88,C
+HW-20688,captive screw M6,hardware,,,,13,39,70,B
+HW-20689,PEM stud M5,hardware,,,,8,24,46,B
+HW-20690,rivet nut M6,hardware,,,,30,90,76,C
+HW-20691,PEM stud 6-32,hardware,,,,27,81,4,C
+HW-20692,PEM stud 6-32,hardware,,,,18,54,141,C
+HW-20693,rivet nut 1/4-20,hardware,,,,33,99,265,B
+HW-20694,PEM nut 8-32,hardware,,,,19,57,135,C
+HW-20695,latch M5,hardware,,,,17,51,96,B
+HW-20696,rivet nut 8-32,hardware,,,,19,57,144,C
+HW-20697,PEM nut M3,hardware,,,,10,30,80,C
+HW-20698,latch 8-32,hardware,,,,25,75,32,B
+HW-20699,rivet nut 8-32,hardware,,,,8,24,62,A
+HW-20700,hinge 1/4-20,hardware,,,,26,78,125,C
+HW-20701,PEM stud 10-32,hardware,,,,15,45,86,C
+HW-20702,captive screw 6-32,hardware,,,,9,27,39,C
+HW-20703,PEM standoff M3,hardware,,,,36,108,242,B
+HW-20704,hinge 10-32,hardware,,,,11,33,70,C
+HW-20705,hinge M4,hardware,,,,13,39,93,C
+HW-20706,hinge 1/4-20,hardware,,,,31,93,73,C
+HW-20707,latch M3,hardware,,,,11,33,74,A
+HW-20708,PEM stud 6-32,hardware,,,,8,24,16,A
+HW-20709,hinge 1/4-20,hardware,,,,24,72,103,B
+HW-20710,PEM stud 6-32,hardware,,,,31,93,136,B
+HW-20711,rivet nut M6,hardware,,,,21,63,118,A
+HW-20712,latch M4,hardware,,,,33,99,225,B
+HW-20713,rivet nut 10-32,hardware,,,,30,90,223,C
+HW-20714,latch M6,hardware,,,,16,48,21,C
+HW-20715,captive screw 1/4-20,hardware,,,,5,15,33,C
+HW-20716,PEM standoff M5,hardware,,,,32,96,204,C
+HW-20717,hinge M5,hardware,,,,17,51,103,C
+HW-20718,captive screw 10-32,hardware,,,,29,87,173,C
+HW-20719,captive screw M3,hardware,,,,19,57,113,B
+HW-20720,rivet nut 8-32,hardware,,,,17,51,100,B
+HW-20721,PEM stud M6,hardware,,,,7,21,1,C
+HW-20722,hinge M5,hardware,,,,13,39,61,C
+HW-20723,PEM standoff 1/4-20,hardware,,,,26,78,119,C
+HW-20724,captive screw 1/4-20,hardware,,,,17,51,43,C
+HW-20725,PEM stud 1/4-20,hardware,,,,30,90,48,B
+HW-20726,PEM nut 6-32,hardware,,,,38,114,247,A
+HW-20727,latch M4,hardware,,,,20,60,94,B
+HW-20728,hinge 1/4-20,hardware,,,,23,69,26,B
+HW-20729,latch 10-32,hardware,,,,32,96,119,C
+HW-20730,PEM nut M5,hardware,,,,19,57,49,C
+HW-20731,captive screw 8-32,hardware,,,,39,117,183,A
+HW-20732,latch M6,hardware,,,,23,69,170,C
+HW-20733,rivet nut 1/4-20,hardware,,,,15,45,7,B
+HW-20734,PEM nut 8-32,hardware,,,,10,30,20,A
+HW-20735,PEM stud M5,hardware,,,,13,39,72,C
+HW-20736,PEM nut M3,hardware,,,,25,75,153,B
+HW-20737,PEM nut 1/4-20,hardware,,,,11,33,17,B
+HW-20738,latch M4,hardware,,,,23,69,55,B
+HW-20739,hinge 8-32,hardware,,,,5,15,19,A
+HW-20740,latch 1/4-20,hardware,,,,6,18,27,A
+HW-20741,rivet nut M5,hardware,,,,38,114,69,C
+HW-20742,hinge M5,hardware,,,,12,36,68,C
+HW-20743,captive screw 8-32,hardware,,,,21,63,97,B
+HW-20744,PEM standoff M6,hardware,,,,37,111,175,C
+HW-20745,PEM stud 10-32,hardware,,,,38,114,147,C
+HW-20746,PEM nut M4,hardware,,,,36,108,283,C
+HW-20747,captive screw 10-32,hardware,,,,31,93,91,A
+HW-20748,PEM nut 6-32,hardware,,,,11,33,78,C
+HW-20749,captive screw M3,hardware,,,,30,90,197,B
+HW-20750,hinge M5,hardware,,,,27,81,225,B
+HW-20751,latch M3,hardware,,,,36,108,182,C
+HW-20752,PEM stud 8-32,hardware,,,,9,27,64,C
+HW-20753,PEM standoff M5,hardware,,,,6,18,49,C
+HW-20754,captive screw 6-32,hardware,,,,21,63,147,C
+HW-20755,latch M6,hardware,,,,39,117,103,B
+HW-20756,hinge M4,hardware,,,,11,33,84,B
+HW-20757,PEM standoff 10-32,hardware,,,,11,33,36,B
+HW-20758,PEM standoff 6-32,hardware,,,,25,75,72,C
+HW-20759,PEM standoff 1/4-20,hardware,,,,29,87,108,B
+CN-30000,powder 000,consumable,,,,13,39,115,C
+CN-30001,powder 001,consumable,,,,13,39,64,B
+CN-30002,masking 002,consumable,,,,9,27,74,B
+CN-30003,nozzle 003,consumable,,,,14,42,76,C
+CN-30004,pallet 004,consumable,,,,8,24,9,A
+CN-30005,weld wire 005,consumable,,,,6,18,4,C
+CN-30006,shielding gas 006,consumable,,,,19,57,62,C
+CN-30007,masking 007,consumable,,,,17,51,19,B
+CN-30008,tooling insert 008,consumable,,,,8,24,26,A
+CN-30009,weld wire 009,consumable,,,,9,27,34,B
+CN-30010,abrasive disc 010,consumable,,,,6,18,25,A
+CN-30011,powder 011,consumable,,,,7,21,57,C
+CN-30012,powder 012,consumable,,,,15,45,95,C
+CN-30013,shielding gas 013,consumable,,,,6,18,16,C
+CN-30014,abrasive disc 014,consumable,,,,19,57,169,B
+CN-30015,powder 015,consumable,,,,17,51,113,C
+CN-30016,lens 016,consumable,,,,5,15,5,B
+CN-30017,nozzle 017,consumable,,,,3,9,15,C
+CN-30018,lens 018,consumable,,,,10,30,25,A
+CN-30019,lens 019,consumable,,,,17,51,103,B
+CN-30020,powder 020,consumable,,,,18,54,31,C
+CN-30021,nozzle 021,consumable,,,,17,51,96,B
+CN-30022,tooling insert 022,consumable,,,,11,33,47,C
+CN-30023,powder 023,consumable,,,,16,48,38,C
+CN-30024,packaging 024,consumable,,,,11,33,64,C
+CN-30025,shielding gas 025,consumable,,,,8,24,12,C
+CN-30026,masking 026,consumable,,,,9,27,35,C
+CN-30027,shielding gas 027,consumable,,,,5,15,22,A
+CN-30028,lens 028,consumable,,,,4,12,34,C
+CN-30029,packaging 029,consumable,,,,2,6,15,B
+CN-30030,lens 030,consumable,,,,16,48,80,A
+CN-30031,lens 031,consumable,,,,7,21,40,B
+CN-30032,abrasive disc 032,consumable,,,,8,24,64,A
+CN-30033,powder 033,consumable,,,,4,12,35,C
+CN-30034,lens 034,consumable,,,,5,15,29,C
+CN-30035,nozzle 035,consumable,,,,10,30,43,C
+CN-30036,pallet 036,consumable,,,,4,12,35,C
+CN-30037,shielding gas 037,consumable,,,,2,6,12,B
+CN-30038,pallet 038,consumable,,,,8,24,67,C
+CN-30039,abrasive disc 039,consumable,,,,13,39,57,A
+CN-30040,packaging 040,consumable,,,,17,51,115,C
+CN-30041,shielding gas 041,consumable,,,,15,45,37,B
+CN-30042,shielding gas 042,consumable,,,,7,21,40,C
+CN-30043,abrasive disc 043,consumable,,,,17,51,20,C
+CN-30044,shielding gas 044,consumable,,,,10,30,23,C
+CN-30045,nozzle 045,consumable,,,,11,33,42,C
+CN-30046,weld wire 046,consumable,,,,6,18,1,C
+CN-30047,nozzle 047,consumable,,,,11,33,46,C
+CN-30048,packaging 048,consumable,,,,14,42,96,A
+CN-30049,packaging 049,consumable,,,,2,6,15,B
+CN-30050,powder 050,consumable,,,,19,57,130,C
+CN-30051,weld wire 051,consumable,,,,16,48,60,C
+CN-30052,packaging 052,consumable,,,,4,12,6,C
+CN-30053,weld wire 053,consumable,,,,5,15,14,A
+CN-30054,pallet 054,consumable,,,,15,45,133,A
+CN-30055,nozzle 055,consumable,,,,11,33,61,C
+CN-30056,pallet 056,consumable,,,,4,12,15,C
+CN-30057,powder 057,consumable,,,,13,39,105,B
+CN-30058,pallet 058,consumable,,,,9,27,17,B
+CN-30059,lens 059,consumable,,,,12,36,67,C
+CN-30060,abrasive disc 060,consumable,,,,16,48,53,B
+CN-30061,tooling insert 061,consumable,,,,19,57,154,A
+CN-30062,pallet 062,consumable,,,,8,24,47,C
+CN-30063,packaging 063,consumable,,,,12,36,64,A
+CN-30064,masking 064,consumable,,,,11,33,37,C
+CN-30065,masking 065,consumable,,,,13,39,64,C
+CN-30066,packaging 066,consumable,,,,15,45,90,A
+CN-30067,packaging 067,consumable,,,,17,51,36,A
+CN-30068,weld wire 068,consumable,,,,14,42,117,C
+CN-30069,packaging 069,consumable,,,,18,54,79,B
+CN-30070,tooling insert 070,consumable,,,,4,12,13,B
+CN-30071,nozzle 071,consumable,,,,18,54,77,C
+CN-30072,tooling insert 072,consumable,,,,9,27,58,B
+CN-30073,powder 073,consumable,,,,7,21,62,C
+CN-30074,powder 074,consumable,,,,5,15,7,C
+CN-30075,tooling insert 075,consumable,,,,6,18,24,C
+CN-30076,lens 076,consumable,,,,8,24,17,C
+CN-30077,shielding gas 077,consumable,,,,6,18,40,C
+CN-30078,weld wire 078,consumable,,,,14,42,83,C
+CN-30079,packaging 079,consumable,,,,8,24,71,C
+CN-30080,abrasive disc 080,consumable,,,,13,39,47,A
+CN-30081,pallet 081,consumable,,,,18,54,21,A
+CN-30082,lens 082,consumable,,,,16,48,101,C
+CN-30083,masking 083,consumable,,,,6,18,20,B
+CN-30084,abrasive disc 084,consumable,,,,4,12,24,C
+CN-30085,abrasive disc 085,consumable,,,,17,51,55,B
+CN-30086,masking 086,consumable,,,,10,30,80,C
+CN-30087,tooling insert 087,consumable,,,,3,9,19,C
+CN-30088,masking 088,consumable,,,,9,27,14,C
+CN-30089,pallet 089,consumable,,,,6,18,9,C
+CN-30090,powder 090,consumable,,,,14,42,94,A
+CN-30091,packaging 091,consumable,,,,2,6,17,C
+CN-30092,shielding gas 092,consumable,,,,3,9,17,C
+CN-30093,powder 093,consumable,,,,3,9,0,B
+CN-30094,shielding gas 094,consumable,,,,12,36,103,C
+CN-30095,shielding gas 095,consumable,,,,9,27,35,C
+CN-30096,weld wire 096,consumable,,,,18,54,122,B
+CN-30097,pallet 097,consumable,,,,13,39,95,B
+CN-30098,lens 098,consumable,,,,6,18,46,C
+CN-30099,masking 099,consumable,,,,3,9,7,C
+CN-30100,pallet 100,consumable,,,,19,57,90,B
+CN-30101,lens 101,consumable,,,,16,48,109,B
+CN-30102,packaging 102,consumable,,,,16,48,16,C
+CN-30103,nozzle 103,consumable,,,,15,45,35,C
+CN-30104,shielding gas 104,consumable,,,,11,33,14,C
+CN-30105,shielding gas 105,consumable,,,,6,18,18,C
+CN-30106,packaging 106,consumable,,,,13,39,96,C
+CN-30107,shielding gas 107,consumable,,,,11,33,18,C
+CN-30108,lens 108,consumable,,,,10,30,26,C
+CN-30109,abrasive disc 109,consumable,,,,16,48,128,A
+CN-30110,masking 110,consumable,,,,11,33,51,C
+CN-30111,powder 111,consumable,,,,9,27,47,C
+CN-30112,masking 112,consumable,,,,6,18,13,B
+CN-30113,tooling insert 113,consumable,,,,13,39,31,B
+CN-30114,packaging 114,consumable,,,,19,57,103,B
+CN-30115,powder 115,consumable,,,,14,42,106,B
+CN-30116,weld wire 116,consumable,,,,17,51,4,C
+CN-30117,shielding gas 117,consumable,,,,8,24,41,C
+CN-30118,powder 118,consumable,,,,6,18,35,C
+CN-30119,weld wire 119,consumable,,,,17,51,148,B
+CN-30120,shielding gas 120,consumable,,,,12,36,10,C
+CN-30121,abrasive disc 121,consumable,,,,12,36,41,A
+CN-30122,weld wire 122,consumable,,,,3,9,3,C
+CN-30123,tooling insert 123,consumable,,,,3,9,5,C
+CN-30124,abrasive disc 124,consumable,,,,8,24,57,C
+CN-30125,masking 125,consumable,,,,17,51,20,C
+CN-30126,packaging 126,consumable,,,,2,6,6,B
+CN-30127,tooling insert 127,consumable,,,,12,36,56,A
+CN-30128,tooling insert 128,consumable,,,,19,57,140,A
+CN-30129,powder 129,consumable,,,,8,24,7,C
+CN-30130,packaging 130,consumable,,,,3,9,17,C
+CN-30131,packaging 131,consumable,,,,9,27,14,B
+CN-30132,packaging 132,consumable,,,,11,33,24,C
+CN-30133,masking 133,consumable,,,,16,48,142,B
+CN-30134,lens 134,consumable,,,,16,48,138,B
+CN-30135,pallet 135,consumable,,,,15,45,88,C
+CN-30136,pallet 136,consumable,,,,14,42,114,A
+CN-30137,pallet 137,consumable,,,,3,9,13,B
+CN-30138,pallet 138,consumable,,,,5,15,5,C
+CN-30139,abrasive disc 139,consumable,,,,13,39,92,C
+CN-30140,pallet 140,consumable,,,,18,54,141,C
+CN-30141,shielding gas 141,consumable,,,,19,57,64,B
+CN-30142,tooling insert 142,consumable,,,,2,6,12,A
+CN-30143,packaging 143,consumable,,,,7,21,46,C
+CN-30144,packaging 144,consumable,,,,12,36,80,C
+CN-30145,nozzle 145,consumable,,,,7,21,59,B
+CN-30146,shielding gas 146,consumable,,,,6,18,10,B
+CN-30147,tooling insert 147,consumable,,,,3,9,8,A
+CN-30148,shielding gas 148,consumable,,,,12,36,7,C
+CN-30149,nozzle 149,consumable,,,,9,27,1,A
+CN-30150,abrasive disc 150,consumable,,,,11,33,9,C
+CN-30151,weld wire 151,consumable,,,,12,36,9,C
+CN-30152,masking 152,consumable,,,,8,24,35,C
+CN-30153,packaging 153,consumable,,,,10,30,5,C
+CN-30154,lens 154,consumable,,,,17,51,15,C
+CN-30155,masking 155,consumable,,,,3,9,3,C
+CN-30156,tooling insert 156,consumable,,,,10,30,69,C
+CN-30157,powder 157,consumable,,,,11,33,84,B
+CN-30158,pallet 158,consumable,,,,7,21,61,A
+CN-30159,weld wire 159,consumable,,,,4,12,34,C
+CN-30160,lens 160,consumable,,,,18,54,93,C
+CN-30161,masking 161,consumable,,,,7,21,51,B
+CN-30162,lens 162,consumable,,,,7,21,52,B
+CN-30163,pallet 163,consumable,,,,15,45,64,A
+CN-30164,powder 164,consumable,,,,13,39,24,B
+CN-30165,packaging 165,consumable,,,,16,48,123,B
+CN-30166,weld wire 166,consumable,,,,4,12,15,C
+CN-30167,tooling insert 167,consumable,,,,4,12,17,B
+CN-30168,nozzle 168,consumable,,,,19,57,24,A
+CN-30169,masking 169,consumable,,,,15,45,72,C
+CN-30170,masking 170,consumable,,,,8,24,23,C
+CN-30171,abrasive disc 171,consumable,,,,11,33,88,C
+CN-30172,tooling insert 172,consumable,,,,4,12,11,A
+CN-30173,nozzle 173,consumable,,,,13,39,81,C
+CN-30174,abrasive disc 174,consumable,,,,8,24,22,B
+CN-30175,masking 175,consumable,,,,12,36,7,A
+CN-30176,shielding gas 176,consumable,,,,2,6,17,B
+CN-30177,packaging 177,consumable,,,,11,33,34,A
+CN-30178,pallet 178,consumable,,,,5,15,28,C
+CN-30179,weld wire 179,consumable,,,,5,15,1,C
+CN-30180,powder 180,consumable,,,,7,21,24,C
+CN-30181,powder 181,consumable,,,,14,42,46,C
+CN-30182,weld wire 182,consumable,,,,11,33,8,B
+CN-30183,weld wire 183,consumable,,,,18,54,93,B
+CN-30184,tooling insert 184,consumable,,,,12,36,45,C
+CN-30185,weld wire 185,consumable,,,,8,24,25,B
+CN-30186,nozzle 186,consumable,,,,6,18,6,B
+CN-30187,masking 187,consumable,,,,18,54,85,A
+CN-30188,lens 188,consumable,,,,6,18,17,C
+CN-30189,shielding gas 189,consumable,,,,13,39,62,C
+CN-30190,weld wire 190,consumable,,,,19,57,97,C
+CN-30191,nozzle 191,consumable,,,,18,54,158,B
+CN-30192,masking 192,consumable,,,,8,24,66,B
+CN-30193,masking 193,consumable,,,,15,45,128,C
+CN-30194,nozzle 194,consumable,,,,7,21,23,C
+CN-30195,masking 195,consumable,,,,9,27,31,C
+CN-30196,weld wire 196,consumable,,,,14,42,40,B
+CN-30197,tooling insert 197,consumable,,,,13,39,54,B
+CN-30198,tooling insert 198,consumable,,,,14,42,57,C
+CN-30199,masking 199,consumable,,,,11,33,6,B
+CN-30200,packaging 200,consumable,,,,8,24,65,B
+CN-30201,packaging 201,consumable,,,,15,45,110,C
+CN-30202,packaging 202,consumable,,,,14,42,29,A
+CN-30203,shielding gas 203,consumable,,,,4,12,8,C
+CN-30204,pallet 204,consumable,,,,2,6,15,C
+CN-30205,tooling insert 205,consumable,,,,16,48,80,A
+CN-30206,nozzle 206,consumable,,,,7,21,2,B
+CN-30207,lens 207,consumable,,,,19,57,19,B
+CN-30208,abrasive disc 208,consumable,,,,13,39,78,A
+CN-30209,powder 209,consumable,,,,7,21,5,B
+CN-30210,shielding gas 210,consumable,,,,12,36,45,B
+CN-30211,shielding gas 211,consumable,,,,11,33,0,A
+CN-30212,powder 212,consumable,,,,7,21,2,C
+CN-30213,powder 213,consumable,,,,2,6,12,C
+CN-30214,shielding gas 214,consumable,,,,7,21,10,C
+CN-30215,abrasive disc 215,consumable,,,,7,21,2,C
+CN-30216,abrasive disc 216,consumable,,,,10,30,17,C
+CN-30217,tooling insert 217,consumable,,,,17,51,135,C
+CN-30218,shielding gas 218,consumable,,,,8,24,8,A
+CN-30219,shielding gas 219,consumable,,,,14,42,8,B
+CN-30220,abrasive disc 220,consumable,,,,9,27,3,B
+CN-30221,weld wire 221,consumable,,,,6,18,27,C
+CN-30222,lens 222,consumable,,,,9,27,76,C
+CN-30223,abrasive disc 223,consumable,,,,9,27,37,A
+CN-30224,nozzle 224,consumable,,,,11,33,69,C
+CN-30225,nozzle 225,consumable,,,,19,57,109,A
+CN-30226,powder 226,consumable,,,,10,30,70,B
+CN-30227,weld wire 227,consumable,,,,16,48,109,C
+CN-30228,abrasive disc 228,consumable,,,,6,18,27,A
+CN-30229,weld wire 229,consumable,,,,4,12,17,C
+CN-30230,powder 230,consumable,,,,12,36,39,B
+CN-30231,abrasive disc 231,consumable,,,,17,51,114,C
+CN-30232,nozzle 232,consumable,,,,6,18,21,C
+CN-30233,pallet 233,consumable,,,,13,39,67,B
+CN-30234,tooling insert 234,consumable,,,,18,54,53,C
+CN-30235,abrasive disc 235,consumable,,,,7,21,62,B
+CN-30236,shielding gas 236,consumable,,,,5,15,15,C
+CN-30237,tooling insert 237,consumable,,,,3,9,26,C
+CN-30238,abrasive disc 238,consumable,,,,8,24,22,C
+CN-30239,shielding gas 239,consumable,,,,11,33,24,B
+CN-30240,shielding gas 240,consumable,,,,16,48,79,C
+CN-30241,lens 241,consumable,,,,4,12,11,B
+CN-30242,packaging 242,consumable,,,,4,12,12,C
+CN-30243,weld wire 243,consumable,,,,11,33,12,B
+CN-30244,nozzle 244,consumable,,,,18,54,69,C
+CN-30245,abrasive disc 245,consumable,,,,9,27,64,B
+CN-30246,nozzle 246,consumable,,,,3,9,3,C
+CN-30247,powder 247,consumable,,,,11,33,33,C
+CN-30248,lens 248,consumable,,,,9,27,66,C
+CN-30249,tooling insert 249,consumable,,,,3,9,26,C
+CN-30250,abrasive disc 250,consumable,,,,13,39,87,B
+CN-30251,tooling insert 251,consumable,,,,16,48,95,C
+CN-30252,tooling insert 252,consumable,,,,13,39,12,C
+CN-30253,lens 253,consumable,,,,12,36,58,C
+CN-30254,weld wire 254,consumable,,,,5,15,38,C
+CN-30255,tooling insert 255,consumable,,,,18,54,95,C
+CN-30256,weld wire 256,consumable,,,,15,45,38,C
+CN-30257,powder 257,consumable,,,,8,24,27,A
+CN-30258,weld wire 258,consumable,,,,5,15,13,C
+CN-30259,packaging 259,consumable,,,,2,6,16,C
+CN-30260,packaging 260,consumable,,,,18,54,84,B
+CN-30261,nozzle 261,consumable,,,,13,39,36,B
+CN-30262,tooling insert 262,consumable,,,,11,33,40,C
+CN-30263,masking 263,consumable,,,,10,30,25,B
+CN-30264,abrasive disc 264,consumable,,,,6,18,47,C
+CN-30265,packaging 265,consumable,,,,6,18,24,A
+CN-30266,lens 266,consumable,,,,9,27,46,C
+CN-30267,weld wire 267,consumable,,,,6,18,46,C
+CN-30268,tooling insert 268,consumable,,,,2,6,11,A
+CN-30269,nozzle 269,consumable,,,,5,15,23,C
+CN-30270,weld wire 270,consumable,,,,14,42,39,C
+CN-30271,lens 271,consumable,,,,2,6,5,B
+CN-30272,shielding gas 272,consumable,,,,11,33,28,B
+CN-30273,nozzle 273,consumable,,,,16,48,112,C
+CN-30274,abrasive disc 274,consumable,,,,10,30,86,B
+CN-30275,pallet 275,consumable,,,,18,54,154,A
+CN-30276,nozzle 276,consumable,,,,11,33,27,C
+CN-30277,packaging 277,consumable,,,,2,6,16,C
+CN-30278,tooling insert 278,consumable,,,,15,45,99,C
+CN-30279,abrasive disc 279,consumable,,,,9,27,52,B
+CN-30280,shielding gas 280,consumable,,,,16,48,54,B
+CN-30281,powder 281,consumable,,,,19,57,82,B
+CN-30282,lens 282,consumable,,,,16,48,71,C
+CN-30283,nozzle 283,consumable,,,,15,45,10,C
+CN-30284,abrasive disc 284,consumable,,,,5,15,13,B
+CN-30285,tooling insert 285,consumable,,,,11,33,93,C
+CN-30286,tooling insert 286,consumable,,,,11,33,88,B
+CN-30287,lens 287,consumable,,,,17,51,137,B
+CN-30288,abrasive disc 288,consumable,,,,13,39,1,A
+CN-30289,weld wire 289,consumable,,,,14,42,63,B
+CN-30290,abrasive disc 290,consumable,,,,9,27,59,C
+CN-30291,abrasive disc 291,consumable,,,,10,30,83,B
+CN-30292,masking 292,consumable,,,,10,30,57,A
+CN-30293,tooling insert 293,consumable,,,,6,18,48,B
+CN-30294,nozzle 294,consumable,,,,19,57,100,C
+CN-30295,abrasive disc 295,consumable,,,,18,54,22,C
+CN-30296,powder 296,consumable,,,,5,15,29,C
+CN-30297,abrasive disc 297,consumable,,,,11,33,29,A
+CN-30298,nozzle 298,consumable,,,,12,36,86,A
+CN-30299,powder 299,consumable,,,,12,36,41,C
+CN-30300,lens 300,consumable,,,,4,12,16,B
+CN-30301,masking 301,consumable,,,,14,42,59,B
+CN-30302,tooling insert 302,consumable,,,,6,18,38,B
+CN-30303,nozzle 303,consumable,,,,14,42,25,C
+CN-30304,packaging 304,consumable,,,,4,12,13,C
+CN-30305,masking 305,consumable,,,,9,27,63,C
+CN-30306,lens 306,consumable,,,,6,18,11,C
+CN-30307,abrasive disc 307,consumable,,,,10,30,17,B
+CN-30308,masking 308,consumable,,,,15,45,133,C
+CN-30309,weld wire 309,consumable,,,,13,39,54,C
+CN-30310,masking 310,consumable,,,,9,27,72,A
+CN-30311,tooling insert 311,consumable,,,,17,51,123,C
+CN-30312,lens 312,consumable,,,,17,51,47,C
+CN-30313,tooling insert 313,consumable,,,,11,33,47,C
+CN-30314,abrasive disc 314,consumable,,,,15,45,73,C
+CN-30315,lens 315,consumable,,,,15,45,100,B
+CN-30316,masking 316,consumable,,,,16,48,68,C
+CN-30317,weld wire 317,consumable,,,,3,9,24,B
+CN-30318,pallet 318,consumable,,,,13,39,54,A
+CN-30319,abrasive disc 319,consumable,,,,10,30,9,C
+CN-30320,weld wire 320,consumable,,,,4,12,25,B
+CN-30321,shielding gas 321,consumable,,,,19,57,53,C
+CN-30322,abrasive disc 322,consumable,,,,12,36,78,B
+CN-30323,nozzle 323,consumable,,,,13,39,33,A
+CN-30324,pallet 324,consumable,,,,5,15,0,C
+CN-30325,packaging 325,consumable,,,,9,27,78,A
+CN-30326,packaging 326,consumable,,,,9,27,20,C
+CN-30327,powder 327,consumable,,,,13,39,3,B
+CN-30328,lens 328,consumable,,,,19,57,10,B
+CN-30329,shielding gas 329,consumable,,,,10,30,83,C
+CN-30330,shielding gas 330,consumable,,,,7,21,28,B
+CN-30331,packaging 331,consumable,,,,7,21,43,C
+CN-30332,weld wire 332,consumable,,,,19,57,51,C
+CN-30333,powder 333,consumable,,,,7,21,53,A
+CN-30334,masking 334,consumable,,,,6,18,7,C
+CN-30335,tooling insert 335,consumable,,,,17,51,78,C
+CN-30336,tooling insert 336,consumable,,,,12,36,9,C
+CN-30337,pallet 337,consumable,,,,15,45,2,B
+CN-30338,shielding gas 338,consumable,,,,18,54,47,C
+CN-30339,powder 339,consumable,,,,5,15,15,C
+CN-30340,nozzle 340,consumable,,,,7,21,37,C
+CN-30341,nozzle 341,consumable,,,,15,45,6,B
+CN-30342,lens 342,consumable,,,,13,39,1,C
+CN-30343,masking 343,consumable,,,,9,27,80,C
+CN-30344,abrasive disc 344,consumable,,,,13,39,99,C
+CN-30345,packaging 345,consumable,,,,16,48,89,B
+CN-30346,nozzle 346,consumable,,,,15,45,11,B
+CN-30347,packaging 347,consumable,,,,7,21,14,B
+CN-30348,weld wire 348,consumable,,,,14,42,59,C
+CN-30349,weld wire 349,consumable,,,,3,9,1,B
+CN-30350,weld wire 350,consumable,,,,8,24,26,C
+CN-30351,weld wire 351,consumable,,,,2,6,0,C
+CN-30352,weld wire 352,consumable,,,,13,39,115,A
+CN-30353,abrasive disc 353,consumable,,,,11,33,76,B
+CN-30354,packaging 354,consumable,,,,16,48,142,C
+CN-30355,packaging 355,consumable,,,,8,24,69,C
+CN-30356,weld wire 356,consumable,,,,10,30,49,B
+CN-30357,abrasive disc 357,consumable,,,,11,33,47,C
+CN-30358,powder 358,consumable,,,,17,51,18,C
+CN-30359,shielding gas 359,consumable,,,,4,12,16,B
+CN-30360,masking 360,consumable,,,,6,18,25,C
+CN-30361,packaging 361,consumable,,,,10,30,14,B
+CN-30362,weld wire 362,consumable,,,,19,57,147,C
+CN-30363,packaging 363,consumable,,,,15,45,79,C
+CN-30364,abrasive disc 364,consumable,,,,12,36,73,C
+CN-30365,pallet 365,consumable,,,,12,36,15,C
+CN-30366,masking 366,consumable,,,,7,21,44,C
+CN-30367,pallet 367,consumable,,,,8,24,22,A
+CN-30368,lens 368,consumable,,,,11,33,97,C
+CN-30369,packaging 369,consumable,,,,8,24,7,B
+CN-30370,tooling insert 370,consumable,,,,15,45,90,C
+CN-30371,abrasive disc 371,consumable,,,,9,27,52,C
+CN-30372,pallet 372,consumable,,,,4,12,20,C
+CN-30373,masking 373,consumable,,,,19,57,86,C
+CN-30374,weld wire 374,consumable,,,,16,48,28,B
+CN-30375,nozzle 375,consumable,,,,12,36,97,A
