@@ -1,0 +1,16 @@
+# build tooling
+generate/
+CLAUDE.md
+# environment and local state
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+*.duckdb
+*.duckdb.wal
+.dlt/
+pipeline/dbt/target/
+pipeline/dbt/logs/
+pipeline/dbt/dbt_packages/
+logs/
+pipeline/dbt/.user.yml

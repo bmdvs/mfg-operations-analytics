@@ -1,0 +1,45 @@
+version: 2
+
+sources:
+  - name: erp
+    schema: raw
+    tables:
+      - name: erp__customers
+      - name: erp__export_batch
+      - name: erp__inventory_items
+      - name: erp__inventory_transactions
+      - name: erp__job_operations
+      - name: erp__jobs
+      - name: erp__order_lines
+      - name: erp__parts
+      - name: erp__po_lines
+      - name: erp__purchase_orders
+      - name: erp__quote_lines
+      - name: erp__quotes
+      - name: erp__routings
+      - name: erp__sales_orders
+      - name: erp__shipments
+      - name: erp__work_center_calendar
+  - name: hr
+    schema: raw
+    tables:
+      - name: hr__attendance
+      - name: hr__employees
+  - name: maintenance
+    schema: raw
+    tables:
+      - name: maintenance__downtime_events
+  - name: mes
+    schema: raw
+    tables:
+      - name: mes__holds
+      - name: mes__job_status_events
+      - name: mes__kit_checks
+      - name: mes__labor_transactions
+      - name: mes__laser_nests
+      - name: mes__powder_color_schedule
+  - name: qms
+    schema: raw
+    tables:
+      - name: qms__ncrs
+      - name: qms__rework_ops
