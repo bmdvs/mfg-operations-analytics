@@ -1,0 +1,96 @@
+version: 2
+
+models:
+  - name: stg_erp__customers
+    columns:
+      - name: customer_id
+        data_tests: [unique, not_null]
+  - name: stg_erp__export_batch
+    columns:
+      - name: export_batch_id
+        data_tests: [unique, not_null]
+  - name: stg_erp__inventory_items
+    columns:
+      - name: item_id
+        data_tests: [unique, not_null]
+  - name: stg_erp__inventory_transactions
+    columns:
+      - name: transaction_id
+        data_tests: [unique, not_null]
+  - name: stg_erp__job_operations
+  - name: stg_erp__jobs
+    columns:
+      - name: job_id
+        data_tests: [unique, not_null]
+  - name: stg_erp__order_lines
+    columns:
+      - name: order_line_id
+        data_tests: [unique, not_null]
+  - name: stg_erp__parts
+    columns:
+      - name: part_id
+        data_tests: [unique, not_null]
+  - name: stg_erp__po_lines
+    columns:
+      - name: po_line_id
+        data_tests: [unique, not_null]
+  - name: stg_erp__purchase_orders
+    columns:
+      - name: po_id
+        data_tests: [unique, not_null]
+  - name: stg_erp__quote_lines
+    columns:
+      - name: quote_line_id
+        data_tests: [unique, not_null]
+  - name: stg_erp__quotes
+    columns:
+      - name: quote_id
+        data_tests: [unique, not_null]
+  - name: stg_erp__routings
+  - name: stg_erp__sales_orders
+    columns:
+      - name: sales_order_id
+        data_tests: [unique, not_null]
+  - name: stg_erp__shipments
+    columns:
+      - name: shipment_id
+        data_tests: [unique, not_null]
+  - name: stg_erp__work_center_calendar
+  - name: stg_hr__attendance
+  - name: stg_hr__employees
+    columns:
+      - name: employee_id
+        data_tests: [unique, not_null]
+  - name: stg_maintenance__downtime_events
+    columns:
+      - name: downtime_id
+        data_tests: [unique, not_null]
+  - name: stg_mes__holds
+    columns:
+      - name: hold_id
+        data_tests: [unique, not_null]
+  - name: stg_mes__job_status_events
+    columns:
+      - name: event_id
+        data_tests: [unique, not_null]
+  - name: stg_mes__kit_checks
+    columns:
+      - name: job_id
+        data_tests: [unique, not_null]
+  - name: stg_mes__labor_transactions
+    columns:
+      - name: transaction_id
+        data_tests: [unique, not_null]
+  - name: stg_mes__laser_nests
+    columns:
+      - name: nest_id
+        data_tests: [unique, not_null]
+  - name: stg_mes__powder_color_schedule
+  - name: stg_qms__ncrs
+    columns:
+      - name: ncr_id
+        data_tests: [unique, not_null]
+  - name: stg_qms__rework_ops
+    columns:
+      - name: rework_op_id
+        data_tests: [unique, not_null]
