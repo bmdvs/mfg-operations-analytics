@@ -1,0 +1,7 @@
+ops_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('OPS_DUCKDB_PATH', '../../data/ops.duckdb') }}"
+      threads: 4
