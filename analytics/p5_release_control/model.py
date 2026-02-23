@@ -5,6 +5,7 @@ move, material and outside-processing times from the measured distributions. Dis
 the daily dispatch list, the powder color schedule and the overtime rule follow the shop's practice.
 """
 import bisect
+import zlib
 from collections import defaultdict
 
 import numpy as np
@@ -27,6 +28,11 @@ BRAKE_PRIORITY = {"B1": [{"precision"}, {"heavy", "light"}], "B2": [{"precision"
                   "B5": [{"light"}]}
 
 
+def generator_seed(scenario, replication):
+    """The seed of the one generator a run draws from: its scenario and its replication number."""
+    return np.random.SeedSequence([zlib.crc32(scenario.encode("utf8")), int(replication)])
+
+
 def hours(ts):
     return (pd.Timestamp(ts) - T0) / pd.Timedelta(hours=1)
 
@@ -38,7 +44,8 @@ class Sampler:
     def __init__(self, std, ratio, bands=8):
         std, ratio = np.asarray(std, dtype=float), np.asarray(ratio, dtype=float)
         ok = np.isfinite(ratio) & (std > 0)
-        std, ratio = std[ok], ratio[ok]
+        order = np.lexsort((ratio[ok], std[ok]))                       # one order whatever order the rows were read in
+        std, ratio = std[ok][order], ratio[ok][order]
         self.edges = np.unique(np.quantile(std, np.linspace(0, 1, bands + 1)[1:-1])) if len(std) >= bands * 5 else np.array([])
         idx = np.searchsorted(self.edges, std, side="right")
         self.arrays = [ratio[idx == k] for k in range(len(self.edges) + 1)]
@@ -63,7 +70,7 @@ class Inputs:
             join intermediate.int_job_lead_time l using (job_id)
             join staging.stg_erp__parts p on p.part_id = j.part_id
             left join staging.stg_erp__order_lines ol on ol.order_line_id = j.order_line_id
-            where j.release_date >= '{start}'""")
+            where j.release_date >= '{start}' order by j.job_id""")
         ops = q(f"""
             select jo.job_id, jo.op_seq, jo.work_center, jo.planned_start, jo.setup_std, jo.run_std * jo.qty as run_std_hours, r.tooling_set
             from staging.stg_erp__job_operations jo
@@ -71,21 +78,21 @@ class Inputs:
             left join staging.stg_erp__routings r on r.part_id = j.part_id and r.op_seq = jo.op_seq and r.work_center = jo.work_center
             where j.release_date >= '{start}' order by jo.job_id, jo.op_seq""")
         sheets = q("""select t.job_id, min(t.item_id) as sheet_item, sum(t.qty) as sheets from staging.stg_erp__inventory_transactions t
-                      join staging.stg_erp__inventory_items i using (item_id) where i.item_type = 'sheet' and t.transaction_type = 'issue' group by 1""")
+                      join staging.stg_erp__inventory_items i using (item_id) where i.item_type = 'sheet' and t.transaction_type = 'issue' group by 1 order by 1""")
         jobs = jobs.merge(sheets, on="job_id", how="left")
         jobs["rush_flag"] = jobs["rush_flag"].fillna(False).astype(bool)
         jobs["cls"] = np.where((jobs["bend_count"] >= 10) | jobs["tolerance_critical"].fillna(False), "precision",
                                np.where(jobs["thickness"].isin(HEAVY_GAUGES), "heavy", "light"))
-        self.jobs = jobs.sort_values("release_date").reset_index(drop=True)
+        self.jobs = jobs.sort_values(["release_date", "job_id"]).reset_index(drop=True)
         self.ops = {k: g.to_dict("records") for k, g in ops.groupby("job_id")}
 
-        cal = q("select work_center, calendar_date, scheduled_hours, saturday from staging.stg_erp__work_center_calendar")
+        cal = q("select work_center, calendar_date, scheduled_hours, saturday from staging.stg_erp__work_center_calendar order by all")
         cal["calendar_date"] = pd.to_datetime(cal["calendar_date"])
-        self.cal = cal[cal["calendar_date"] >= T0]
-        self.shifts = q("select machine_id, work_center, crewed_shifts from intermediate.int_machine_shifts").set_index("machine_id")
-        dt = q("select machine_id, start_ts, end_ts from marts.mart_downtime_events")
+        self.cal = cal[cal["calendar_date"] >= T0].sort_values(["work_center", "calendar_date"]).reset_index(drop=True)
+        self.shifts = q("select machine_id, work_center, crewed_shifts from intermediate.int_machine_shifts order by all").set_index("machine_id")
+        dt = q("select machine_id, start_ts, end_ts from marts.mart_downtime_events order by all")
         self.downtime = {k: [(hours(a), hours(b)) for a, b in zip(g["start_ts"], g["end_ts"])] for k, g in dt.groupby("machine_id")}
-        colors = q("select schedule_date, color from staging.stg_mes__powder_color_schedule")
+        colors = q("select schedule_date, color from staging.stg_mes__powder_color_schedule order by all")
         self.color_days = defaultdict(set)
         for d, c in zip(pd.to_datetime(colors["schedule_date"]), colors["color"]):
             self.color_days[d.date()].add(c)
@@ -101,7 +108,7 @@ class Inputs:
 
         # measured distributions (report year)
         s = q(f"select work_center, setup_std, setup_ratio, same_tooling_as_previous as grouped, qty from marts.mart_setups "
-              f"where setup_year = {REPORT_YEAR} and setup_std > 0")
+              f"where setup_year = {REPORT_YEAR} and setup_std > 0 order by all")
         s["grouped"] = s["grouped"].fillna(False).astype(bool)
         self.setup_ratio = {wc: Sampler(g["setup_std"], g["setup_ratio"]) for wc, g in s[s["work_center"] != "press_brake"].groupby("work_center")}
         b = s[s["work_center"] == "press_brake"]
@@ -111,22 +118,24 @@ class Inputs:
                 x = b[(b["grouped"] == g_) & ((b["qty"] < 25) == sm)]
                 self.brake_setup_ratio[(g_, sm)] = Sampler(x["setup_std"], x["setup_ratio"], bands=4)
         r = q(f"select work_center, machine_id, run_std_hours, run_hours / run_std_hours as ratio from marts.mart_run_standards "
-              f"where start_year = {REPORT_YEAR} and run_std_hours > 0")
+              f"where start_year = {REPORT_YEAR} and run_std_hours > 0 order by all")
         self.run_ratio = {wc: Sampler(g["run_std_hours"], g["ratio"]) for wc, g in r.groupby("work_center")}
         self.laser_run_ratio = {m: Sampler(g["run_std_hours"], g["ratio"]) for m, g in r[r["work_center"] == "laser"].groupby("machine_id")}
         st = q(f"""select s.job_id, s.op_seq, s.work_center, s.stage, s.days, l.routing_class from intermediate.int_job_stage_days s
-                   join intermediate.int_job_lead_time l using (job_id) where year(l.ship_date) = {REPORT_YEAR}""")
+                   join intermediate.int_job_lead_time l using (job_id) where year(l.ship_date) = {REPORT_YEAR} order by all""")
         mat = st[st["stage"] == "material wait at first operation"].groupby("job_id")["days"].sum()
         jl = st.drop_duplicates("job_id").set_index("job_id")["routing_class"]
-        self.material = {c: mat.reindex(jl[jl == c].index).fillna(0.0).to_numpy() for c in jl.unique()}
+        self.material = {c: np.sort(mat.reindex(jl[jl == c].index).fillna(0.0).to_numpy()) for c in sorted(jl.unique())}
         mv = st[(st["stage"] == "move") | st["stage"].str.startswith("hold")].groupby(["job_id", "op_seq", "work_center"])["days"].sum().reset_index()
-        self.move = {wc: g["days"].to_numpy() for wc, g in mv.groupby("work_center")}
-        self.outside = st[st["stage"] == "outside processing"].groupby(["job_id", "op_seq"])["days"].sum().to_numpy()
-        self.ship = st[st["stage"] == "complete to ship"]["days"].to_numpy()
-        self.brake_actual_over_standard = float(q(f"""select sum(setup_hours + run_hours) / sum(setup_std + run_std_hours) from marts.mart_operations
-                                                     where work_center = 'press_brake' and start_year = {REPORT_YEAR}""").iloc[0, 0])
+        self.move = {wc: np.sort(g["days"].to_numpy()) for wc, g in mv.groupby("work_center")}
+        self.outside = np.sort(st[st["stage"] == "outside processing"].groupby(["job_id", "op_seq"])["days"].sum().to_numpy())
+        self.ship = np.sort(st[st["stage"] == "complete to ship"]["days"].to_numpy())
+        # ratios summed by the database are rounded: the order of a sum is not fixed and its last digits must not reach the model
+        self.brake_actual_over_standard = round(float(q(f"""select sum(setup_hours + run_hours) / sum(setup_std + run_std_hours) from marts.mart_operations
+                                                           where work_center = 'press_brake' and start_year = {REPORT_YEAR}""").iloc[0, 0]), 9)
         # overtime as worked: share of weeks with a Saturday brake shift and share of days with an extended shift, by jobs at the brakes that week
-        wkl = q("select wip_at_brakes, brake_saturday_shifts, brake_extended_hours from marts.mart_weekly_floor where weekdays = 5")
+        wkl = q("select round(wip_at_brakes, 6) as wip_at_brakes, brake_saturday_shifts, brake_extended_hours from marts.mart_weekly_floor "
+                "where weekdays = 5 order by week_start")
         self.ot_edges = np.array([30.0, 60.0, 90.0, 120.0])
         band = np.searchsorted(self.ot_edges, wkl["wip_at_brakes"].to_numpy(), side="right")
         self.p_saturday = np.array([float((wkl["brake_saturday_shifts"][band == k] > 0).mean()) if (band == k).any() else 0.0 for k in range(5)])
@@ -135,7 +144,7 @@ class Inputs:
         av = q("""select sum(m.machine_hours) / sum(m.scheduled_hours - m.downtime_hours) from marts.mart_machine_weekly m
                   join marts.mart_weekly_floor w using (week_start)
                   where m.work_center = 'press_brake' and m.saturday_hours = 0 and m.machine_id not in ('B1', 'B2') and w.wip_at_brakes > 120 and w.weekdays = 5""")
-        self.brake_availability = min(float(av.iloc[0, 0]), 1.0)
+        self.brake_availability = round(min(float(av.iloc[0, 0]), 1.0), 9)
 
     # working-day clock
     def W(self, t):
@@ -256,7 +265,7 @@ class Machine:
 
 
 class Shop:
-    def __init__(self, inp, seed=1, scenario=None):
+    def __init__(self, inp, seed, scenario=None):
         self.inp, self.rng, self.sc = inp, np.random.default_rng(seed), scenario or {}
         self.env = simpy.Environment()
         self.queue = defaultdict(list)
@@ -587,6 +596,20 @@ class Shop:
         env.process(self.monitor())
         env.run(until=hours(until))
         return self
+
+
+def quarter_measures(shop):
+    """Jobs shipped, on-time delivery and median lead time by quarter shipped, from one run."""
+    inp = shop.inp
+    r = pd.DataFrame(shop.results)
+    r["ship_date"] = r["ship_ts"].dt.normalize()
+    r["lead"] = [inp.W(hours(s) + 15) - inp.W(hours(a) + 10) for s, a in zip(r["ship_date"], r["release_date"])]
+    r["on_time"] = r["ship_date"] <= pd.to_datetime(r["due_date"])
+    g = r[r["ship_date"] >= "2024-07-01"].groupby(r["ship_date"].dt.to_period("Q")).agg(jobs_shipped=("lead", "size"), on_time_delivery=("on_time", "mean"),
+                                                                                       lead_time_median=("lead", "median")).reset_index()
+    g["quarter"] = g.pop("ship_date").astype(str)
+    g["peak_brake_queue"] = pd.DataFrame(shop.daily)["press_brake"].max()
+    return g
 
 
 # ── measures ────────────────────────────────────────────────────────────────

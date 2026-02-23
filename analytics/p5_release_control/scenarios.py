@@ -1,4 +1,5 @@
 """Scenarios on the validated shop model: 30 replications each on the 2024 to 2025 release stream, with paired differences from current practice.
+Each run draws from one generator seeded by its scenario and replication number, so a run repeats exactly.
 
 Usage: python -m analytics.p5_release_control.scenarios [replications] [workers]
 """
@@ -9,10 +10,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from analytics.p5_release_control.model import Inputs, Shop, measures
+from analytics.p5_release_control.model import Inputs, Shop, generator_seed, measures, quarter_measures
 
 OUT = Path(__file__).resolve().parent / "results" / "scenario_runs.csv"
-HOLD = Path(__file__).resolve().parent / "results" / "release_hold_runs.csv"
+QUARTERS = Path(__file__).resolve().parent / "results" / "validation_quarters.csv"
 PEAK_MONTHS = (11, 12, 1, 2)
 MEASURES = ["lead_time_median", "lead_time_p90", "on_time_delivery", "wip_mean", "brake_utilization", "robotic_weld_utilization", "saturday_shifts",
             "extended_hours", "jobs_shipped", "on_time_delivery_load_aware", "promises_longer_than_fixed_quote", "release_hold_days"]
@@ -55,8 +56,8 @@ def versus(df, scenario, reference):
     """Paired difference of one scenario from another, by period and measure."""
     out = []
     for period in df["period"].unique():
-        a = df[(df["scenario"] == scenario) & (df["period"] == period)].set_index("seed")
-        b = df[(df["scenario"] == reference) & (df["period"] == period)].set_index("seed").reindex(a.index)
+        a = df[(df["scenario"] == scenario) & (df["period"] == period)].set_index("replication")
+        b = df[(df["scenario"] == reference) & (df["period"] == period)].set_index("replication").reindex(a.index)
         for m in MEASURES:
             if m in a and not a[m].isna().all():
                 d = a[m] - b[m]
@@ -79,12 +80,12 @@ def setup_reduction():
     keys = {(r.part_id, int(r.op_seq)) for r in top.head(A.TOP_N).itertuples() if r.work_center == "press_brake"}
     b = A.brake(D)
     other = b[[(p, int(o)) not in keys for p, o in zip(b["part_id"], b["op_seq"])]]["setup_hours"].sum()
-    return dict(at_standard=keys, other_factor=1 - (asg + ho) / other)
+    return dict(at_standard=keys, other_factor=round(1 - (asg + ho) / other, 9))
 
 
 def run_one(args):
     global _INP, _RED
-    name, sc, seed = args
+    name, sc, rep = args
     if _INP is None:
         _INP = Inputs()
     sc = dict(sc)
@@ -92,31 +93,35 @@ def run_one(args):
         if _RED is None:
             _RED = setup_reduction()
         sc["setup_reduction"] = _RED
-    shop = Shop(_INP, seed=seed, scenario=sc).run()
+    shop = Shop(_INP, generator_seed(name, rep), scenario=sc).run()
     rows = []
     for fq, label in ((1, "year"), (2, "Q2 to Q4")):
         m = measures(shop, fq)
-        rows.append(dict(scenario=name, seed=seed, period=label, **m))
-    return rows
+        rows.append(dict(scenario=name, replication=rep, period=label, **m))
+    quarters = quarter_measures(shop).assign(replication=rep).to_dict("records") if name.startswith("S0") else []
+    return rows, quarters
 
 
 def run(scenarios, reps, workers):
-    tasks = [(n, sc, 100 + k) for n, sc in scenarios.items() for k in range(reps)]
-    rows = []
+    tasks = [(n, sc, k + 1) for n, sc in scenarios.items() for k in range(reps)]
+    rows, quarters = [], []
     with ProcessPoolExecutor(max_workers=workers) as ex:
         for i, r in enumerate(ex.map(run_one, tasks, chunksize=2)):
-            rows.extend(r)
+            rows.extend(r[0])
+            quarters.extend(r[1])
             if (i + 1) % 30 == 0:
                 print(f"{i + 1} of {len(tasks)} runs", flush=True)
+    if quarters:
+        pd.DataFrame(quarters).to_csv(QUARTERS, index=False)
     return pd.DataFrame(rows)
 
 
 def summarize(df):
     """Mean and 95% interval per scenario and period, and the paired difference from current practice."""
-    base = df[df["scenario"].str.startswith("S0")].set_index(["period", "seed"])
+    base = df[df["scenario"].str.startswith("S0")].set_index(["period", "replication"])
     out = []
     for (name, period), g in df.groupby(["scenario", "period"], sort=False):
-        g = g.set_index("seed")
+        g = g.set_index("replication")
         b = base.loc[period].reindex(g.index)
         n = len(g)
         for m in MEASURES:
@@ -138,41 +143,19 @@ def best_cap(summary):
     return int(pick.split()[-1])
 
 
-def run_packages(reps=30, workers=6):
-    df = pd.read_csv(OUT)
-    df = df[~df["scenario"].isin(PACKAGES)]
-    df = pd.concat([df, run(PACKAGES, reps, workers)], ignore_index=True)
-    df.to_csv(OUT, index=False)
-    return df
-
-
-def run_gated(reps=30, workers=6):
-    """A second set of replications of the scenarios with release control (the WIP caps, constraint-paced release and the cap combinations),
-    kept for the release hold in working days."""
-    df = pd.read_csv(OUT)
-    names = [n for n in df["scenario"].unique() if "WIP cap" in n or n.startswith("S2")]
-    gated = {n: sc for n, sc in {**SCENARIOS, **combos(best_cap(summarize(df)))}.items() if n in names}
-    assert len(gated) == len(names)
-    new = run(gated, reps, workers)
-    new = new[new["period"] == "year"][["scenario", "seed", "release_hold_days"]]
-    new.to_csv(HOLD, index=False)
-    return new
-
-
 if __name__ == "__main__":
     reps = int(sys.argv[1]) if len(sys.argv) > 1 else 30
     workers = int(sys.argv[2]) if len(sys.argv) > 2 else 6
-    if len(sys.argv) > 3 and sys.argv[3] == "packages":
-        run_packages(reps, workers)
-        print("wrote", OUT)
+    out = Path(sys.argv[3]) if len(sys.argv) > 3 else OUT
+    only = sys.argv[4].split("|") if len(sys.argv) > 4 else None
+    if only:
+        every = {**SCENARIOS, **combos(240), **PACKAGES}
+        run({n: every[n] for n in only}, reps, workers).to_csv(out, index=False)
         sys.exit(0)
-    if len(sys.argv) > 3 and sys.argv[3] == "gated":
-        run_gated(reps, workers)
-        print("wrote", HOLD)
-        sys.exit(0)
-    df = run(SCENARIOS, reps, workers)
+    df = run({**SCENARIOS, **PACKAGES}, reps, workers)
+    df.to_csv(out, index=False)
     cap = best_cap(summarize(df))
     print("best cap", cap, flush=True)
     df = pd.concat([df, run(combos(cap), reps, workers)], ignore_index=True)
-    df.to_csv(OUT, index=False)
-    print("wrote", OUT)
+    df.to_csv(out, index=False)
+    print("wrote", out)
