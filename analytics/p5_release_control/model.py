@@ -145,6 +145,11 @@ class Inputs:
                   join marts.mart_weekly_floor w using (week_start)
                   where m.work_center = 'press_brake' and m.saturday_hours = 0 and m.machine_id not in ('B1', 'B2') and w.wip_at_brakes > 120 and w.weekdays = 5""")
         self.brake_availability = round(min(float(av.iloc[0, 0]), 1.0), 9)
+        # the P7 quote table: 80th-percentile lead time by routing class and brake backlog band at release
+        from analytics.p7_quoting import analysis as quoting
+        qt = quoting.quote_table(quoting.load())
+        self.quote_edges = np.array(quoting.BANDS[1:-1], dtype=float)
+        self.quote_table = {(c, quoting.BAND_LABELS.index(b)): float(v) for c, b, v in zip(qt["routing_class"], qt["band"], qt["p80"]) if v == v}
 
     # working-day clock
     def W(self, t):
@@ -275,6 +280,7 @@ class Shop:
         self.results = []
         self.overtime = dict(saturdays=0, extended_days=0, hours=0.0)
         self.ot_log = []
+        self.backlog_at_release = {}               # days of brake work waiting when each job is released
         self.gate = None
         if self.sc.get("wip_cap"):
             self.gate = Gate(self, "cap", self.sc["wip_cap"])
@@ -582,6 +588,7 @@ class Shop:
             if t > env.now:
                 yield env.timeout(t - env.now)
             ops = self.inp.ops.get(j.job_id)
+            self.backlog_at_release[j.job_id] = sum(e["std"] for e in self.queue["press_brake"]) * self.inp.brake_actual_over_standard / 72.0
             if ops:
                 env.process(self.job_flow(j, ops))
 
@@ -648,7 +655,32 @@ def measures(shop, first_quarter=1):
     if shop.gate is not None:
         out["release_hold_days"] = float(np.mean(shop.gate.held_days)) if shop.gate.held_days else 0.0
     out.update(load_aware_promise(shop, r, first_quarter))
+    out.update(quote_table_promise(shop, r, first_quarter))
     return out
+
+
+def quote_table_promise(shop, r, first_quarter):
+    """On-time delivery if non-rush lines were promised at the later of the requested date and the order date plus the quote table's lead time:
+    the table value for the routing class and the brake backlog at release (P7), never below the fixed quote. The floor is not changed."""
+    inp = shop.inp
+    r = r.dropna(subset=["order_date"]).copy()
+    r["order_date"] = pd.to_datetime(r["order_date"])
+    r["requested_date"] = pd.to_datetime(r["requested_date"])
+    r["due_new"] = pd.to_datetime(r["due_date"])
+    r["quote_new"] = np.nan
+    for idx, jid, cls, od, req, rush, fixed in zip(r.index, r["job_id"], r["routing_class"], r["order_date"], r["requested_date"], r["rush"], r["quoted_lead_days"]):
+        if rush or od.year != REPORT_YEAR and (od + pd.Timedelta(days=120)).year != REPORT_YEAR:
+            continue
+        band = int(np.searchsorted(inp.quote_edges, shop.backlog_at_release[jid], side="left"))
+        n = max(float(fixed), inp.quote_table.get((cls, band), float(fixed)))
+        new = (T0 + pd.Timedelta(hours=inp.wd_add(hours(od), n))).normalize()
+        r.at[idx, "due_new"] = max(new, req) if req == req else new
+        r.at[idx, "quote_new"] = n
+    y = r[(r["ship_date"].dt.year == REPORT_YEAR) & (r["ship_date"].dt.quarter >= first_quarter)]
+    q_ = y.dropna(subset=["quote_new"])
+    return dict(on_time_delivery_quote_table=float((y["ship_date"] <= y["due_new"]).mean()),
+                promises_longer_quote_table=float((q_["quote_new"] > q_["quoted_lead_days"]).mean()) if len(q_) else np.nan,
+                quote_table_mean=float(q_["quote_new"].mean()) if len(q_) else np.nan)
 
 
 def load_aware_promise(shop, r, first_quarter, weeks=13, pctl=0.8, min_jobs=20):

@@ -210,9 +210,9 @@ def t_packages():
             rows.append([PKG_NAMES[sc], pct(v(p, sc, "on_time_delivery")), spts(p.loc[(sc, "on_time_delivery")]),
                          "" if sc == S8 else spts(vs.loc["on_time_delivery"]), d1(v(p, sc, "lead_time_p90")), sdays(p.loc[(sc, "lead_time_p90")]),
                          "" if sc == S8 else sdays(vs.loc["lead_time_p90"]), n0(v(p, sc, "wip_mean")), d1(v(p, sc, "saturday_shifts")), n0(v(p, sc, "extended_hours"))])
-        la = v(p, NOCAP, "on_time_delivery_load_aware")
-        rows.append(["No-capital package at the load-aware promise", pct(la), paired(period, NOCAP, "on_time_delivery_load_aware", S0, "on_time_delivery"),
-                     "", "", "", "", "", "", ""])
+        for name, m in (("No-capital package at the P7 quote table", "on_time_delivery_quote_table"),
+                        ("No-capital package at the trailing 13-week promise", "on_time_delivery_load_aware")):
+            rows.append([name, pct(v(p, NOCAP, m)), paired(period, NOCAP, m, S0, "on_time_delivery"), "", "", "", "", "", "", ""])
         out += f"<h3>{label}</h3>" + table(pd.DataFrame(rows, columns=["Package", "On time", "Against current practice (points)", "Against setup reduction (points)",
                                                                        "90th-percentile lead time", "Against current practice (days)",
                                                                        "Against setup reduction (days)", "Mean WIP", "Saturday shifts", "Extended hours"]))
@@ -248,9 +248,11 @@ def t_promise():
     rows = []
     for period, label, p in (("year", f"{YEAR}", PY), (REST, f"{YEAR} {REST}", PR)):
         for name, sc in (("Current practice", S0), ("No-capital package", NOCAP)):
-            a, b, c = p.loc[(sc, "on_time_delivery")], p.loc[(sc, "on_time_delivery_load_aware")], p.loc[(sc, "promises_longer_than_fixed_quote")]
-            rows.append([label, name, pct(a["mean"]), pct(b["mean"]), paired(period, sc, "on_time_delivery_load_aware", sc, "on_time_delivery"), pct(c["mean"], 0)])
-    return table(pd.DataFrame(rows, columns=["Period", "Floor", "On time at the promises as made", "On time at the load-aware promise", "Difference (points)",
+            a = p.loc[(sc, "on_time_delivery")]
+            for rule, m, lm in (("P7 quote table", "on_time_delivery_quote_table", "promises_longer_quote_table"),
+                                ("Routing class, trailing 13 weeks", "on_time_delivery_load_aware", "promises_longer_than_fixed_quote")):
+                rows.append([label, name, rule, pct(a["mean"]), pct(v(p, sc, m)), paired(period, sc, m, sc, "on_time_delivery"), pct(v(p, sc, lm), 0)])
+    return table(pd.DataFrame(rows, columns=["Period", "Floor", "Promise rule", "On time at the promises as made", "On time at the rule", "Difference (points)",
                                              "Non-rush promises longer than the fixed quote"]))
 
 
@@ -316,12 +318,14 @@ def report():
     b.append(f"<p>Light work ahead of heavy on B1 and B2, {spp(PY.loc[(s4, 'on_time_delivery')])} for the year, and a third weekly color day for black, "
              f"{spp(PY.loc[(s6, 'on_time_delivery')])}, do not move on-time delivery or the 90th percentile beyond their intervals.</p>")
 
-    b.append("<h2 id='f8'>8. The load-aware promise</h2>")
-    la_y, la_r = v(PY, S0, "on_time_delivery_load_aware") - v(PY, S0, "on_time_delivery"), v(PR, S0, "on_time_delivery_load_aware") - v(PR, S0, "on_time_delivery")
-    lo, hi = sorted([v(PY, S0, "promises_longer_than_fixed_quote"), v(PR, S0, "promises_longer_than_fixed_quote")])
-    b.append(f"<p>Promising non-rush lines at the 80th percentile of the routing class's lead time over the trailing 13 weeks raises on-time delivery "
-             f"{la_y * 100:.1f} points for the year and {la_r * 100:.1f} in {REST} without touching the floor, and makes {pct(lo, 0)} to {pct(hi, 0)} of non-rush "
-             f"promises longer than the fixed quote. The rule goes to P7.</p>")
+    b.append("<h2 id='f8'>8. The promise rules</h2>")
+    b.append(f"<p>At the P7 quote table (routing class and brake backlog at release, never below the fixed quote) the current floor delivers "
+             f"{pct(v(PY, S0, 'on_time_delivery_quote_table'))} on time for the year and {pct(v(PR, S0, 'on_time_delivery_quote_table'))} in {REST}, with "
+             f"{pct(v(PY, S0, 'promises_longer_quote_table'), 0)} and {pct(v(PR, S0, 'promises_longer_quote_table'), 0)} of non-rush promises longer than the fixed "
+             f"quote; at the 80th percentile of the routing class over the trailing 13 weeks, {pct(v(PY, S0, 'on_time_delivery_load_aware'))} and "
+             f"{pct(v(PR, S0, 'on_time_delivery_load_aware'))}, with {pct(v(PY, S0, 'promises_longer_than_fixed_quote'), 0)} and "
+             f"{pct(v(PR, S0, 'promises_longer_than_fixed_quote'), 0)} longer. Neither touches the floor; the quote table is the P7 rule and the trailing rule the "
+             f"one first modeled.</p>")
 
     b.append("<h2 id='f9'>9. Packages</h2>")
     alone = sum(v(PY, sc, "on_time_delivery", "diff") for sc in (S8, s5, s7)) * 100
@@ -335,8 +339,9 @@ def report():
              f"{d1(v(PR, NOCAP, 'lead_time_p90'))} days. The three effects are close to additive: the levers alone sum to {alone:+.1f} points for the year against "
              f"{v(PY, NOCAP, 'on_time_delivery', 'diff') * 100:+.1f} for the package. In {REST} the gain is the weld cell's second shift; planned Saturdays add "
              f"{sat_rest:.1f} points there. Setup reduction and the packages ship {n0(fewer[0])} to {n0(fewer[-1])} fewer jobs in {REST} and the same number for the year; the "
-             f"first-quarter backlog ships earlier. At the load-aware promise the same floor delivers "
-             f"{pct(v(PY, NOCAP, 'on_time_delivery_load_aware'))} on time for the year and {pct(v(PR, NOCAP, 'on_time_delivery_load_aware'))} in {REST}.</p>")
+             f"first-quarter backlog ships earlier. At the P7 quote table the same floor delivers "
+             f"{pct(v(PY, NOCAP, 'on_time_delivery_quote_table'))} on time for the year and {pct(v(PR, NOCAP, 'on_time_delivery_quote_table'))} in {REST} "
+             f"({pct(v(PY, NOCAP, 'on_time_delivery_load_aware'))} and {pct(v(PR, NOCAP, 'on_time_delivery_load_aware'))} at the trailing 13-week promise).</p>")
     b.append(t_packages())
     b.append(f"<div class='caption'>Table 2. The packages against current practice and against setup reduction alone, {YEAR} and {REST}.</div>")
 
@@ -362,7 +367,8 @@ def report():
              f"Scenarios: the WIP cap holds non-rush jobs in release order until the jobs on the floor are below the cap, and lead time still runs from the release "
              f"date; constraint-paced release holds jobs with brake work while the work waiting at the brakes exceeds 3 days of crewed brake capacity; light work goes "
              f"ahead of heavy on B1 and B2, after precision, when the B3 to B5 queue exceeds 2 days; the setup reduction runs the top 12 part-operations at standard and "
-             f"takes the assignment and handover hours off the other brake setups in proportion, the model having no individual operators. Each run draws from one generator seeded by its scenario and "
+             f"takes the assignment and handover hours off the other brake setups in proportion, the model having no individual operators. The promise rules do not change the floor: the model reads its own brake backlog at "
+             f"each job's release to select the band of the quote table, which is the table fitted on 2023 to {YEAR} (P7). Each run draws from one generator seeded by its scenario and "
              f"replication number. Differences are paired by replication; throughput is flagged where a scenario ships fewer jobs in the period with the interval excluding zero.</p>")
 
     b.append("<h2 id='appendix'>Appendix</h2>")
@@ -373,11 +379,11 @@ def report():
     b.append(f"<h3>Table 6. Scenario results, {YEAR} {REST}</h3>" + t_full(PR, allsc))
     b.append(f"<h3>Table 7. Difference from current practice, {YEAR} {REST}</h3>" + t_diff(PR, allsc[1:]))
     b.append("<h3>Table 8. Release hold under the WIP cap and constraint-paced release</h3>" + t_hold())
-    b.append("<h3>Table 9. The load-aware promise</h3>" + t_promise())
-    b.append("<div class='glossary'>WIP cap: a limit on jobs released to the floor and not shipped. Load-aware promise: the later of the requested date and the order "
-             "date plus the 80th-percentile lead time of the routing class over the trailing 13 weeks.</div>")
+    b.append("<h3>Table 9. On-time delivery at the two promise rules</h3>" + t_promise())
+    b.append("<div class='glossary'>WIP cap: a limit on jobs released to the floor and not shipped. Promise rule: the later of the requested date and the order "
+             "date plus the rule's lead time; rush lines keep their promise.</div>")
     toc = [("f1", "Validation"), ("f2", "Release control"), ("f3", "Dispatch"), ("f4", "Capacity at the constraint"), ("f5", "Weld cell"), ("f6", "The peak"),
-           ("f8", "Load-aware promise"), ("f9", "Packages"), ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
+           ("f8", "Promise rules"), ("f9", "Packages"), ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
     (DOCS / "reports").mkdir(parents=True, exist_ok=True)
     (DOCS / "reports" / "p5_release_control.html").write_text(shell("Release control and the shop model", "Project 5 report", HEADER_META, "\n".join(b), toc),
                                                               encoding="utf8")
