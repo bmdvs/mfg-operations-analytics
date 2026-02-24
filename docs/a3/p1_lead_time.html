@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lead time decomposition</title><style>
+:root { --brand: #3D5166; --accent: #6B8FA8; --text: #222222; --muted: #555555; --rule: #DDDDDD; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #F4F5F7; color: var(--text); font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        font-size: 15px; line-height: 1.55; }
+.page { max-width: 980px; margin: 0 auto; background: white; padding: 40px 56px 64px; }
+header.doc { border-bottom: 3px solid var(--brand); padding-bottom: 14px; margin-bottom: 28px; }
+header.doc .kicker { color: var(--accent); font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; font-weight: 600; }
+header.doc h1 { margin: 4px 0 6px; font-size: 28px; color: var(--brand); }
+header.doc .meta { color: var(--muted); font-size: 13px; }
+h2 { color: var(--brand); font-size: 21px; margin: 36px 0 8px; border-bottom: 1px solid var(--rule); padding-bottom: 4px; }
+h3 { color: var(--brand); font-size: 16px; margin: 22px 0 6px; }
+p { margin: 8px 0 12px; }
+img { max-width: 100%; display: block; margin: 10px 0 4px; }
+.caption { color: var(--muted); font-size: 12.5px; margin-bottom: 18px; }
+table.data { border-collapse: collapse; width: 100%; font-size: 13px; margin: 10px 0 16px; }
+table.data th { background: var(--brand); color: white; text-align: left; padding: 6px 8px; font-weight: 600; }
+table.data td { border-bottom: 1px solid #EEE; padding: 5px 8px; }
+table.data td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.data tr.total td { font-weight: 600; border-top: 1px solid var(--rule); }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 16px 0 22px; }
+.kpi { border: 1px solid var(--rule); border-top: 3px solid var(--accent); padding: 10px 12px; }
+.kpi .v { font-size: 24px; font-weight: 700; color: var(--brand); }
+.kpi .l { font-size: 12px; color: var(--muted); }
+.note { background: #F7F9FB; border-left: 3px solid var(--accent); padding: 10px 14px; margin: 14px 0; font-size: 14px; }
+.glossary { color: var(--muted); font-size: 12.5px; margin-top: 28px; border-top: 1px solid var(--rule); padding-top: 10px; }
+nav.toc { font-size: 13.5px; margin: 0 0 24px; }
+nav.toc a { color: var(--accent); text-decoration: none; margin-right: 14px; }
+@media (max-width: 700px) { .page { padding: 20px 16px 40px; } }
+@media print { body { background: white; } .page { padding: 0; max-width: none; } }
+
+.a3 { max-width: 1500px; padding: 26px 32px 30px; }
+.a3 header.doc { margin-bottom: 14px; padding-bottom: 8px; }
+.a3 header.doc h1 { font-size: 22px; margin: 2px 0 4px; }
+.a3 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px; }
+.a3 .grid > div { display: grid; gap: 12px; align-content: start; }
+.a3 section { border: 1px solid var(--rule); border-top: 3px solid var(--brand); padding: 8px 12px 10px; font-size: 12.5px; line-height: 1.4; }
+.a3 section h2 { font-size: 14px; margin: 0 0 4px; border: 0; padding: 0; text-transform: uppercase; letter-spacing: 0.6px; }
+.a3 section p { margin: 4px 0 6px; }
+.a3 section ul { margin: 4px 0 4px 16px; padding: 0; }
+.a3 section li { margin-bottom: 3px; }
+.a3 img { margin: 4px 0 2px; max-height: 360px; }
+.a3 .caption { font-size: 11px; margin-bottom: 4px; }
+.a3 table.data { font-size: 11.5px; margin: 4px 0 4px; }
+.a3 table.data th, .a3 table.data td { padding: 3px 6px; }
+@page { size: A3 landscape; margin: 9mm; }
+@media print { .a3 { max-width: none; padding: 0; } .a3 .grid { gap: 8px 14px; } .a3 section { break-inside: avoid; } }
+@media (max-width: 900px) { .a3 .grid { grid-template-columns: 1fr; } }
+</style></head>
+<body><div class="page a3">
+<header class="doc"><div class="kicker">Project 1 A3</div><h1>Lead time decomposition</h1><div class="meta">Custom sheet-metal fabrication job shop, about 120 employees, one plant. Jobs shipped in 2025, whole year and Q2 to Q4; records from January 2023 to December 2025.<br>Sources: ERP, shop-floor data collection, quality, maintenance and attendance exports (batch 20261003T152921Z-20250101). All durations in working days, scheduled Saturdays counted.</div></header>
+<div class="grid"><div><section><h2>Background and problem</h2><p>The fixed quote of 10, 15 or 20 working days is met on 58% of jobs (74% in Q2 to Q4); 76.6% ship by the promised date (90.1% in Q2 to Q4) against the 95% key accounts require.<br>The 90th-percentile lead time is 25.2 days (18.2 in Q2 to Q4) against a median of 11.2 (9.2).</p></section>
+<section><h2>Current condition</h2><img alt="Lead time by stage, on-time and late jobs" src="../figures/p1_a3_stage_decomposition.png"><div class='caption'>Mean working days per job at each stage, on-time against late jobs, 2025 and Q2 to Q4.</div></section>
+<section><h2>Target</h2><p>95% of jobs shipped by the promised date in every quarter, the first quarter included.</p></section></div><div><section><h2>Analysis</h2><img alt="Weekly WIP, releases and shipments, October 2024 to March 2025" src="../figures/p1_a3_year_end_build.png"><div class='caption'>Weekly WIP, releases and shipments, October 2024 to March 2025; shaded weeks have fewer than five working days.</div><ul><li>For the year the brake queue separates late from on-time jobs (6.98 against 2.71 days). In Q2 to Q4 it does not (1.81 against 1.96); late jobs there differ in material wait at the first operation, outside processing, the robotic weld queue and setup and run.</li><li>The brakes hold 56% of queue time for the year and 40% in Q2 to Q4; the 90th-percentile brake queue is 11.3 days and 4.8.</li><li>Floor WIP is 253 jobs against 245 at the quoted lead times for the year and 209 against 250 in Q2 to Q4: the gap between quote and delivery is dispersion, not level.</li><li>The 2024 year-end build: 26% more brake standard hours released than in the third quarter, the lasers at 0.98, 0.95 and 0.93 for three weeks from November 11, WIP at 471 on December 23, and a first quarter of 2025 at 40.8% on time with 847 of the year's 1,226 late jobs.</li></ul></section>
+<section><h2>Countermeasures</h2><table class="data"><thead><tr><th>Action</th><th>Owner</th><th>When</th></tr></thead><tbody><tr><td class="">Attribute each late job to a cause and replace the late-reason code with a buffer status record (P2)</td><td class="">Production control manager</td><td class="">February 2026</td></tr><tr><td class="">Size a fourth-quarter release and overtime plan on the shop model, and test a WIP cap and due-date dispatch (P5)</td><td class="">Plant manager</td><td class="">April 2026</td></tr><tr><td class="">Restate quoted lead times as a percentile of measured lead time by routing class and brake load (P7)</td><td class="">Estimating and customer service manager</td><td class="">May 2026</td></tr></tbody></table></section>
+<section><h2>Results</h2><p>Measured baseline for 2025: on-time delivery 76.6% (90.1% in Q2 to Q4); quote met on 58% (74%); 90th-percentile lead time 25.2 days (18.2). Results of the countermeasures are reported in P2, P5 and P7.</p></section>
+<section><h2>Follow-up</h2><p>Weekly: WIP by location, brake queue per operation, and material wait at the first operation. P6 evaluates these as leading measures of on-time delivery.</p></section></div></div>
+</div></body></html>
