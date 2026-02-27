@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operations analytics</title><style>
+:root { --brand: #3D5166; --accent: #6B8FA8; --text: #222222; --muted: #555555; --rule: #DDDDDD; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #F4F5F7; color: var(--text); font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        font-size: 15px; line-height: 1.55; }
+.page { max-width: 980px; margin: 0 auto; background: white; padding: 40px 56px 64px; }
+header.doc { border-bottom: 3px solid var(--brand); padding-bottom: 14px; margin-bottom: 28px; }
+header.doc .kicker { color: var(--accent); font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; font-weight: 600; }
+header.doc h1 { margin: 4px 0 6px; font-size: 28px; color: var(--brand); }
+header.doc .meta { color: var(--muted); font-size: 13px; }
+h2 { color: var(--brand); font-size: 21px; margin: 36px 0 8px; border-bottom: 1px solid var(--rule); padding-bottom: 4px; }
+h3 { color: var(--brand); font-size: 16px; margin: 22px 0 6px; }
+p { margin: 8px 0 12px; }
+img { max-width: 100%; display: block; margin: 10px 0 4px; }
+.caption { color: var(--muted); font-size: 12.5px; margin-bottom: 18px; }
+table.data { border-collapse: collapse; width: 100%; font-size: 13px; margin: 10px 0 16px; }
+table.data th { background: var(--brand); color: white; text-align: left; padding: 6px 8px; font-weight: 600; }
+table.data td { border-bottom: 1px solid #EEE; padding: 5px 8px; }
+table.data td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.data tr.total td { font-weight: 600; border-top: 1px solid var(--rule); }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 16px 0 22px; }
+.kpi { border: 1px solid var(--rule); border-top: 3px solid var(--accent); padding: 10px 12px; }
+.kpi .v { font-size: 24px; font-weight: 700; color: var(--brand); }
+.kpi .l { font-size: 12px; color: var(--muted); }
+.note { background: #F7F9FB; border-left: 3px solid var(--accent); padding: 10px 14px; margin: 14px 0; font-size: 14px; }
+.glossary { color: var(--muted); font-size: 12.5px; margin-top: 28px; border-top: 1px solid var(--rule); padding-top: 10px; }
+nav.toc { font-size: 13.5px; margin: 0 0 24px; }
+nav.toc a { color: var(--accent); text-decoration: none; margin-right: 14px; }
+@media (max-width: 700px) { .page { padding: 20px 16px 40px; } }
+@media print { body { background: white; } .page { padding: 0; max-width: none; } }
+</style></head>
+<body><div class="page">
+<header class="doc"><div class="kicker">Deliverables</div><h1>Operations analytics</h1><div class="meta">Custom sheet-metal fabrication job shop, about 120 employees, one plant.<br>Eight improvement projects and an operations dashboard on the shop's records from January 2023 to December 2025. Sources: ERP, shop-floor data collection, QMS, maintenance and HR exports (batch 20261003T152921Z-20250101).</div></header>
+<table class="data"><thead><tr><th>Project</th><th>Question</th><th>Finding</th><th>Report</th><th>A3</th></tr></thead><tbody><tr><td class="">P1. Lead time decomposition</td><td class="">Where does the lead time go, and does the floor's WIP match the quoted lead times?</td><td class="">The median job ships in 11.2 working days against an average quoted lead time of 12.4; 9.2 in Q2 to Q4.</td><td class=""><a href='reports/p1_lead_time.html'>Report</a></td><td class=""><a href='a3/p1_lead_time.html'>A3</a></td></tr><tr><td class="">P2. Why jobs are late</td><td class="">What makes jobs late, and do the shop's late-reason codes say so?</td><td class="">For the year, constraint queue is 36% of the 4,647 lost days, unexplained 33%, released late 17%, material 6.5% and outside processing 3%; the year is the 2024 year-end build shipping in the first quarter.</td><td class=""><a href='reports/p2_late_jobs.html'>Report</a></td><td class=""><a href='a3/p2_late_jobs.html'>A3</a></td></tr><tr><td class="">P3. The constraint, utilization and variability</td><td class="">Which work center is the constraint, and how does its queue respond to load?</td><td class="">The brakes run at 0.91 of scheduled hours net of downtime, the robotic weld cell at 0.83, the lasers at 0.74, assembly through hardware at 0.66 to 0.69 and the powder line at 0.56.</td><td class=""><a href='reports/p3_constraint.html'>Report</a></td><td class=""><a href='a3/p3_constraint.html'>A3</a></td></tr><tr><td class="">P4. Setups and standards</td><td class="">What do setups cost at the brakes, and where is the overrun?</td><td class="">Brake setups ran 6,077 hours against 4,235 standard in 2025: 1,842 hours over, 35 a week, 11% of brake machine time.</td><td class=""><a href='reports/p4_setups.html'>Report</a></td><td class=""><a href='a3/p4_setups.html'>A3</a></td></tr><tr><td class="">P5. Release control and the shop model</td><td class="">Do release control and dispatch rules help, and what does?</td><td class="">Adding planned Saturdays from November through February takes the year to 88.0% on time, up 6.0 points (5.0 to 6.9), with a 90th percentile of 19.8 days against 22.9; Q2 to Q4 reaches 91.8% and 15.3 days.</td><td class=""><a href='reports/p5_release_control.html'>Report</a></td><td class=""><a href='a3/p5_release_control.html'>A3</a></td></tr><tr><td class="">P6. Leading indicators</td><td class="">Which weekly measures move before on-time delivery does?</td><td class="">The on-time start rate correlates +0.62 with on-time delivery 1 week later, against a 95th percentile of +0.24 on shuffled series and +0.21 on shifted series.</td><td class=""><a href='reports/p6_leading_indicators.html'>Report</a></td><td class=""><a href='a3/p6_leading_indicators.html'>A3</a></td></tr><tr><td class="">P7. Lead-time quoting and quote analytics</td><td class="">What lead time should be quoted, and what wins quotes?</td><td class="">A quote from the 80th-percentile lead time by routing class and brake backlog at release, never below the fixed quote, is met on 67.0% of non-rush jobs for the year and 82.1% in Q2 to Q4 when each job is quoted from the jobs shipped before its release, against 53.0% and 70.5% for the fixed quote; it is longer than the fixed quote on 43.6% and 33.9% of jobs.</td><td class=""><a href='reports/p7_quoting.html'>Report</a></td><td class=""><a href='a3/p7_quoting.html'>A3</a></td></tr><tr><td class="">P8. Technology ROI</td><td class="">Do the capital options pay back?</td><td class="">On overtime and labor alone no option pays back within the 7-year horizon, and the no-capital package is net negative ($70,000 a year, the weld cell's second shift).</td><td class=""><a href='reports/p8_technology_roi.html'>Report</a></td><td class=""><a href='a3/p8_technology_roi.html'>A3</a></td></tr></tbody></table><p><a href='dashboard/index.html'>Operations dashboard</a></p>
+</div></body></html>
