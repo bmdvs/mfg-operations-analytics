@@ -350,11 +350,11 @@ def panel_brakes():
     f, axes = fig(h=3.2, ncols=2)
     ax = axes[0]
     u = np.linspace(0.55, 0.985, 200)
-    ax.plot(u, k * P3.vut_factor(u, m), color=GREY, linewidth=1.5, label="Curve fitted on 2023 to 2025")
-    ax.scatter(U.loc[V, "utilization"], U.loc[V, "queue_mean"], color=BRAND_BLUE, s=22, zorder=3, label=f"{VIEW} weeks")
-    ax.scatter([c["utilization"]], [c["queue_mean"]], color=RED, s=46, zorder=4, label="Current week")
+    ax.plot(u, style.sig(k * P3.vut_factor(u, m)), color=GREY, linewidth=1.5, label="Curve fitted on 2023 to 2025")
+    ax.scatter(style.sig(U.loc[V, "utilization"]), style.sig(U.loc[V, "queue_mean"]), color=BRAND_BLUE, s=22, zorder=3, label=f"{VIEW} weeks")
+    ax.scatter(style.sig([c["utilization"]]), style.sig([c["queue_mean"]]), color=RED, s=46, zorder=4, label="Current week")
     for t in PARTIAL:
-        ax.scatter([U.loc[t, "utilization"]], [U.loc[t, "queue_mean"]], facecolors="white", edgecolors=BRAND_BLUE, s=22, zorder=3)
+        ax.scatter(style.sig([U.loc[t, "utilization"]]), style.sig([U.loc[t, "queue_mean"]]), facecolors="white", edgecolors=BRAND_BLUE, s=22, zorder=3)
     ax.set_xlabel("Brake utilization", fontsize=9)
     ax.set_ylabel("Mean brake queue (working days)", fontsize=9)
     ax.set_ylim(0, max(float(U.loc[VP, "queue_mean"].max()) * 1.4, float(k * P3.vut_factor(0.95, m))))

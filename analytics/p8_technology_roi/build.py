@@ -9,7 +9,7 @@ import pandas as pd
 from analytics.db import q
 from analytics.p8_technology_roi import analysis as A
 from analytics.p8_technology_roi.scenarios import ASSUME, PACKAGE, QUEUE, S0
-from analytics.style.style import AMBER, BRAND_BLUE, DOCS, GREEN, GREY, RED, a3_shell, fig, pct, save, shell, table
+from analytics.style.style import AMBER, BRAND_BLUE, DOCS, GREEN, GREY, RED, a3_shell, fig, pct, save, shell, sig, table
 
 YEAR, REST = A.YEAR, "Q2 to Q4"
 df = A.runs()
@@ -133,10 +133,10 @@ def fig_npv(name="p8_npv_by_share_sold", h=3.4):
         e = E[n]
         base = e["net_without_throughput"]
         npv = -e["one_time"] + (base + e["released_constraint_hours"] * x * e["value_per_released_hour_sold"]) * e["annuity"]
-        ax.plot(x * 100, npv / 1e6, color=color, linewidth=1.8, label=SHORT[n])
+        ax.plot(x * 100, sig(npv / 1e6), color=color, linewidth=1.8, label=SHORT[n])
         if e["breakeven_share"] == e["breakeven_share"]:
-            ax.plot([e["breakeven_share"] * 100], [0], marker="o", color=color, markersize=6, zorder=5)
-            ax.annotate(f"{e['breakeven_share']:.0%}, {e['breakeven_hours']:,.0f} h", (e["breakeven_share"] * 100, 0), textcoords="offset points",
+            ax.plot(sig([e["breakeven_share"] * 100]), [0], marker="o", color=color, markersize=6, zorder=5)
+            ax.annotate(f"{e['breakeven_share']:.0%}, {e['breakeven_hours']:,.0f} h", (float(sig(e["breakeven_share"] * 100)), 0), textcoords="offset points",
                         xytext=(-6, (-0.42 * h * 16) if n != CELL else 7), fontsize=8, color=color, ha="left" if n != CELL else "right",
                         arrowprops=dict(arrowstyle="-", color=color, linewidth=0.6) if n != CELL else None)
     ax.axhline(0, color=RED, linewidth=1, linestyle="--")

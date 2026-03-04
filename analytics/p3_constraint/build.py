@@ -7,7 +7,7 @@ import pandas as pd
 
 from analytics.db import q
 from analytics.p3_constraint import analysis as A
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, shell, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, sig, shell, table
 
 YEAR, REST = A.YEAR, "Q2 to Q4"
 WC = {"press_brake": "Press brake", "grind_deburr": "Grind and deburr", "inspection_pack": "Inspection and pack", "hardware": "Hardware", "weld": "Weld",
@@ -81,12 +81,12 @@ def fig_curve(name="p3_brake_queue_curve", h=3.9):
     m, k = int(FB["machines"]), float(FB["k"])
     f, ax = fig(h=h)
     old, cur = w[w["week_year"] != YEAR], w[w["week_year"] == YEAR]
-    ax.scatter(old["utilization"], old["queue_mean"], s=14, color=GREY, alpha=0.7, label="Week, 2023 and 2024")
-    ax.scatter(cur["utilization"], cur["queue_mean"], s=16, color=ACCENT, label=f"Week, {YEAR}")
+    ax.scatter(sig(old["utilization"]), sig(old["queue_mean"]), s=14, color=GREY, alpha=0.7, label="Week, 2023 and 2024")
+    ax.scatter(sig(cur["utilization"]), sig(cur["queue_mean"]), s=16, color=ACCENT, label=f"Week, {YEAR}")
     u = np.linspace(0.5, 0.96, 200)
-    ax.plot(u, k * A.vut_factor(u, m), color=BRAND_BLUE, linewidth=2.2, label="Curve fitted on 13-week windows")
+    ax.plot(u, sig(k * A.vut_factor(u, m)), color=BRAND_BLUE, linewidth=2.2, label="Curve fitted on 13-week windows")
     for x in A.QUEUE_AT:
-        y = k * float(A.vut_factor(x, m))
+        y = float(sig(k * float(A.vut_factor(x, m))))
         ax.plot([x], [y], marker="o", color=RED, markersize=6)
         ax.annotate(f"{y:.2f}", (x, y), textcoords="offset points", xytext=(-26, 6), fontsize=9, color=RED)
     ax.set_xlim(0.5, 1.02)
@@ -97,10 +97,10 @@ def fig_curve(name="p3_brake_queue_curve", h=3.9):
     return save(f, name, "Brake queue against utilization")
 
 
-def fig_robot():
+def fig_robot(name="p3_robotic_weld_weekly", h=3.3):
     w = D["uw"][(D["uw"]["work_center"] == "robotic_weld") & (D["uw"]["week_year"] == YEAR)].sort_values("week_start")
     x = pd.to_datetime(w["week_start"])
-    f, ax = fig(h=3.3)
+    f, ax = fig(h=h)
     ax.bar(x, w["utilization"], width=5, color=LIGHT_BLUE, label="Utilization (left)")
     ax.axhline(0.95, color=GREY, linewidth=1, linestyle="--")
     ax.set_ylabel("Utilization")
@@ -113,7 +113,7 @@ def fig_robot():
     h2, l2 = ax2.get_legend_handles_labels()
     ax.legend(h1 + h2, l1 + l2, frameon=False, fontsize=9, ncol=2, loc="upper left")
     f.tight_layout()
-    return save(f, "p3_robotic_weld_weekly", "Robotic weld cell weekly utilization and queue")
+    return save(f, name, "Robotic weld cell weekly utilization and queue")
 
 
 # ── tables ──────────────────────────────────────────────────────────────────
@@ -281,7 +281,7 @@ def report():
              f"mid-December. They reached 0.95 in {LW_N} of {LW_ALL} full weeks in three years.</p>")
 
     b.append("<h2 id='rec'>Recommendation</h2>")
-    b.append(f"<p>The brake queue is set by arrival variability and by load above 0.85, so release leveling and dispatch (P5) are the first levers and reducing the "
+    b.append(f"<p>The brake queue is set by arrival variability and by load above 0.85, so capacity at the constraint (the P4 setup reduction, P5) is the first lever; release leveling and dispatch rules do not help (P5), and reducing the "
              f"spread of setup time is not one. A second shift on the robotic weld cell is an unstaffed shift on the shop's secondary constraint; P5 tests it and P8 prices it. The color "
              f"schedule is a scheduling choice to revisit: {', '.join(two_day[:-1])} and {two_day[-1]} already run two days a week, and a third day for black is a P5 "
              f"scenario. Mean setup time at the brakes is P4.</p>")
@@ -318,7 +318,8 @@ def report():
 
 
 COUNTERMEASURES = [
-    ("Test release leveling and dispatch rules on the shop model (P5)", "Plant manager", "April 2026"),
+    ("Take the P4 setup reduction and planned Saturday brake shifts as the capacity levers (P5); release leveling and dispatch rules were tested on the shop "
+     "model and do not help", "Plant manager", "April 2026"),
     ("Trial a second shift on the robotic weld cell (P5, P8)", "Production manager", "April 2026"),
     ("Review the powder color schedule; a third day for black if the weld shift is not enough (P5)", "Powder line lead", "March 2026"),
     ("Reduce mean setup time at the brakes (P4)", "Brake supervisor", "March 2026"),
@@ -342,7 +343,7 @@ def a3():
     left.append(f"<section><h2>Target</h2><p>Brake queue 90th percentile under 5 days in every quarter, the first included. Met in {lab(met)} {YEAR} "
                 f"({val(met)} days), not in {lab(missed)} ({val(missed)}).</p></section>")
     right.append(
-        f"<section><h2>Analysis</h2>{fig_robot()}<div class='caption'>Robotic weld cell weekly utilization and queue per operation, {YEAR}.</div><ul>"
+        f"<section><h2>Analysis</h2>{fig_robot('p3_a3_robotic_weld_weekly', 2.9)}<div class='caption'>Robotic weld cell weekly utilization and queue per operation, {YEAR}.</div><ul>"
         f"<li>B1 and B2 carry precision and expedited work with the shortest queues; B3 to B5 carry the tail (90th percentile "
         f"{rng(MY.loc[['B3', 'B4', 'B5'], 'queue_p90'].min(), MY.loc[['B3', 'B4', 'B5'], 'queue_p90'].max(), d1)} days).</li>"
         f"<li>On the fitted curve the brake queue is {d2(FB['queue_at_0.85'])} days at 0.85 utilization, {d2(FB['queue_at_0.90'])} at 0.90 and "
