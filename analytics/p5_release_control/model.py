@@ -57,10 +57,12 @@ class Inputs:
     def __init__(self, start="2024-01-01"):
         self.batch = q("select export_batch_id from marts.mart_job_lead_time limit 1").iloc[0, 0]
         jobs = q(f"""
-            select j.job_id, j.release_date, j.due_date, j.qty, l.rush_flag, l.routing_class, p.family, p.bend_count, p.thickness, p.tolerance_critical, p.powder_color
+            select j.job_id, j.part_id, j.release_date, j.due_date, j.qty, l.rush_flag, l.routing_class, l.quoted_lead_days, ol.order_date, ol.requested_date,
+                p.family, p.bend_count, p.thickness, p.tolerance_critical, p.powder_color
             from staging.stg_erp__jobs j
             join intermediate.int_job_lead_time l using (job_id)
             join staging.stg_erp__parts p on p.part_id = j.part_id
+            left join staging.stg_erp__order_lines ol on ol.order_line_id = j.order_line_id
             where j.release_date >= '{start}'""")
         ops = q(f"""
             select jo.job_id, jo.op_seq, jo.work_center, jo.planned_start, jo.setup_std, jo.run_std * jo.qty as run_std_hours, r.tooling_set
@@ -169,6 +171,64 @@ class Inputs:
 
 
 # ── the floor ───────────────────────────────────────────────────────────────
+class Gate:
+    """Release control ahead of the first operation. Rush jobs are released at once; the others in release order.
+
+    cap: a job is released when the jobs on the floor are below the cap (a job leaves the floor when it ships).
+    paced: a job with brake work is released when the work waiting at the brakes, in days of crewed brake capacity, is at or below the limit."""
+
+    def __init__(self, shop, mode, limit):
+        self.shop, self.mode, self.limit = shop, mode, limit
+        self.pending = []
+        self.on_floor = 0
+        self.brake_load = 0.0
+        self.held_days = []
+
+    def backlog_days(self):
+        waiting = sum(e["std"] for e in self.shop.queue["press_brake"])
+        return waiting * self.shop.inp.brake_actual_over_standard / 72.0
+
+    def open_for(self, brake_std):
+        if self.mode == "cap":
+            return self.on_floor < self.limit
+        return brake_std <= 0 or self.backlog_days() <= self.limit
+
+    def admit(self, ev, brake_std, t_in):
+        self.on_floor += 1
+        self.brake_load += brake_std
+        self.held_days.append(self.shop.inp.W(self.shop.env.now) - self.shop.inp.W(t_in))
+        ev.succeed()
+
+    def request(self, rush, brake_std):
+        ev = self.shop.env.event()
+        if rush:
+            self.admit(ev, brake_std, self.shop.env.now)
+        else:
+            self.pending.append((ev, brake_std, self.shop.env.now))
+            self.release()
+        return ev
+
+    def release(self):
+        i = 0
+        while i < len(self.pending):
+            ev, std, t_in = self.pending[i]
+            if self.open_for(std):
+                self.pending.pop(i)
+                self.admit(ev, std, t_in)
+            elif self.mode == "cap":
+                break
+            else:
+                i += 1
+
+    def brake_done(self, std):
+        self.brake_load -= std
+        self.release()
+
+    def shipped(self):
+        self.on_floor -= 1
+        self.release()
+
+
 class Machine:
     def __init__(self, mid, wc, windows):
         self.id, self.wc = mid, wc
@@ -205,6 +265,19 @@ class Shop:
         self.pool = defaultdict(list)          # nest pools by sheet item
         self.results = []
         self.overtime = dict(saturdays=0, extended_days=0, hours=0.0)
+        self.ot_log = []
+        self.gate = None
+        if self.sc.get("wip_cap"):
+            self.gate = Gate(self, "cap", self.sc["wip_cap"])
+        elif self.sc.get("paced_days"):
+            self.gate = Gate(self, "paced", self.sc["paced_days"])
+        self.color_days = inp.color_days
+        if self.sc.get("extra_color_day"):
+            color, weekday = self.sc["extra_color_day"]
+            self.color_days = defaultdict(set, {d: set(c) for d, c in inp.color_days.items()})
+            for d in list(self.color_days) + [x.date() for x in inp.days if inp.weekday_flag[(x - T0).days]]:
+                if d.weekday() == weekday:
+                    self.color_days[d].add(color)
         self._build_machines()
 
     # calendar ---------------------------------------------------------------
@@ -266,7 +339,7 @@ class Shop:
         if wc == "laser":
             cand = [e for e in cand if e["eligible"]]
         elif wc == "powder_coat":
-            colors = self.inp.color_days.get((T0 + pd.Timedelta(hours=t)).date(), set())
+            colors = self.color_days.get((T0 + pd.Timedelta(hours=t)).date(), set())
             cand = [e for e in cand if e["color"] in colors or e["color"] is None]
         elif wc in DAILY_LIST and not self.sc.get("continuous_dispatch"):
             cutoff = 24 * int(t // 24) + LIST_CUTOFF_HOUR
@@ -281,7 +354,13 @@ class Shop:
                     cand = hot
                 else:
                     own = []
-                    for group in BRAKE_PRIORITY[m.id]:
+                    groups = BRAKE_PRIORITY[m.id]
+                    limit = self.sc.get("light_relief_days")
+                    if limit and m.id in SAT_MACHINES:
+                        waiting = sum(e["std"] for e in self.queue[wc] if e["cls"] != "precision") * self.inp.brake_actual_over_standard / 40.0
+                        if waiting > limit:
+                            groups = [{"precision"}, {"light"}, {"heavy"}]
+                    for group in groups:
                         own = [e for e in cand if e["cls"] in group]
                         if own:
                             break
@@ -292,6 +371,8 @@ class Shop:
         if not cand:
             return None, False
         rule = self.sc.get("dispatch")
+        if self.sc.get("dispatch_brakes_only") and wc != "press_brake":
+            rule = None
         if rule == "edd":
             e = min(cand, key=lambda x: (0 if x["rush"] else 1, x["due_h"], x["arrival"]))
         elif rule == "spt":
@@ -312,7 +393,11 @@ class Shop:
         inp, r = self.inp, self.rng
         wc = m.wc
         if wc == "press_brake":
-            su = e["setup_std"] * inp.brake_setup_ratio[(grouped, e["qty"] < 25)].draw(r, e["setup_std"]) * self.sc.get("brake_setup_factor", 1.0)
+            red = self.sc.get("setup_reduction")
+            if red and (e["part_id"], e["op_seq"]) in red["at_standard"]:
+                su = e["setup_std"]
+            else:
+                su = e["setup_std"] * inp.brake_setup_ratio[(grouped, e["qty"] < 25)].draw(r, e["setup_std"]) * (red["other_factor"] if red else 1.0)
         else:
             sm = inp.setup_ratio.get(wc)
             su = e["setup_std"] * (sm.draw(r, e["setup_std"]) if sm is not None else 1.0)
@@ -372,10 +457,9 @@ class Shop:
     # jobs -------------------------------------------------------------------
     def job_flow(self, j, ops):
         env, inp, r = self.env, self.inp, self.rng
-        release_h = hours(j.release_date) + 10.0
-        hold = self.sc.get("release_hold")
-        if hold is not None:
-            yield env.process(hold(self, j, ops, release_h))
+        brake_std = sum(o["setup_std"] + o["run_std_hours"] for o in ops if o["work_center"] == "press_brake")
+        if self.gate is not None:
+            yield self.gate.request(bool(j.rush_flag), brake_std)
         yield env.timeout(max(inp.next_working_morning(hours(j.release_date)) - env.now, 0))
         mat = float(r.choice(inp.material[j.routing_class])) if j.routing_class in inp.material else 0.0
         if mat > 0:
@@ -389,7 +473,7 @@ class Shop:
                 continue
             if k > 0 and wc in inp.move:
                 yield env.timeout(inp.wd_add(env.now, float(r.choice(inp.move[wc]))) - env.now)
-            e = dict(job_id=j.job_id, rush=bool(j.rush_flag), due_h=due_h, planned=hours(o["planned_start"]), arrival=env.now, family=j.family, cls=j.cls,
+            e = dict(job_id=j.job_id, part_id=j.part_id, op_seq=o["op_seq"], rush=bool(j.rush_flag), due_h=due_h, planned=hours(o["planned_start"]), arrival=env.now, family=j.family, cls=j.cls,
                      qty=j.qty, tool=o["tooling_set"], setup_std=o["setup_std"], run_std=o["run_std_hours"], std=o["setup_std"] + o["run_std_hours"],
                      remaining_std=remaining, color=j.powder_color if wc == "powder_coat" else None, eligible=True, done=env.event())
             if wc == "laser":
@@ -398,12 +482,14 @@ class Shop:
             self.wake(wc)
             yield e["done"]
             remaining -= e["std"]
+            if wc == "press_brake" and self.gate is not None:
+                self.gate.brake_done(e["std"])
         yield env.timeout(inp.wd_add(env.now, float(r.choice(inp.ship))) - env.now)
         self.results.append(dict(job_id=j.job_id, release_date=j.release_date, due_date=j.due_date, ship_ts=T0 + pd.Timedelta(hours=env.now),
-                                 routing_class=j.routing_class, rush=bool(j.rush_flag)))
-        done = self.sc.get("on_ship")
-        if done is not None:
-            done(self, j)
+                                 routing_class=j.routing_class, rush=bool(j.rush_flag), order_date=j.order_date, requested_date=j.requested_date,
+                                 quoted_lead_days=j.quoted_lead_days))
+        if self.gate is not None:
+            self.gate.shipped()
 
     def nest(self, e, j):
         """A job needing more than one sheet is cut on its own; single-sheet jobs wait for a second job on the sheet item or for their planned start."""
@@ -429,6 +515,8 @@ class Shop:
                         x["eligible"] = True
                     pool.clear()
             self.wake("laser")
+            if self.gate is not None:
+                self.gate.release()
             yield env.timeout(1.0)
 
     # overtime rule ------------------------------------------------------------
@@ -439,7 +527,6 @@ class Shop:
         """Saturday and extended brake shifts as the shop has worked them: by the number of jobs at the brakes."""
         env, inp, r = self.env, self.inp, self.rng
         mach = {m.id: m for m in self.machines["press_brake"]}
-        always = self.sc.get("saturday_always", False)
         while True:
             d = int(env.now // 24) + 1
             while d < len(inp.weekday_flag) and inp.weekday_flag[d] == 0:
@@ -448,13 +535,15 @@ class Shop:
                 return
             yield env.timeout(24 * d + 12.0 - env.now)
             k = int(np.searchsorted(inp.ot_edges, self.jobs_at_brakes(), side="right"))
-            if inp.days[d].weekday() == 4 and (always or r.random() < inp.p_saturday[k]):
+            planned = inp.days[d].month in self.sc.get("planned_saturday_months", ())
+            if inp.days[d].weekday() == 4 and (planned or r.random() < inp.p_saturday[k]):
                 a = 24 * (d + 1) + FIRST[0]
                 for mid in SAT_MACHINES:
-                    bisect.insort(mach[mid].extra, (a, a + 8.0, not always))
+                    bisect.insort(mach[mid].extra, (a, a + 8.0, not planned))
                     mach[mid].sched_added[(inp.days[d + 1].year, inp.days[d + 1].quarter)] += 8.0
                 self.overtime["saturdays"] += 1
                 self.overtime["hours"] += 16.0
+                self.ot_log.append((inp.days[d + 1], "saturday", 16.0))
             yield env.timeout(2.0)
             if r.random() < inp.p_extended[k]:
                 a = 24 * d + EXTENDED[0]
@@ -463,6 +552,7 @@ class Shop:
                     mach[mid].sched_added[(inp.days[d].year, inp.days[d].quarter)] += 2.0
                 self.overtime["extended_days"] += 1
                 self.overtime["hours"] += 4.0
+                self.ot_log.append((inp.days[d], "extended", 4.0))
             self.wake("press_brake")
 
     def monitor(self):
@@ -529,4 +619,40 @@ def measures(shop, first_quarter=1):
                 if yr == REPORT_YEAR and qtr >= first_quarter:
                     sched += h
         out[name] = busy / sched
+    log = [x for x in shop.ot_log if x[0].year == REPORT_YEAR and x[0].quarter >= first_quarter]
+    out["saturday_shifts"] = float(sum(1 for x in log if x[1] == "saturday"))
+    out["extended_hours"] = float(sum(x[2] for x in log if x[1] == "extended"))
+    if shop.gate is not None:
+        out["release_hold_days"] = float(np.mean(shop.gate.held_days)) if shop.gate.held_days else 0.0
+    out.update(load_aware_promise(shop, r, first_quarter))
     return out
+
+
+def load_aware_promise(shop, r, first_quarter, weeks=13, pctl=0.8, min_jobs=20):
+    """On-time delivery if non-rush lines were promised at the later of the requested date and the order date plus the 80th-percentile
+    lead time of the routing class over the trailing 13 weeks. Rush lines keep their promise. The floor is not changed."""
+    inp = shop.inp
+    r = r.dropna(subset=["order_date"]).copy()
+    r["order_date"] = pd.to_datetime(r["order_date"])
+    r["requested_date"] = pd.to_datetime(r["requested_date"])
+    r["due_new"] = pd.to_datetime(r["due_date"])
+    r["quote_new"] = np.nan
+    for cls, g in r.groupby("routing_class"):
+        h = g.sort_values("ship_date")
+        ship, lead = h["ship_date"].to_numpy(), h["lead"].to_numpy()
+        for idx, od, req, rush in zip(g.index, g["order_date"], g["requested_date"], g["rush"]):
+            if rush or od.year != REPORT_YEAR and (od + pd.Timedelta(days=120)).year != REPORT_YEAR:
+                continue
+            a, b = np.searchsorted(ship, np.datetime64(od - pd.Timedelta(weeks=weeks))), np.searchsorted(ship, np.datetime64(od))
+            if b - a < min_jobs:
+                continue
+            n = float(np.ceil(np.quantile(lead[a:b], pctl)))
+            t = inp.wd_add(hours(od), n)
+            new = (T0 + pd.Timedelta(hours=t)).normalize()
+            r.at[idx, "due_new"] = max(new, req) if req == req else new
+            r.at[idx, "quote_new"] = n
+    y = r[(r["ship_date"].dt.year == REPORT_YEAR) & (r["ship_date"].dt.quarter >= first_quarter)]
+    q_ = y.dropna(subset=["quote_new"])
+    return dict(on_time_delivery_load_aware=float((y["ship_date"] <= y["due_new"]).mean()),
+                promises_longer_than_fixed_quote=float((q_["quote_new"] > q_["quoted_lead_days"]).mean()) if len(q_) else np.nan,
+                load_aware_quote_mean=float(q_["quote_new"].mean()) if len(q_) else np.nan)
