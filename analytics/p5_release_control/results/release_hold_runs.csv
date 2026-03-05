@@ -1,0 +1,211 @@
+scenario,seed,release_hold_days
+S1 WIP cap 240,100,1.2628829086305058
+S1 WIP cap 240,101,1.481119361412009
+S1 WIP cap 240,102,1.7968889277876103
+S1 WIP cap 240,103,1.5880854241211748
+S1 WIP cap 240,104,1.610504904239941
+S1 WIP cap 240,105,1.1238718473212337
+S1 WIP cap 240,106,1.5357294402553625
+S1 WIP cap 240,107,1.3751669992556088
+S1 WIP cap 240,108,1.629406349384016
+S1 WIP cap 240,109,1.2943008549819286
+S1 WIP cap 240,110,1.5891027438072507
+S1 WIP cap 240,111,1.807061111719977
+S1 WIP cap 240,112,1.4427346643141712
+S1 WIP cap 240,113,1.0947393793853335
+S1 WIP cap 240,114,1.4484068247897457
+S1 WIP cap 240,115,1.3910394316725962
+S1 WIP cap 240,116,1.5275868550637015
+S1 WIP cap 240,117,1.219953112934956
+S1 WIP cap 240,118,1.2588666997288838
+S1 WIP cap 240,119,1.618994731907481
+S1 WIP cap 240,120,1.5536929901122745
+S1 WIP cap 240,121,1.6546091958889924
+S1 WIP cap 240,122,1.1910136117843588
+S1 WIP cap 240,123,1.3968475024070997
+S1 WIP cap 240,124,1.369577042485519
+S1 WIP cap 240,125,1.5212016097055847
+S1 WIP cap 240,126,1.3598255968831032
+S1 WIP cap 240,127,1.652803639583739
+S1 WIP cap 240,128,1.9674477643233328
+S1 WIP cap 240,129,1.0574786541893957
+S1 WIP cap 210,100,2.402045092638514
+S1 WIP cap 210,101,2.3289172381355625
+S1 WIP cap 210,102,1.936481652293864
+S1 WIP cap 210,103,2.5309933714559976
+S1 WIP cap 210,104,2.7534016763150864
+S1 WIP cap 210,105,2.1897922638328966
+S1 WIP cap 210,106,2.402818057352832
+S1 WIP cap 210,107,2.3830607871345717
+S1 WIP cap 210,108,2.025504814695761
+S1 WIP cap 210,109,2.474608093467652
+S1 WIP cap 210,110,2.288456770403551
+S1 WIP cap 210,111,1.923092012155392
+S1 WIP cap 210,112,2.305188222473467
+S1 WIP cap 210,113,2.0418235258265094
+S1 WIP cap 210,114,2.475340345556524
+S1 WIP cap 210,115,2.070502390079207
+S1 WIP cap 210,116,2.3381563885202747
+S1 WIP cap 210,117,2.459684529360933
+S1 WIP cap 210,118,2.466074096101171
+S1 WIP cap 210,119,2.511581964301769
+S1 WIP cap 210,120,2.490589037849145
+S1 WIP cap 210,121,2.092113430200575
+S1 WIP cap 210,122,2.8346067988801287
+S1 WIP cap 210,123,2.117735297544358
+S1 WIP cap 210,124,2.1359439544712244
+S1 WIP cap 210,125,2.3467063650071824
+S1 WIP cap 210,126,2.2664184388794166
+S1 WIP cap 210,127,2.043326903099125
+S1 WIP cap 210,128,2.615651545063076
+S1 WIP cap 210,129,2.1237505789920195
+S1 WIP cap 180,100,4.199207210496378
+S1 WIP cap 180,101,5.4556557844913165
+S1 WIP cap 180,102,4.22682089966736
+S1 WIP cap 180,103,4.962720338004491
+S1 WIP cap 180,104,4.567813013374541
+S1 WIP cap 180,105,4.01644082226335
+S1 WIP cap 180,106,3.1747210653152997
+S1 WIP cap 180,107,4.027811508366878
+S1 WIP cap 180,108,3.8072554881109584
+S1 WIP cap 180,109,3.872351592031537
+S1 WIP cap 180,110,3.844608094720676
+S1 WIP cap 180,111,5.342950060537646
+S1 WIP cap 180,112,4.550517582541242
+S1 WIP cap 180,113,4.161300987475713
+S1 WIP cap 180,114,3.934343575353463
+S1 WIP cap 180,115,3.56906957880537
+S1 WIP cap 180,116,4.201965660774757
+S1 WIP cap 180,117,3.814071377914443
+S1 WIP cap 180,118,3.740340871034524
+S1 WIP cap 180,119,4.645028169377412
+S1 WIP cap 180,120,5.225202559955878
+S1 WIP cap 180,121,4.383570348890402
+S1 WIP cap 180,122,4.421441659798286
+S1 WIP cap 180,123,4.17762171815593
+S1 WIP cap 180,124,4.344094170788241
+S1 WIP cap 180,125,3.2054674298217822
+S1 WIP cap 180,126,4.995698823921836
+S1 WIP cap 180,127,3.949028691615613
+S1 WIP cap 180,128,6.152428435497269
+S1 WIP cap 180,129,5.613449295099353
+S2 Constraint-paced release (3 days of brake work),100,0.5720596475366115
+S2 Constraint-paced release (3 days of brake work),101,0.3902131054409747
+S2 Constraint-paced release (3 days of brake work),102,0.4142761759331259
+S2 Constraint-paced release (3 days of brake work),103,0.1958163791387836
+S2 Constraint-paced release (3 days of brake work),104,0.4322773374253404
+S2 Constraint-paced release (3 days of brake work),105,0.3176684813906266
+S2 Constraint-paced release (3 days of brake work),106,0.3944951344628019
+S2 Constraint-paced release (3 days of brake work),107,0.4007438707527772
+S2 Constraint-paced release (3 days of brake work),108,0.419206849125361
+S2 Constraint-paced release (3 days of brake work),109,0.428692085778933
+S2 Constraint-paced release (3 days of brake work),110,0.4362103550933118
+S2 Constraint-paced release (3 days of brake work),111,0.5421463436225303
+S2 Constraint-paced release (3 days of brake work),112,0.3054502070129172
+S2 Constraint-paced release (3 days of brake work),113,0.5512453812614022
+S2 Constraint-paced release (3 days of brake work),114,0.281899958405005
+S2 Constraint-paced release (3 days of brake work),115,0.2949869184419229
+S2 Constraint-paced release (3 days of brake work),116,0.5011050705044855
+S2 Constraint-paced release (3 days of brake work),117,0.4089814920170208
+S2 Constraint-paced release (3 days of brake work),118,0.3932875855978659
+S2 Constraint-paced release (3 days of brake work),119,0.313519147366063
+S2 Constraint-paced release (3 days of brake work),120,0.3902517942987291
+S2 Constraint-paced release (3 days of brake work),121,0.416160976031682
+S2 Constraint-paced release (3 days of brake work),122,0.2525061000727168
+S2 Constraint-paced release (3 days of brake work),123,0.3349949719102194
+S2 Constraint-paced release (3 days of brake work),124,0.4406253657201505
+S2 Constraint-paced release (3 days of brake work),125,0.4653239267558904
+S2 Constraint-paced release (3 days of brake work),126,0.3445763846394493
+S2 Constraint-paced release (3 days of brake work),127,0.3341882801762367
+S2 Constraint-paced release (3 days of brake work),128,0.3559090717579407
+S2 Constraint-paced release (3 days of brake work),129,0.3832502065145069
+S10 WIP cap 240 + earliest due date,100,1.6411911706393332
+S10 WIP cap 240 + earliest due date,101,1.0636703242088534
+S10 WIP cap 240 + earliest due date,102,1.412858898107483
+S10 WIP cap 240 + earliest due date,103,1.2750358130286064
+S10 WIP cap 240 + earliest due date,104,1.4127041562114253
+S10 WIP cap 240 + earliest due date,105,1.0405074604636373
+S10 WIP cap 240 + earliest due date,106,1.0078775483949176
+S10 WIP cap 240 + earliest due date,107,1.1301817628389927
+S10 WIP cap 240 + earliest due date,108,1.1327071315075825
+S10 WIP cap 240 + earliest due date,109,1.012848627213221
+S10 WIP cap 240 + earliest due date,110,1.1902468948376734
+S10 WIP cap 240 + earliest due date,111,1.5033749467095725
+S10 WIP cap 240 + earliest due date,112,1.1512166835725546
+S10 WIP cap 240 + earliest due date,113,1.119928805071966
+S10 WIP cap 240 + earliest due date,114,1.4099605968941225
+S10 WIP cap 240 + earliest due date,115,1.0154476504527976
+S10 WIP cap 240 + earliest due date,116,1.3828489914085031
+S10 WIP cap 240 + earliest due date,117,1.4577482799014134
+S10 WIP cap 240 + earliest due date,118,0.8427910700924218
+S10 WIP cap 240 + earliest due date,119,1.3747255253253876
+S10 WIP cap 240 + earliest due date,120,1.1503875923639584
+S10 WIP cap 240 + earliest due date,121,1.3568929970711312
+S10 WIP cap 240 + earliest due date,122,1.2047090092981525
+S10 WIP cap 240 + earliest due date,123,1.381790451321877
+S10 WIP cap 240 + earliest due date,124,1.0218345785680587
+S10 WIP cap 240 + earliest due date,125,1.0700079812080454
+S10 WIP cap 240 + earliest due date,126,1.1725125661852096
+S10 WIP cap 240 + earliest due date,127,1.1943335061792948
+S10 WIP cap 240 + earliest due date,128,1.163521321353874
+S10 WIP cap 240 + earliest due date,129,1.4848815730057754
+S10 WIP cap 240 + earliest due date + weld second shift,100,1.1349723634835347
+S10 WIP cap 240 + earliest due date + weld second shift,101,1.397784051479204
+S10 WIP cap 240 + earliest due date + weld second shift,102,1.0136174583954805
+S10 WIP cap 240 + earliest due date + weld second shift,103,0.9401623320630054
+S10 WIP cap 240 + earliest due date + weld second shift,104,1.1567121201923256
+S10 WIP cap 240 + earliest due date + weld second shift,105,1.0183841875752202
+S10 WIP cap 240 + earliest due date + weld second shift,106,1.9632296746923767
+S10 WIP cap 240 + earliest due date + weld second shift,107,1.467570010248037
+S10 WIP cap 240 + earliest due date + weld second shift,108,1.3867437388777215
+S10 WIP cap 240 + earliest due date + weld second shift,109,1.0828391298433362
+S10 WIP cap 240 + earliest due date + weld second shift,110,1.0163545485235836
+S10 WIP cap 240 + earliest due date + weld second shift,111,0.8401884724516887
+S10 WIP cap 240 + earliest due date + weld second shift,112,1.3549144883751316
+S10 WIP cap 240 + earliest due date + weld second shift,113,0.9307216980365204
+S10 WIP cap 240 + earliest due date + weld second shift,114,1.244836128125145
+S10 WIP cap 240 + earliest due date + weld second shift,115,1.7321783954696768
+S10 WIP cap 240 + earliest due date + weld second shift,116,1.1886176221210671
+S10 WIP cap 240 + earliest due date + weld second shift,117,1.357536816726457
+S10 WIP cap 240 + earliest due date + weld second shift,118,1.0105538970085113
+S10 WIP cap 240 + earliest due date + weld second shift,119,1.0523249482617578
+S10 WIP cap 240 + earliest due date + weld second shift,120,1.3356650719503294
+S10 WIP cap 240 + earliest due date + weld second shift,121,1.5958624866921922
+S10 WIP cap 240 + earliest due date + weld second shift,122,1.326729940468855
+S10 WIP cap 240 + earliest due date + weld second shift,123,1.4749206954015446
+S10 WIP cap 240 + earliest due date + weld second shift,124,1.132446218118129
+S10 WIP cap 240 + earliest due date + weld second shift,125,1.3518824127803444
+S10 WIP cap 240 + earliest due date + weld second shift,126,1.3370451093881408
+S10 WIP cap 240 + earliest due date + weld second shift,127,0.9932700036981508
+S10 WIP cap 240 + earliest due date + weld second shift,128,1.013081619130058
+S10 WIP cap 240 + earliest due date + weld second shift,129,1.396732009709573
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,100,0.7865621936671351
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,101,0.7828697696842736
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,102,0.8290406360355481
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,103,0.6851273656460016
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,104,0.7734225832282695
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,105,0.8156614132463424
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,106,0.99927036273508
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,107,0.7940489123698375
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,108,0.5354422111595522
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,109,0.7147407465062943
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,110,0.7292586699806513
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,111,0.6406293701441214
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,112,0.7992985066602546
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,113,0.5534985012757612
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,114,0.775406586400526
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,115,0.8274926933021977
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,116,0.8442183361883588
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,117,0.8315154313715666
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,118,0.8117062146759214
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,119,0.7482048284452771
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,120,0.5845593313774766
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,121,0.7775205090556726
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,122,0.6368821528222018
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,123,0.904057436992815
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,124,0.7374103980981366
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,125,0.696447004642189
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,126,0.7564688030560062
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,127,1.2892965215645618
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,128,0.7957247363354509
+S10 WIP cap 240 + earliest due date + weld second shift + setup reduction,129,0.88181784229289
