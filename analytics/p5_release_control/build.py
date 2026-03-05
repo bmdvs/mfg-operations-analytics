@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from analytics.db import q
-from analytics.p5_release_control.scenarios import HOLD, OUT, summarize, versus
+from analytics.p5_release_control.scenarios import OUT, QUARTERS, summarize, versus
 from analytics.p5_release_control.validate import TOLERANCE, measured
 from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, shell, table
 
@@ -28,12 +28,12 @@ MEAS = {"lead_time_median": ("Median lead time", "{:.1f}"), "lead_time_p90": ("9
 
 df = pd.read_csv(OUT)
 S = summarize(df)
-REPS = int(df.groupby("scenario")["seed"].nunique().iloc[0])
+REPS = int(df.groupby("scenario")["replication"].nunique().iloc[0])
 PK = [s for s in df["scenario"].unique() if s.startswith("P")]
 CHRONIC, NOCAP = PK[0], PK[1]
 SINGLE = [s for s in df["scenario"].unique() if s.startswith("S") and not s.startswith(("S0", "S10"))]
 CAPCOMBO = [s for s in df["scenario"].unique() if s.startswith("S10")]
-VQ = pd.read_csv(RES / "validation_quarters.csv")
+VQ = pd.read_csv(QUARTERS)
 MQ = q("select * from marts.mart_delivery_by_quarter order by quarter_start")
 MQ["quarter"] = pd.to_datetime(MQ["quarter_start"]).dt.to_period("Q").astype(str)
 batch = q("select export_batch_id from marts.mart_delivery_by_quarter limit 1").iloc[0, 0]
@@ -46,13 +46,11 @@ def P(period):
 
 
 PY, PR = P("year"), P(REST)
-HD = pd.read_csv(HOLD).groupby("scenario", sort=False)["release_hold_days"].agg(["mean", "std", "count"])
-HD["half"] = 1.96 * HD["std"] / np.sqrt(HD["count"])
 
 
 def hold(sc):
     """Mean working days a job is held before release to the floor, over the whole replay."""
-    return float(HD.loc[sc, "mean"])
+    return float(PY.loc[(sc, "release_hold_days"), "mean"])
 
 
 def v(p, sc, m, col="mean"):
@@ -64,25 +62,31 @@ def pts(p, sc, m="on_time_delivery", interval=False):
     return f"{abs(r['diff']) * 100:.1f}" + (f" ({r['diff_low'] * 100:+.1f} to {r['diff_high'] * 100:+.1f})" if interval else "")
 
 
+def sg(x, f="{:+.1f}"):
+    """A signed number without a negative zero."""
+    t = f.format(x)
+    return t.replace("-", "+") if float(t) == 0 else t
+
+
 def spts(r):
-    return f"{r['diff'] * 100:+.1f} ({r['diff_low'] * 100:+.1f} to {r['diff_high'] * 100:+.1f})"
+    return f"{sg(r['diff'] * 100)} ({sg(r['diff_low'] * 100)} to {sg(r['diff_high'] * 100)})"
 
 
 def spp(r):
     """A signed change in points followed by its interval, for running text."""
-    return f"{r['diff'] * 100:+.1f} points ({r['diff_low'] * 100:+.1f} to {r['diff_high'] * 100:+.1f})"
+    return f"{sg(r['diff'] * 100)} points ({sg(r['diff_low'] * 100)} to {sg(r['diff_high'] * 100)})"
 
 
 def sdd(r):
-    return f"{r['diff']:+.1f} days ({r['diff_low']:+.1f} to {r['diff_high']:+.1f})"
+    return f"{sg(r['diff'])} days ({sg(r['diff_low'])} to {sg(r['diff_high'])})"
 
 
 def paired(period, sc, m, ref, ref_m):
     """Paired difference in points between a measure of one scenario and a measure of another, by replication, with its 95% interval."""
-    a = df[(df["scenario"] == sc) & (df["period"] == period)].set_index("seed")[m]
-    d = (a - df[(df["scenario"] == ref) & (df["period"] == period)].set_index("seed")[ref_m].reindex(a.index)) * 100
+    a = df[(df["scenario"] == sc) & (df["period"] == period)].set_index("replication")[m]
+    d = (a - df[(df["scenario"] == ref) & (df["period"] == period)].set_index("replication")[ref_m].reindex(a.index)) * 100
     h = 1.96 * d.std(ddof=1) / np.sqrt(len(d))
-    return f"{d.mean():+.1f} ({d.mean() - h:+.1f} to {d.mean() + h:+.1f})"
+    return f"{sg(d.mean())} ({sg(d.mean() - h)} to {sg(d.mean() + h)})"
 
 
 def by(r):
@@ -91,7 +95,7 @@ def by(r):
 
 
 def sdays(r, f="{:+.1f}"):
-    return f"{f.format(r['diff'])} ({f.format(r['diff_low'])} to {f.format(r['diff_high'])})"
+    return f"{sg(r['diff'], f)} ({sg(r['diff_low'], f)} to {sg(r['diff_high'], f)})"
 
 
 def d1(x):
@@ -235,7 +239,8 @@ def t_diff(p, scen):
 
 
 def t_hold():
-    rows = [[SHORT.get(sc, sc[4:]), f"{r['mean']:.2f} ({r['mean'] - r['half']:.2f} to {r['mean'] + r['half']:.2f})"] for sc, r in HD.iterrows()]
+    rows = [[SHORT.get(sc, sc[4:]), f"{v(PY, sc, 'release_hold_days'):.2f} ({v(PY, sc, 'release_hold_days', 'low'):.2f} to {v(PY, sc, 'release_hold_days', 'high'):.2f})"]
+            for sc in df["scenario"].unique() if (sc, "release_hold_days") in PY.index]
     return table(pd.DataFrame(rows, columns=["Scenario", "Working days held before release to the floor, mean per job"]))
 
 
@@ -296,8 +301,10 @@ def report():
              f"with 95% intervals.</div>")
 
     b.append("<h2 id='f5'>5. The secondary constraint</h2>")
-    b.append(f"<p>A second shift on the robotic weld cell raises on-time delivery by {by(PR.loc[(s5, 'on_time_delivery')])} in {REST} and "
-             f"{pts(PY, s5)} for the year, and shortens the 90th percentile by {d1(-v(PR, s5, 'lead_time_p90', 'diff'))} days in {REST}.</p>")
+    y5 = PY.loc[(s5, "on_time_delivery")]
+    b.append(f"<p>A second shift on the robotic weld cell raises on-time delivery by {by(PR.loc[(s5, 'on_time_delivery')])} in {REST} and shortens the 90th "
+             f"percentile there by {d1(-v(PR, s5, 'lead_time_p90', 'diff'))} days; for the year the effect is {spp(y5)}"
+             + (", not distinguishable from zero." if y5["diff_low"] <= 0 <= y5["diff_high"] else ".") + "</p>")
 
     b.append("<h2 id='f6'>6. The peak</h2>")
     b.append(f"<p>A planned Saturday brake shift every week from November through February raises on-time delivery by {by(PY.loc[(s7, 'on_time_delivery')])} "
@@ -355,8 +362,8 @@ def report():
              f"Scenarios: the WIP cap holds non-rush jobs in release order until the jobs on the floor are below the cap, and lead time still runs from the release "
              f"date; constraint-paced release holds jobs with brake work while the work waiting at the brakes exceeds 3 days of crewed brake capacity; light work goes "
              f"ahead of heavy on B1 and B2, after precision, when the B3 to B5 queue exceeds 2 days; the setup reduction runs the top 12 part-operations at standard and "
-             f"takes the assignment and handover hours off the other brake setups in proportion, the model having no individual operators. The release hold is from a second set of {int(HD['count'].iloc[0])} replications of the "
-             f"release-control scenarios. Differences are paired by replication; throughput is flagged where a scenario ships fewer jobs in the period with the interval excluding zero.</p>")
+             f"takes the assignment and handover hours off the other brake setups in proportion, the model having no individual operators. Each run draws from one generator seeded by its scenario and "
+             f"replication number. Differences are paired by replication; throughput is flagged where a scenario ships fewer jobs in the period with the interval excluding zero.</p>")
 
     b.append("<h2 id='appendix'>Appendix</h2>")
     b.append("<h3>Table 3. The model against measured, by quarter shipped</h3>" + t_quarters())
