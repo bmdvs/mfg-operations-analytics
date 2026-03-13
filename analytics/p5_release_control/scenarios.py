@@ -16,7 +16,8 @@ OUT = Path(__file__).resolve().parent / "results" / "scenario_runs.csv"
 QUARTERS = Path(__file__).resolve().parent / "results" / "validation_quarters.csv"
 PEAK_MONTHS = (11, 12, 1, 2)
 MEASURES = ["lead_time_median", "lead_time_p90", "on_time_delivery", "wip_mean", "brake_utilization", "robotic_weld_utilization", "saturday_shifts",
-            "extended_hours", "jobs_shipped", "on_time_delivery_load_aware", "promises_longer_than_fixed_quote", "release_hold_days"]
+            "extended_hours", "jobs_shipped", "on_time_delivery_load_aware", "promises_longer_than_fixed_quote", "release_hold_days",
+            "on_time_delivery_quote_table", "promises_longer_quote_table"]
 
 SCENARIOS = {
     "S0 Current practice": {},
