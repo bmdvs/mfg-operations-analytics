@@ -24,6 +24,9 @@ HOT_DAYS = 2
 GROUP_MAX = 3
 HEAVY_GAUGES = {"12ga", "11ga", "0.125in", "0.250in"}
 SAT_MACHINES = ("B1", "B2")
+CELL = "RB1"                                   # the robotic bending cell, when a scenario adds it
+CELL_MIN_LOT = 25
+TOWER_HOURS = (22.5, 28.5)                     # unattended cutting after second shift on the laser with the sheet tower
 BRAKE_PRIORITY = {"B1": [{"precision"}, {"heavy", "light"}], "B2": [{"precision"}, {"heavy", "light"}], "B3": [{"heavy", "light"}], "B4": [{"heavy", "light"}],
                   "B5": [{"light"}]}
 
@@ -65,7 +68,7 @@ class Inputs:
         self.batch = q("select export_batch_id from marts.mart_job_lead_time limit 1").iloc[0, 0]
         jobs = q(f"""
             select j.job_id, j.part_id, j.release_date, j.due_date, j.qty, l.rush_flag, l.routing_class, l.quoted_lead_days, ol.order_date, ol.requested_date,
-                p.family, p.bend_count, p.thickness, p.tolerance_critical, p.powder_color
+                p.family, p.bend_count, p.thickness, p.tolerance_critical, p.powder_color, p.repeat_part
             from staging.stg_erp__jobs j
             join intermediate.int_job_lead_time l using (job_id)
             join staging.stg_erp__parts p on p.part_id = j.part_id
@@ -83,6 +86,8 @@ class Inputs:
         jobs["rush_flag"] = jobs["rush_flag"].fillna(False).astype(bool)
         jobs["cls"] = np.where((jobs["bend_count"] >= 10) | jobs["tolerance_critical"].fillna(False), "precision",
                                np.where(jobs["thickness"].isin(HEAVY_GAUGES), "heavy", "light"))
+        # parts a robotic bending cell can run: light parts, repeat parts, lots of CELL_MIN_LOT pieces or more
+        jobs["cell_ok"] = (jobs["cls"] == "light") & jobs["repeat_part"].fillna(False).astype(bool) & (jobs["qty"] >= CELL_MIN_LOT)
         self.jobs = jobs.sort_values(["release_date", "job_id"]).reset_index(drop=True)
         self.ops = {k: g.to_dict("records") for k, g in ops.groupby("job_id")}
 
@@ -253,6 +258,7 @@ class Machine:
         self.blocked_until = 0.0
         self.last_tool, self.group_n = None, 0
         self.busy_hours = defaultdict(float)   # by (year, quarter)
+        self.setup_hours = defaultdict(float)  # by (year, quarter) of the setup's start
         self.sched_added = defaultdict(float)
 
     def next_window(self, t):
@@ -312,8 +318,16 @@ class Shop:
                     win.append((base + FIRST[0], base + FIRST[1], False))
                     if shifts >= 2:
                         win.append((base + SECOND[0], base + SECOND[1], False))
+                    if self.sc.get("laser_tower") == mid:
+                        win.append((base + TOWER_HOURS[0], base + TOWER_HOURS[1], False))
                 win = self._subtract(sorted(win), sorted(inp.downtime.get(mid, [])))
                 self.machines[wc].append(Machine(mid, wc, win))
+            if wc == "press_brake" and self.sc.get("bending_cell"):
+                win = []
+                for d, sat in zip(cal["calendar_date"], cal["saturday"]):
+                    if not sat:
+                        win += [(hours(d) + FIRST[0], hours(d) + FIRST[1], False), (hours(d) + SECOND[0], hours(d) + SECOND[1], False)]
+                self.machines[wc].append(Machine(CELL, wc, sorted(win)))
             self.signal[wc] = self.env.event()
 
     @staticmethod
@@ -360,7 +374,9 @@ class Shop:
             cutoff = 24 * int(t // 24) + LIST_CUTOFF_HOUR
             cand = [e for e in cand if e["arrival"] < cutoff or self.priority(e, t) < 2]
         grouped = False
-        if wc == "press_brake":
+        if wc == "press_brake" and m.id == CELL:
+            cand = [e for e in cand if e["cell_ok"]]
+        elif wc == "press_brake":
             if overtime:
                 cand = [e for e in cand if e["family"] == "enclosure" or e["rush"]]
             else:
@@ -413,6 +429,11 @@ class Shop:
                 su = e["setup_std"]
             else:
                 su = e["setup_std"] * inp.brake_setup_ratio[(grouped, e["qty"] < 25)].draw(r, e["setup_std"]) * (red["other_factor"] if red else 1.0)
+            atc = self.sc.get("tool_changer")
+            if atc and (atc["machines"] == "all" or m.id in atc["machines"]):
+                su *= atc["setup_factor"]
+            ts = T0 + pd.Timedelta(hours=self.env.now)
+            m.setup_hours[(ts.year, ts.quarter)] += su
         else:
             sm = inp.setup_ratio.get(wc)
             su = e["setup_std"] * (sm.draw(r, e["setup_std"]) if sm is not None else 1.0)
@@ -423,7 +444,7 @@ class Shop:
     def work(self, m, hours_needed):
         """Hold the machine for `hours_needed` of machine time across its windows; at the brakes the crewed time needed is longer by the measured availability."""
         env = self.env
-        phi = self.inp.brake_availability if m.wc == "press_brake" else 1.0
+        phi = self.sc["bending_cell"]["availability"] if m.id == CELL else self.inp.brake_availability if m.wc == "press_brake" else 1.0
         left = hours_needed / phi
         while left > 1e-9:
             w = m.next_window(env.now)
@@ -461,7 +482,7 @@ class Shop:
                 if e["cls"] == "heavy":                                  # a heavy setup takes a second operator from an idle brake
                     for other in self.machines["press_brake"]:
                         ow = other.next_window(env.now)
-                        if other is not m and not other.busy and other.blocked_until <= env.now and ow is not None and ow[0] <= env.now:
+                        if other is not m and other.id != CELL and not other.busy and other.blocked_until <= env.now and ow is not None and ow[0] <= env.now:
                             other.blocked_until = env.now + su
                             break
             e["start"] = env.now
@@ -490,7 +511,7 @@ class Shop:
                 yield env.timeout(inp.wd_add(env.now, float(r.choice(inp.move[wc]))) - env.now)
             e = dict(job_id=j.job_id, part_id=j.part_id, op_seq=o["op_seq"], rush=bool(j.rush_flag), due_h=due_h, planned=hours(o["planned_start"]), arrival=env.now, family=j.family, cls=j.cls,
                      qty=j.qty, tool=o["tooling_set"], setup_std=o["setup_std"], run_std=o["run_std_hours"], std=o["setup_std"] + o["run_std_hours"],
-                     remaining_std=remaining, color=j.powder_color if wc == "powder_coat" else None, eligible=True, done=env.event())
+                     remaining_std=remaining, color=j.powder_color if wc == "powder_coat" else None, eligible=True, cell_ok=bool(j.cell_ok), done=env.event())
             if wc == "laser":
                 self.nest(e, j)
             self.queue[wc].append(e)
@@ -635,9 +656,11 @@ def measures(shop, first_quarter=1):
     wip = np.mean([np.searchsorted(rel, np.datetime64(d), side="right") - np.searchsorted(shp, np.datetime64(d), side="right") for d in days])
     out = dict(jobs_shipped=len(y), lead_time_median=float(y["lead"].median()), lead_time_p90=float(y["lead"].quantile(0.9)), wip_mean=float(wip),
                on_time_delivery=float(y["on_time"].mean()))
-    for wc, name in (("press_brake", "brake_utilization"), ("robotic_weld", "robotic_weld_utilization")):
+    for wc, name in (("press_brake", "brake_utilization"), ("robotic_weld", "robotic_weld_utilization"), ("laser", "laser_utilization")):
         busy = sched = 0.0
         for m in shop.machines[wc]:
+            if m.id == CELL:
+                continue
             for (yr, qtr), h in m.busy_hours.items():
                 if yr == REPORT_YEAR and qtr >= first_quarter:
                     busy += h
@@ -649,6 +672,23 @@ def measures(shop, first_quarter=1):
                 if yr == REPORT_YEAR and qtr >= first_quarter:
                     sched += h
         out[name] = busy / sched
+    def in_period(k):
+        return k[0] == REPORT_YEAR and k[1] >= first_quarter
+
+    brakes = shop.machines["press_brake"]
+    out["brake_hours"] = float(sum(h for m in brakes if m.id != CELL for k, h in m.busy_hours.items() if in_period(k)))
+    out["cell_hours"] = float(sum(h for m in brakes if m.id == CELL for k, h in m.busy_hours.items() if in_period(k)))
+    out["brake_setup_hours"] = float(sum(h for m in brakes for k, h in m.setup_hours.items() if in_period(k)))
+    out["b3_setup_hours"] = float(sum(h for m in brakes if m.id == "B3" for k, h in m.setup_hours.items() if in_period(k)))
+    out["weld_second_shift_hours"] = float(sum(b - a for m in shop.machines["robotic_weld"] for a, b, _ in m.windows
+                                               if (a % 24) >= SECOND[0] - 1e-9 and (T0 + pd.Timedelta(hours=a)).year == REPORT_YEAR
+                                               and (T0 + pd.Timedelta(hours=a)).quarter >= first_quarter))
+    # the three weeks from November 11, 2024: jobs waiting at the lasers at the end of each day, and delivery of the jobs released in them
+    d0, d1 = hours("2024-11-11"), hours("2024-12-02")
+    out["laser_queue_nov_2024"] = float(np.mean([x.get("laser", 0) for x in shop.daily if d0 < x["t"] <= d1]))
+    nov = r[(pd.to_datetime(r["release_date"]) >= "2024-11-11") & (pd.to_datetime(r["release_date"]) < "2024-12-02")]
+    out["on_time_released_nov_2024"] = float(nov["on_time"].mean())
+    out["lead_time_released_nov_2024"] = float(nov["lead"].median())
     log = [x for x in shop.ot_log if x[0].year == REPORT_YEAR and x[0].quarter >= first_quarter]
     out["saturday_shifts"] = float(sum(1 for x in log if x[1] == "saturday"))
     out["extended_hours"] = float(sum(x[2] for x in log if x[1] == "extended"))
