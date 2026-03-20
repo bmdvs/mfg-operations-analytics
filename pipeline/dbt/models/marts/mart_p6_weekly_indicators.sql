@@ -28,7 +28,8 @@ on_time_start as (
 adherence as (
     select cast(date_trunc('week', first_start) as date) as week_start, avg((planned_start >= previous_planned_start)::int) as schedule_adherence
     from (
-        select first_start, planned_start, lag(planned_start) over (partition by machine_id order by first_start) as previous_planned_start
+        select first_start, planned_start,
+            lag(planned_start) over (partition by machine_id order by first_start, job_id, op_seq) as previous_planned_start
         from ops
         where first_start is not null
     )
