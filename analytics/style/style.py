@@ -2,6 +2,7 @@
 from pathlib import Path
 
 import matplotlib
+import numpy as np
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
@@ -40,6 +41,15 @@ def fig(h=None, w=None, ncols=1, nrows=1, grid="y", **kw):
     for a in (ax.ravel() if hasattr(ax, "ravel") else [ax]):
         chart_style(a, grid)
     return f, ax
+
+
+def sig(x, digits=6):
+    """Values rounded to a number of significant digits before plotting, so a figure does not depend on the last digits of a sum."""
+    a = np.asarray(x, dtype=float)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        mag = np.where((a == 0) | ~np.isfinite(a), 0.0, np.floor(np.log10(np.abs(a))))
+    scale = 10.0 ** (digits - 1 - mag)
+    return np.round(a * scale) / scale
 
 
 def save(f, name, alt="", up=1):
