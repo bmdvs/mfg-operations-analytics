@@ -76,8 +76,8 @@ def fig_conditions(name="p4_overrun_by_condition", h=4.6):
     return save(f, name, "Brake setup overrun hours by condition")
 
 
-def fig_tenure():
-    f, ax = fig(h=3.0)
+def fig_tenure(name="p4_tenure_decomposition", h=3.0):
+    f, ax = fig(h=h)
     lab = ["Tenure only", "+ familiarity", "+ grouping", "+ machine", "+ lot size, bends,\nshift handover"]
     v = TM["tenure_effect_pct"].to_numpy() * 100
     ax.bar(lab, v, color=[BRAND_BLUE] + [ACCENT] * 3 + [LIGHT_BLUE])
@@ -86,7 +86,7 @@ def fig_tenure():
     ax.set_ylabel("New operators over tenured (%)")
     ax.set_ylim(0, v.max() * 1.2)
     f.tight_layout()
-    return save(f, "p4_tenure_decomposition", "Tenure effect on brake setup ratio as controls are added")
+    return save(f, name, "Tenure effect on brake setup ratio as controls are added")
 
 
 def fig_grouping():
@@ -384,14 +384,14 @@ def a3():
     left.append(f"<section><h2>Background and problem</h2><p>Brake setups ran {n0(y['overrun_hours'])} hours over standard in {YEAR}: {n0(ST['brake_overrun_per_week'])} "
                 f"hours a week and {pct(ST['brake_overrun_per_week'] / MH_WEEK, 0)} of brake machine time.<br>The median setup runs at {d2(y['median_ratio'])} of standard "
                 f"and the 90th percentile at {d2(y['p90_ratio'])}; the ratios are the same in the first quarter and in {REST}.</p></section>")
-    left.append(f"<section><h2>Current condition</h2>{fig_conditions('p4_a3_overrun_by_condition', 4.4)}"
+    left.append(f"<section><h2>Current condition</h2>{fig_conditions('p4_a3_overrun_by_condition', 4.0)}"
                 f"<div class='caption'>Brake setup hours over standard by condition, {YEAR}, with setup counts and median ratios; the conditions overlap.</div></section>")
     wk = y["setup_hours"] / A.WEEKS
     left.append(f"<section><h2>Target</h2><p>Brake setup hours under {n0(wk - LEVERS)} a week, from {n0(wk)} in {YEAR}. Measured levers: top {A.TOP_N} "
                 f"part-operations at standard {d1(ST['top_hours_per_week'])} hours a week; repeat setups assigned to an operator who has set the part up "
                 f"{d1(ASG_ANY['hours_released_per_week'])}; shift-handover standard {d1(cf_start['hours_per_week'])}; {d1(LEVERS)} in all.</p></section>")
     right.append(
-        f"<section><h2>Analysis</h2>{fig_tenure()}<div class='caption'>Brake setup ratio of operators with under 12 months over tenured operators as controls are "
+        f"<section><h2>Analysis</h2>{fig_tenure('p4_a3_tenure_decomposition', 2.3)}<div class='caption'>Brake setup ratio of operators with under 12 months over tenured operators as controls are "
         f"added.</div><ul>"
         f"<li>Handed-over setups are {pct(ho['share_of_setups'], 0)} of setups and {pct(ho['share_of_overrun'], 0)} of the overrun (median {d2(ho['median_ratio'])} "
         f"against {d2(nho['median_ratio'])}); the handover itself costs {d1(cf_start['hours_per_week'])} hours a week, the rest is long setups reaching the shift end.</li>"
