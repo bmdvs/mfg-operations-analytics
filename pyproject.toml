@@ -2,7 +2,7 @@
 name = "mfg-operations-analytics"
 version = "1.0.0"
 description = "Lead time, constraint, setup, release control and quoting analysis for a sheet-metal job shop"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "dlt[duckdb]>=1.0",
     "dbt-duckdb>=1.8",
