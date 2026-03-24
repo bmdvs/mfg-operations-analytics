@@ -353,7 +353,7 @@ def report():
 
     b.append("<h2 id='rec'>Recommendation</h2>")
     b.append(f"<p>Restate the fixed quote as a percentile of the measured lead-time distribution by routing class (P7): the 10-day repeat quote is met on "
-             f"{hit['repeat part'][1]} of jobs in an ordinary quarter. Plan the fourth-quarter peak with a release and overtime plan sized from P5; "
+             f"{hit['repeat part'][1]} of jobs in an ordinary quarter. Plan the fourth-quarter peak with planned Saturday brake shifts from November through February and the setup program, sized on the shop model (P5); "
              f"the 2024 build put {n0(q1['late_jobs'])} jobs late in the first quarter of {YEAR}. Take ordinary-quarter lateness to P2, where material, vendor and "
              f"robotic weld causes are attributed job by job.</p>")
 
@@ -393,7 +393,8 @@ def report():
 # ── A3 ──────────────────────────────────────────────────────────────────────
 COUNTERMEASURES = [
     ("Attribute each late job to a cause and replace the late-reason code with a buffer status record (P2)", "Production control manager", "February 2026"),
-    ("Size a fourth-quarter release and overtime plan on the shop model, and test a WIP cap and due-date dispatch (P5)", "Plant manager", "April 2026"),
+    ("Plan the fourth-quarter peak on the shop model: planned Saturday brake shifts and the setup program (P5); a WIP cap and due-date dispatch lower on-time "
+     "delivery (P5)", "Plant manager", "April 2026"),
     ("Restate quoted lead times as a percentile of measured lead time by routing class and brake load (P7)", "Estimating and customer service manager", "May 2026"),
 ]
 
@@ -406,12 +407,12 @@ def a3():
                 f"({pct(ra['share_within_quoted'], 0)} in {REST}); {pct(ya['on_time_delivery'])} ship by the promised date ({pct(ra['on_time_delivery'])} in {REST}) "
                 f"against the {pct(required, 0)} key accounts require.<br>The 90th-percentile lead time is {d1(ya['lead_time_p90'])} days ({d1(ra['lead_time_p90'])} in "
                 f"{REST}) against a median of {d1(ya['lead_time_median'])} ({d1(ra['lead_time_median'])}).</p></section>")
-    left.append(f"<section><h2>Current condition</h2>{fig_stages('p1_a3_stage_decomposition', 1, 4.6)}"
+    left.append(f"<section><h2>Current condition</h2>{fig_stages('p1_a3_stage_decomposition', 1, 4.3)}"
                 f"<div class='caption'>Mean working days per job at each stage, on-time against late jobs, {YEAR} and {REST}.</div></section>")
     left.append(f"<section><h2>Target</h2><p>{pct(required, 0)} of jobs shipped by the promised date in every quarter, the first quarter included.</p></section>")
     right = []
     right.append(
-        f"<section><h2>Analysis</h2>{fig_build('p1_a3_year_end_build', 1, 3.0)}"
+        f"<section><h2>Analysis</h2>{fig_build('p1_a3_year_end_build', 1, 2.7)}"
         f"<div class='caption'>Weekly WIP, releases and shipments, October 2024 to March 2025; shaded weeks have fewer than five working days.</div><ul>"
         f"<li>For the year the brake queue separates late from on-time jobs ({d2(st(SY, 'queue: press brake', 'late'))} against "
         f"{d2(st(SY, 'queue: press brake', 'on time'))} days). In {REST} it does not ({d2(st(SR, 'queue: press brake', 'late'))} against "
