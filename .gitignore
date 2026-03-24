@@ -1,6 +1,3 @@
-# build tooling
-generate/
-CLAUDE.md
 # environment and local state
 .venv/
 __pycache__/
@@ -12,5 +9,5 @@ __pycache__/
 pipeline/dbt/target/
 pipeline/dbt/logs/
 pipeline/dbt/dbt_packages/
-logs/
 pipeline/dbt/.user.yml
+logs/
