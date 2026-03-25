@@ -77,7 +77,7 @@ def fig_util():
 
 
 def fig_curve(name="p3_brake_queue_curve", h=3.9):
-    w = D["uw"][(D["uw"]["work_center"] == "press_brake") & (D["uw"]["weekdays"] == 5) & D["uw"]["queue_mean"].notna()]
+    w = D["uw"][(D["uw"]["work_center"] == "press_brake") & (D["uw"]["weekdays"] == 5) & D["uw"]["queue_mean"].notna()].sort_values("week_start")
     m, k = int(FB["machines"]), float(FB["k"])
     f, ax = fig(h=h)
     old, cur = w[w["week_year"] != YEAR], w[w["week_year"] == YEAR]
