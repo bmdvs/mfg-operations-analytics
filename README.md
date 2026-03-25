@@ -7,14 +7,14 @@ Eight improvement projects and an operations dashboard on the shop's records fro
 
 | Project | Question | Finding | Deliverable |
 |---|---|---|---|
-| P1. Lead time decomposition | Where does the lead time go, and does the floor's WIP match the quoted lead times? | The median job ships in 11.2 working days against an average quoted lead time of 12.4; 9.2 in Q2 to Q4. | [report](docs/reports/p1_lead_time.html), [A3](docs/a3/p1_lead_time.html) |
+| P1. Lead time decomposition | Where does the lead time go, and does the floor's WIP match the quoted lead times? | The brakes hold 56% of queue time for the year and 40% in Q2 to Q4. The median job ships in 11.2 working days against an average quoted lead time of 12.4; 9.2 in Q2 to Q4. | [report](docs/reports/p1_lead_time.html), [A3](docs/a3/p1_lead_time.html) |
 | P2. Why jobs are late | What makes jobs late, and do the shop's late-reason codes say so? | For the year, constraint queue is 36% of the 4,647 lost days, unexplained 33%, released late 17%, material 6.5% and outside processing 3%; the year is the 2024 year-end build shipping in the first quarter. | [report](docs/reports/p2_late_jobs.html), [A3](docs/a3/p2_late_jobs.html) |
 | P3. The constraint, utilization and variability | Which work center is the constraint, and how does its queue respond to load? | The brakes run at 0.91 of scheduled hours net of downtime, the robotic weld cell at 0.83, the lasers at 0.74, assembly through hardware at 0.66 to 0.69 and the powder line at 0.56. | [report](docs/reports/p3_constraint.html), [A3](docs/a3/p3_constraint.html) |
 | P4. Setups and standards | What do setups cost at the brakes, and where is the overrun? | Brake setups ran 6,077 hours against 4,235 standard in 2025: 1,842 hours over, 35 a week, 11% of brake machine time. | [report](docs/reports/p4_setups.html), [A3](docs/a3/p4_setups.html) |
-| P5. Release control and the shop model | Do release control and dispatch rules help, and what does? | Adding planned Saturdays from November through February takes the year to 88.0% on time, up 6.0 points (5.0 to 6.9), with a 90th percentile of 19.8 days against 22.9; Q2 to Q4 reaches 91.8% and 15.3 days. | [report](docs/reports/p5_release_control.html), [A3](docs/a3/p5_release_control.html) |
-| P6. Leading indicators | Which weekly measures move before on-time delivery does? | The on-time start rate correlates +0.62 with on-time delivery 1 week later, against a 95th percentile of +0.24 on shuffled series and +0.21 on shifted series. | [report](docs/reports/p6_leading_indicators.html), [A3](docs/a3/p6_leading_indicators.html) |
-| P7. Lead-time quoting and quote analytics | What lead time should be quoted, and what wins quotes? | A quote from the 80th-percentile lead time by routing class and brake backlog at release, never below the fixed quote, is met on 67.0% of non-rush jobs for the year and 82.1% in Q2 to Q4 when each job is quoted from the jobs shipped before its release, against 53.0% and 70.5% for the fixed quote; it is longer than the fixed quote on 43.6% and 33.9% of jobs. | [report](docs/reports/p7_quoting.html), [A3](docs/a3/p7_quoting.html) |
-| P8. Technology ROI | Do the capital options pay back? | On overtime and labor alone no option pays back within the 7-year horizon, and the no-capital package is net negative ($70,000 a year, the weld cell's second shift). | [report](docs/reports/p8_technology_roi.html), [A3](docs/a3/p8_technology_roi.html) |
+| P5. Release control and the shop model | Do release control and dispatch rules help, and what does? | A WIP cap and dispatch rules do not help; the setup program, a second shift on the robotic weld cell and planned Saturdays from November through February take the year to 88.0% on time, up 6.0 points (5.0 to 6.9), and Q2 to Q4 to 91.8%. | [report](docs/reports/p5_release_control.html), [A3](docs/a3/p5_release_control.html) |
+| P6. Leading indicators | Which weekly measures move before on-time delivery does? | The on-time start rate correlates +0.62 with on-time delivery 1 week later, against a 95th percentile of +0.24 on shuffled series and +0.21 on shifted series. It moved before all four declines in on-time delivery; no other weekly measure leads in ordinary weeks. | [report](docs/reports/p6_leading_indicators.html), [A3](docs/a3/p6_leading_indicators.html) |
+| P7. Lead-time quoting and quote analytics | What lead time should be quoted, and what wins quotes? | The fixed quote is met on 53.0% of non-rush jobs for the year and 70.5% in Q2 to Q4; a quote by routing class and brake backlog at release, never below the fixed quote, is met on 67.0% and 82.1% out of sample and lengthens 43.6% and 33.9% of promises. | [report](docs/reports/p7_quoting.html), [A3](docs/a3/p7_quoting.html) |
+| P8. Technology ROI | Do the capital options pay back? | On overtime and labor alone no option pays back within the 7-year horizon, and the no-capital package is net negative ($70,000 a year, the weld cell's second shift). With half the released brake hours sold, the robotic cell pays back in 1.6 years, the tool changer on B3 in 3.9, the laser tower not at all. | [report](docs/reports/p8_technology_roi.html), [A3](docs/a3/p8_technology_roi.html) |
 
 Dashboard: [docs/dashboard/index.html](docs/dashboard/index.html). Index of deliverables: [docs/index.html](docs/index.html).
 
@@ -34,7 +34,7 @@ Dashboard: [docs/dashboard/index.html](docs/dashboard/index.html). Index of deli
 
 ## How to run
 
-Python 3.11 or later, from a clean clone:
+Python 3.12 or later, from a clean clone:
 
 ```
 python -m venv .venv
