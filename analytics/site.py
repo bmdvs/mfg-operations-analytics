@@ -18,7 +18,11 @@ SHOP = "Custom sheet-metal fabrication job shop, about 120 employees, one plant.
 SCOPE = "Eight improvement projects and an operations dashboard on the shop's records from January 2023 to December 2025."
 
 def _p1():
-    return finding("p1_lead_time", "f3", 0) + " " + finding("p1_lead_time", "f1", 0)
+    share, late, on_time = re.search(r"the brake queue is ([\d.]+%) of lead time .*: ([\d.]+) days against ([\d.]+)\.", finding("p1_lead_time", "f2", 0)).groups()
+    median, quote, rest = re.search(r"ships in ([\d.]+) working days against an average quoted lead time of ([\d.]+); ([\d.]+) in Q2 to Q4",
+                                    finding("p1_lead_time", "f1", 0)).groups()
+    return (f"Queue at the brakes is {share} of lead time and the stage that separates late jobs from on-time jobs ({late} days against {on_time}); the median job "
+            f"ships in {median} working days against an average quoted lead time of {quote}, {rest} in Q2 to Q4.")
 
 
 def _p5():
