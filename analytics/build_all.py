@@ -7,7 +7,7 @@ import sys
 
 MODULES = ["analytics.p1_lead_time.build", "analytics.p2_late_jobs.build", "analytics.p3_constraint.build", "analytics.p4_setups.build",
            "analytics.p5_release_control.build", "analytics.p6_leading_indicators.build", "analytics.p7_quoting.build", "analytics.p8_technology_roi.build",
-           "analytics.dashboard.build", "analytics.site"]
+           "analytics.dashboard.build", "analytics.readme_image", "analytics.site"]
 
 
 def main():

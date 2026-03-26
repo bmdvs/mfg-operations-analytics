@@ -129,16 +129,63 @@ python -m analytics.p8_technology_roi.scenarios 30 6 laser_queue
 ```"""
 
 
+INTRO = ("Delivery, flow, capacity and quoting analytics on a custom sheet-metal fabrication job shop, January 2023 to December 2025, computed on the shop's complete ERP and MES record.")
+INCLUDED = [
+    "Eight connected studies, each delivered as a client report, with an A3 for each improvement project: lead-time decomposition, late-job attribution, the constraint and variability, setups "
+    "against standards, release control on a discrete-event model of the floor, leading indicators, lead-time quoting and quote analytics, technology ROI.",
+    "One operations dashboard: on-time delivery, lead time, WIP, utilization and queue by work center, setup against standard, overtime, the leading indicators; weekly grain, 13-week view, "
+    "three-year trend.",
+    "A data pipeline from raw system exports to analysis-ready marts: DuckDB, dbt with schema tests, one build command that regenerates every table, figure and page byte-identically.",
+]
+CONTEXT = [
+    "The shop is a custom sheet-metal fabricator: about 120 employees, ISO 9001, one plant, about 2,000 active part numbers, 450 customers, 4,800 jobs a year in lots from 1 to 500 pieces. Laser "
+    "cutting, CNC punching, press brake forming, hardware insertion, welding, powder coating and light assembly in house; plating, anodizing and heat treat at outside vendors. Two shifts on the "
+    "lasers and brakes, one elsewhere, Saturdays when behind.",
+    "The shop quotes a fixed lead time by routing class, measures on-time delivery weekly, and records a late reason on each late job. In 2025 it delivered 82% on time. The late-reason codes did "
+    "not explain the misses: a large share were blank, and the coded ones pointed at the operation where the job was found late rather than where it lost the time. A first-quarter decline that "
+    "year was felt on the floor as a brake-capacity problem, and the shop was weighing a second press brake with automatic tooling against a laser tower and a bending cell.",
+    "The engagement put the ERP order and quote records beside the MES operation timestamps for three years, every job and every operation, to answer what the reports could not: where lead time "
+    "goes, which stage each late job lost its days at, which work center sets the lead time and what variability at it costs, which indicators move before delivery slips, what lead time the shop "
+    "should quote at its current load, and which of the capital options pays back on measured hours. The studies below are the result, in the order they were built.",
+]
+METHODS = [
+    "Operations analysis: lead-time decomposition and Little's Law; utilization and queue-time curves on the shop's own data; late-job attribution by stage against the stage's own normal; setup "
+    "and standard variance by lot size and work center; a reproducible discrete-event model of the floor with 19 scenarios, replications and intervals; lead-time quoting from the actual "
+    "distribution by routing class and load, evaluated out of sample; leading-indicator tests against shuffled and shifted chance series; ROI with payback and break-even analysis on stated "
+    "assumptions.",
+    "Data engineering: raw system exports loaded to DuckDB; a dbt project with schema tests on every mart; one build command that regenerates every table, figure and page byte-identically from "
+    "the committed inputs; fixed input ordering and per-scenario seeding so that the floor model reproduces to the digit.",
+    "Framing: the improvement projects are written as DMAIC projects with an A3 each. Every report describes the findings and what to do, in the form a client receives at the end of an engagement.",
+]
+RECORD = ("The record carries what these systems carry in practice: blank and miscoded late reasons, operations closed in batches at the end of a shift, standards not updated after routing "
+          "changes, and a 2024 year-end build that shows in every queue. The analyses work with the record as it stands and say so where it limits a finding.")
+AUTHOR = "Brian Davis. Data engineering and applied analytics/ML for manufacturers. Other work: [github.com/brimsystems](https://github.com/brimsystems?tab=repositories)."
+
+
+def current_week():
+    """The current week as the dashboard header states it."""
+    meta = (DOCS / "dashboard" / "index.html").read_text(encoding="utf8")
+    name, day, year = re.search(r"Week of (\w+) (\d+), (\d{4}) \(current week", meta).groups()
+    return f"{int(day)} {name} {year}"
+
+
 def readme():
-    lines = ["# Operations analytics for a sheet-metal job shop", "", SHOP + "  ", SCOPE, "", "## Projects", "",
-             "| Project | Question | Finding | Deliverable |", "|---|---|---|---|"]
+    lines = ["# mfg-operations-analytics", "", INTRO, "", "![Operations dashboard](docs/readme/dashboard.png)", "", "## What is included", ""]
+    lines += [f"- {x}" for x in INCLUDED]
+    lines += ["", "## Business context", ""]
+    for x in CONTEXT:
+        lines += [x, ""]
+    lines += ["## Studies", "", "| Project | Question | Finding | Deliverable |", "|---|---|---|---|"]
     for p, stem, title, question, spec in PROJECTS:
         lines.append(f"| {p}. {title} | {question} | {headline(stem, spec)} | [report](docs/reports/{stem}.html), [A3](docs/a3/{stem}.html) |")
-    lines += ["", "Dashboard: [docs/dashboard/index.html](docs/dashboard/index.html). Index of deliverables: [docs/index.html](docs/index.html).", "",
-              "## Data sources", "", "| System | Export | Tables | Grain | Batch |", "|---|---|---|---|---|"]
+    lines += ["", "**Dashboard.** [docs/dashboard/index.html](docs/dashboard/index.html). Index of deliverables: [docs/index.html](docs/index.html). "
+              f"The week of {current_week()} is the current week; every panel carries a one-line definition in the reports' wording.", "", "## Methods", ""]
+    for x in METHODS:
+        lines += [x, ""]
+    lines += ["## Data", "", RECORD, "", "| System | Export | Tables | Grain | Batch |", "|---|---|---|---|---|"]
     lines += ["| " + " | ".join(r) + " |" for r in sources()]
-    lines += ["", "## Pipeline", "", PIPELINE, "", "## How to run", "", "Python 3.12 or later, from a clean clone:", "", RUN, "",
-              "`analytics.build_all` uses the saved model runs. To repeat the runs (several hours on six processes):", "", RERUN, ""]
+    lines += ["", PIPELINE, "", "## How to run", "", "Python 3.12 or later, from a clean clone:", "", RUN, "",
+              "`analytics.build_all` uses the saved model runs. To repeat the runs (several hours on six processes):", "", RERUN, "", "## Author", "", AUTHOR, ""]
     (ROOT / "README.md").write_text("\n".join(lines), encoding="utf8")
 
 
