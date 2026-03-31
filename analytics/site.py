@@ -14,8 +14,14 @@ from analytics.style.style import DOCS, shell, table
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
+PAGES = "https://brimsystems.github.io/mfg-operations-analytics/"          # where the pages under docs/ are served
 SHOP = "Custom sheet-metal fabrication job shop, about 120 employees, one plant."
 SCOPE = "Eight improvement projects and an operations dashboard on the shop's records from January 2023 to December 2025."
+
+def page_links(text):
+    """Links to the pages under docs/ as their served addresses, so they open the page and not its source."""
+    return re.sub(r"\]\((docs/[^)]+\.html)\)", lambda m: f"]({PAGES}{m.group(1)})", text)
+
 
 def _p1():
     share, late, on_time = re.search(r"the brake queue is ([\d.]+%) of lead time .*: ([\d.]+) days against ([\d.]+)\.", finding("p1_lead_time", "f2", 0)).groups()
@@ -186,7 +192,7 @@ def readme():
     lines += ["| " + " | ".join(r) + " |" for r in sources()]
     lines += ["", PIPELINE, "", "## How to run", "", "Python 3.12 or later, from a clean clone:", "", RUN, "",
               "`analytics.build_all` uses the saved model runs. To repeat the runs (several hours on six processes):", "", RERUN, "", "## Author", "", AUTHOR, ""]
-    (ROOT / "README.md").write_text("\n".join(lines), encoding="utf8")
+    (ROOT / "README.md").write_text(page_links("\n".join(lines)), encoding="utf8")
 
 
 def index():
