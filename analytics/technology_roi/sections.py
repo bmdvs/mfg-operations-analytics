@@ -9,7 +9,7 @@ import pandas as pd
 from analytics.db import q
 from analytics.technology_roi import analysis as A
 from analytics.technology_roi.scenarios import ASSUME, PACKAGE, QUEUE, S0
-from analytics.style.style import AMBER, BRAND_BLUE, DOCS, GREEN, GREY, RED, fig, pct, save, sig, table
+from analytics.style.style import AMBER, BRAND_BLUE, DOCS, GREEN, GREY, RED, fig, pct, save_conformed as save, sig, table
 
 YEAR, REST = A.YEAR, "Q2 to Q4"
 df = A.runs()

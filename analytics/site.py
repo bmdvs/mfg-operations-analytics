@@ -32,7 +32,7 @@ def _lead_time():
     median, quote, rest = re.search(r"shipped in ([\d.]+) working days against an average quoted lead time of ([\d.]+); ([\d.]+) in Q2-Q4",
                                     section_text(LEAD, "f1")).groups()
     return (f"Queue at the brakes is {share} of lead time and the stage that separates late jobs from on-time jobs ({late} days against {on_time}); the median job "
-            f"ships in {median} working days against an average quoted lead time of {quote}, {rest} in Q2 to Q4. " + finding(LEAD, "f5", 0))
+            f"ships in {median} working days against an average quoted lead time of {quote}, {rest} in Q2-Q4. " + finding(LEAD, "f5", 0))
 
 
 def _brakes():
@@ -41,20 +41,20 @@ def _brakes():
 
 def _options():
     t = finding(OPTIONS, "f9", 1)
-    year, gain, rest = re.search(r"takes the year to ([\d.]+%) on time, up ([\d.]+ points \([\d.]+ to [\d.]+\)).*Q2 to Q4 reaches ([\d.]+%)", t).groups()
+    year, gain, rest = re.search(r"takes the year to ([\d.]+%) on time, up ([\d.]+ points \([\d.]+ to [\d.]+\)).*Q2-Q4 reaches ([\d.]+%)", t).groups()
     t = finding(OPTIONS, "f15", 1)
     cell, changer = re.search(r"robotic cell pays back in ([\d.]+) years, the tool changer on B3 in ([\d.]+), the tower not at all", t).groups()
     return (f"A WIP cap and dispatch rules do not help; the setup program, a second shift on the robotic weld cell and planned Saturdays from November through "
-            f"February take the year to {year} on time, up {gain}, and Q2 to Q4 to {rest}. " + finding(OPTIONS, "f15", 0) +
+            f"February take the year to {year} on time, up {gain}, and Q2-Q4 to {rest}. " + finding(OPTIONS, "f15", 0) +
             f" With half the released brake hours sold, the robotic cell pays back in {cell} years, the tool changer on B3 in {changer}, the laser tower not at all.")
 
 
 def _quoting():
     t = finding(QUOTING, "f3", 0)
-    y, r, fy, fr, ly, lr = re.search(r"is met on ([\d.]+%) of non-rush jobs for the year and ([\d.]+%) in Q2 to Q4 .* against ([\d.]+%) and ([\d.]+%) for the fixed "
+    y, r, fy, fr, ly, lr = re.search(r"is met on ([\d.]+%) of non-rush jobs for the year and ([\d.]+%) in Q2-Q4 .* against ([\d.]+%) and ([\d.]+%) for the fixed "
                                      r"quote; it is longer than the fixed quote on ([\d.]+%) and ([\d.]+%)", t).groups()
     assert "moved before all four" in report_text(QUOTING, "f13")
-    return (f"The fixed quote is met on {fy} of non-rush jobs for the year and {fr} in Q2 to Q4; a quote by routing class and brake backlog at release, never below "
+    return (f"The fixed quote is met on {fy} of non-rush jobs for the year and {fr} in Q2-Q4; a quote by routing class and brake backlog at release, never below "
             f"the fixed quote, is met on {y} and {r} out of sample and lengthens {ly} and {lr} of promises. " + finding(QUOTING, "f11", 0) +
             " It moved before all four declines in on-time delivery; no other weekly measure leads in ordinary weeks.")
 

@@ -6,10 +6,10 @@ import pandas as pd
 from analytics.style.style import DOCS, report_shell, table
 
 REPORTS = {
-    "lead": ("lead_time_and_late_jobs", "Lead time and late jobs", "Lead time and late jobs"),
-    "brakes": ("brakes_capacity_and_setups", "The brakes: capacity, utilization and setups", "The brakes"),
-    "options": ("options_tested", "Options tested: release rules, scheduling, shifts and equipment", "Options tested"),
-    "quoting": ("quoting_and_early_warning", "Quoting and early warning from load", "Quoting and early warning"),
+    "lead": ("lead_time_and_late_jobs", "Lead time and late jobs", "the lead time report"),
+    "brakes": ("brakes_capacity_and_setups", "The brakes: capacity, utilization and setups", "the brakes report"),
+    "options": ("options_tested", "Options tested: release rules, scheduling, shifts and equipment", "the options report"),
+    "quoting": ("quoting_and_early_warning", "Quoting and early warning from load", "the quoting report"),
 }
 SHOP = "Custom sheet-metal fabrication job shop, about 120 employees, one plant. "
 TABLES = re.compile(r"\b(Tables?) (\d+[a-z]?(?:(?:, | and | to )\d+[a-z]?)*)")
@@ -58,6 +58,23 @@ def unique_sentences(second, first):
     return re.sub(r"[^.<>]+(?:\.(?!\s|<|$)[^.<>]*)*\.(?:\s+|(?=<)|$)", keep, second), dropped
 
 
+def references(body):
+    """Another report by its full title at its first mention in the text, and by its short name after that and in every table cell; each a link."""
+    seen = set()
+
+    def one(m):
+        kind, key = m.group(1), m.group(2)
+        stem, title, short = REPORTS[key]
+        before = body[:m.start()]
+        in_cell = before.rfind("<td") > before.rfind("</td>")
+        if kind == "R" and not in_cell and key not in seen:
+            seen.add(key)
+            return f"<a href='{stem}.html'>{title}</a>"
+        opens = before.rstrip()[-1:] in (".", ">", "")
+        return f"<a href='{stem}.html'>{short[0].upper() + short[1:] if opens else short}</a>"
+    return re.sub(r"\[\[([RN]):(\w+)\]\]", one, body)
+
+
 def write(key, first, second, titles, lead=None, same_target=False, header=True):
     stem, title, _ = REPORTS[key]
     a, b = first.report(), second.report()
@@ -76,23 +93,25 @@ def write(key, first, second, titles, lead=None, same_target=False, header=True)
     rows = pd.DataFrame(list(rows1) + [(shift_tables(x, last_table), o, w) for x, o, w in rows2], columns=["Action", "Owner", "When"])
     follow = "<p>Follow-up: " + " ".join(x for x in (f1, f2) if x) + "</p>"
     method2, dropped = unique_sentences(B["method"], A["method"])
+    scope1 = scope2 = ""
+    if not header:                       # no header block on the page: each half's scope and sources open its method note
+        scope1, scope2 = f"<p>{a['meta']}</p>", f"<p>{b['meta'].replace(SHOP, '', 1)}</p>"
     body = "\n".join([
         A["sections"], B["sections"],
         "<h2 id='rec'>Recommendation</h2>", A["rec"], B["rec"], targets, table(rows), follow,
-        "<h2 id='method'>Method and data</h2>", f"<h3>{titles[0]}</h3>", A["method"], f"<h3>{titles[1]}</h3>", method2,
+        "<h2 id='method'>Method and data</h2>", f"<h3>{titles[0]}</h3>", scope1, A["method"], f"<h3>{titles[1]}</h3>", scope2, method2,
         "<h2 id='appendix'>Appendix</h2>", table_anchors(A["appendix"]), table_anchors(B["appendix"]), A["glossary"], B["glossary"]])
     body = chart_titles(body)
     span = {"first": (1, n_sections), "second": (n_sections + 1, n_sections + n_second)}
     body = re.sub(r"\[\[S:(\w+)\]\]", lambda m: f"<a href='#f{span[m.group(1)][0]}'>Sections {span[m.group(1)][0]} to {span[m.group(1)][1]}</a>", body)
-    body = re.sub(r"\[\[R:(\w+)\]\]", lambda m: f"<a href='{REPORTS[m.group(1)][0]}.html'>{REPORTS[m.group(1)][1]}</a>", body)
-    body = re.sub(r"\[\[N:(\w+)\]\]", lambda m: REPORTS[m.group(1)][2], body)
+    body = references(body).replace("Q2 to Q4", "Q2-Q4")
     assert "[[" not in body
     toc = (list(a["toc"]) + [(f"f{int(i[1:]) + n_sections}", t) for i, t in b["toc"]]
            + [("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")])
     meta = ""
     if header:
         rest = b["meta"].replace(SHOP, "", 1)
-        meta = a["meta"] + ("<br>" + rest if rest and rest != a["meta"] else "")
+        meta = (a["meta"] + ("<br>" + rest if rest and rest != a["meta"] else "")).replace("Q2 to Q4", "Q2-Q4")
     out = DOCS / "reports"
     out.mkdir(parents=True, exist_ok=True)
     (out / f"{stem}.html").write_text(report_shell(title, "", meta, body, toc), encoding="utf8")
