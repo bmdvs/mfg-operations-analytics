@@ -1,4 +1,4 @@
-"""Build every deliverable from the marts and the saved model runs: the eight reports and A3s, the dashboard, the README and the index.
+"""Build every deliverable from the marts and the saved model runs: the eight reports, the dashboard, the README and the index.
 
 Usage: python -m analytics.build_all
 """
