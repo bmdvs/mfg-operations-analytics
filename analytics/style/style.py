@@ -77,7 +77,9 @@ def save_conformed(f, name, alt="", up=1):
     for t in f.findobj(Text):
         if "Q2 to Q4" in t.get_text():
             t.set_text(fix(t.get_text()))
-    if not f.legends:
+    # panels whose legends differ keep them; one shared legend moves to the bottom of the figure
+    own = {tuple(t.get_text() for t in ax.get_legend().get_texts()) for ax in f.axes if ax.get_legend() is not None}
+    if not f.legends and len(own) == 1:
         handles, labels = [], []
         for ax in f.axes:
             leg = ax.get_legend()
