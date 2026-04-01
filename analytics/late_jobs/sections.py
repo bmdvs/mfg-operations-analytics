@@ -83,7 +83,7 @@ by_year = L_all.groupby("ship_year").agg(late=("job_id", "size"), blank=("late_r
                                          capacity=("late_reason_code", lambda x: (x.dropna() == "capacity").mean()))
 cross = pd.crosstab(LY.dropna(subset=["late_reason_code"])["late_reason_code"], LY.dropna(subset=["late_reason_code"])["dominant_cause"])
 cross = cross.reindex(index=CODES, columns=CAUSES).fillna(0).astype(int)
-cross_all = pd.crosstab(LY["late_reason_code"].fillna("blank"), LY["dominant_cause"]).reindex(index=["blank"] + CODES, columns=CAUSES).fillna(0).astype(int)
+cross_all = pd.crosstab(LY["late_reason_code"].fillna("blank"), LY["dominant_cause"]).reindex(index=CODES + ["blank"], columns=CAUSES).fillna(0).astype(int)
 mat_jobs = set(AY.loc[AY["cause"] == "material", "job_id"])
 mat_coded = int((LY[LY["job_id"].isin(mat_jobs)]["late_reason_code"] == "material").sum())
 
@@ -155,6 +155,8 @@ def fig_work_center():
             v = sig(W[k].reindex(centers).fillna(0.0).values)
             ax.bar(x + dx, v, width=0.36, bottom=bottom, color=CAUSE_COLOR[k])
             bottom += v
+        for xi, total in zip(x + dx, bottom):
+            ax.text(xi, total, f"{total:,.0f}", ha="center", va="bottom", fontsize=7)
         ticks += list(x + dx)
         names += [name] * len(centers)
     for xi in x[:-1]:
@@ -303,8 +305,8 @@ def report():
              f"for each job), with {n0(len(LR))} of these late jobs ({pct(len(LR) / len(LY), 0)}) in {REST} that shipped a total of {n0(r['total'])} days late "
              f"(average of {d1(r['total'] / len(LR))} days late for each).</p>")
     b.append("<p>We analyzed the ERP and shop-floor records to arrive at an attribution of lost days (i.e., how many days late the jobs shipped) by driver. "
-             "For each late job, we counted the days above the on-time median at each stage as lost, and assigned to a driver by the rules in "
-             "<a href='#method'>Method and data</a>.</p>")
+             "For each late job, we considered how many days it ran longer than an on-time job of the same routing class at each stage, as well as material "
+             "holds and late purchase order receipts. We then assigned each job to a driver.</p>")
     b.append(f"<p>In {YEAR}, jobs waiting at work centers (i.e., queue constraints) accounted for {pct(ys['constraint queue'], 0)} of the {n0(y['total'])} lost days, "
              f"while jobs that were released late accounted for {pct(ys['released late'], 0)}, and jobs that waited on material and outside processing accounted for "
              f"{pct(ys['material'], 0)} and {pct(ys['outside processing'], 0)}, respectively. In {REST}, jobs that were released late accounted for "
@@ -332,16 +334,17 @@ def report():
              f"system, given it accounts for a significant portion of lost days.</p>")
     cq = cross_all["constraint queue"] / cross_all.sum(axis=1)
     rel = cross_all["released late"]
-    b.append(f"<p>The entered code agrees with the largest attributed cause on {pct(AG['year']['agree'])} of coded late jobs against {pct(AG['year']['chance'])} "
-             f"expected by chance ({pct(AG[REST]['agree'])} against {pct(AG[REST]['chance'])} in {REST}). Queue constraint is the largest attributed cause on "
+    b.append(f"<p>As shown below, the shop's entered reason-codes do not adequately capture the true drivers of lost days. The entered code agrees with the largest "
+             f"attributed cause on just {pct(AG['year']['agree'])} of coded late jobs against {pct(AG['year']['chance'])} expected by chance "
+             f"({pct(AG[REST]['agree'])} against {pct(AG[REST]['chance'])} in {REST}). Queue constraint is the largest attributed driver on "
              f"{pct(cq['capacity'], 0)} of the jobs coded capacity, and on {pct(cq['blank'], 0)} of the jobs with no code and {pct(cq['material'], 0)} of those coded "
-             f"material. Material is the largest cause on {n0(cross_all.loc['material', 'material'])} of the {n0(cross_all.loc['material'].sum())} jobs coded "
-             f"material, outside processing on {n0(cross_all.loc['outside processing', 'outside processing'])} of the "
-             f"{n0(cross_all.loc['outside processing'].sum())} coded outside processing and quality on {n0(cross_all.loc['quality', 'quality'])} of the "
-             f"{n0(cross_all.loc['quality'].sum())} coded quality. Of the {n0(rel.sum())} jobs where released late is the largest cause, {n0(rel['capacity'])} are "
-             f"coded capacity, {n0(rel['blank'])} carry no code and {n0(rel['other'])} are coded other. {see(3, 4)} From this analysis, we conclude that the "
-             f"late-reason codes carry almost no relevant information. In the <a href='#rec'>Recommendation</a> section, we lay out our proposed solution for the "
-             f"shop going forward.</p>")
+             f"material. Material is the largest cause on just {n0(cross_all.loc['material', 'material'])} of the {n0(cross_all.loc['material'].sum())} "
+             f"({pct(cross_all.loc['material', 'material'] / cross_all.loc['material'].sum(), 0)}) jobs coded material, outside processing on just {n0(cross_all.loc['outside processing', 'outside processing'])} of the "
+             f"{n0(cross_all.loc['outside processing'].sum())} coded outside processing ({pct(cross_all.loc['outside processing', 'outside processing'] / cross_all.loc['outside processing'].sum(), 0)}) and quality on just {n0(cross_all.loc['quality', 'quality'])} of the "
+             f"{n0(cross_all.loc['quality'].sum())} ({pct(cross_all.loc['quality', 'quality'] / cross_all.loc['quality'].sum(), 0)}) coded quality. Of the {n0(rel.sum())} jobs where released late is the largest attributed driver, "
+             f"{n0(rel['capacity'])} are coded capacity, {n0(rel['blank'])} carry no code and {n0(rel['other'])} are coded other. {see(3, 4)}</p>")
+    b.append("<p>The shop should consider process changes to include additional options in the late-reason code dropdown menu, as well as to enable shop-floor data "
+             "capture on the reasons for late jobs once they become late.</p>")
     b.append(chart("What the shop coded against what the data shows", fig_mosaic()))
 
     b.append("<h2 id='rec'>Recommendation and control</h2>")

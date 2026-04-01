@@ -158,8 +158,8 @@ def fig_weekly_year():
     f, ax = fig(h=4.2)
     x = pd.to_datetime(d["week_start"])
     ax.plot(x, d["wip_mean"], color=BRAND_BLUE, linewidth=2.4, label="Total WIP (left)")
-    ax.plot(x, d["wip_at_laser"], color=GREEN, linewidth=2.2, linestyle=":", label="WIP at the laser (left)")
-    ax.plot(x, d["wip_at_brakes"], color=AMBER, linewidth=2.2, linestyle=":", label="WIP at the brakes (left)")
+    ax.plot(x, d["wip_at_laser"], color=GREEN, linewidth=1.9, linestyle="--", label="WIP at the laser (left)")
+    ax.plot(x, d["wip_at_brakes"], color=AMBER, linewidth=1.9, linestyle="--", label="WIP at the brakes (left)")
     ax.set_ylabel("Jobs in WIP")
     ax2 = ax.twinx()
     ax2.bar(x, net, width=4.6, color=LIGHT_BLUE, label="Net inflow to WIP (releases less shipments, right)", zorder=2)
@@ -379,7 +379,7 @@ def report():
     ahead = [qlabel(x) for x in llq_miss.loc[llq_miss["wip_over_throughput_x_lead_time"] > 1, "period_start"]]
     behind = [qlabel(x) for x in llq_miss.loc[llq_miss["wip_over_throughput_x_lead_time"] < 1, "period_start"]]
     assert ahead == ["2024 Q4"] and len(behind) >= 1
-    b.append(f"<p>WIP was within 10% of its expected value (measured as throughput x working days) in {llq_in} of the last {len(llq)} quarters, "
+    b.append(f"<p>WIP was within 10% of its expected value (measured as <i>throughput x working days</i>) in {llq_in} of the last {len(llq)} quarters, "
              f"meaning the floor was in balance. The {NUMBER[len(llq_miss)]} quarters that miss are the 2024 year-end build ({ahead[0]}), when WIP ran "
              f"ahead of shipments, and the quarters in which a build shipped ({join_and(behind)}), when shipments ran ahead of WIP. {see('6')}</p>")
     b.append(f"<p>WIP peaked at {n0(peaks[2024]['peak'])} jobs at the end of 2024 against a Q3 2024 average of {n0(peaks[2024]['q3'])}. In Q4 2024, the shop "
@@ -387,7 +387,7 @@ def report():
              f"{pct(laser_six['laser_utilization'].mean(), 0)} of scheduled hours on average, vs. {pct(q3_24['laser_utilization'].mean(), 0)} in Q3. During the "
              f"three peak weeks, {n0(laser_three['wip_at_laser'].min())} to {n0(laser_three['wip_at_laser'].max())} jobs were waiting to be cut, "
              f"vs. an average of {n0(q3_24['wip_at_laser'].mean())} jobs in Q3. The work then queued at the brakes, which already run at {pct(brake_rest, 0)} in a "
-             f"normal quarter, and it took through Q1 and into Q2 {YEAR} to clear the backlog. {see('7')}</p>")
+             f"normal quarter, and it took through Q1 and into Q2 {YEAR} to clear this backlog. {see('7')}</p>")
     b.append(chart("Weekly WIP and Net Inflow, Q3 &rsquo;24 to Q2 &rsquo;25", fig_weekly_year()))
 
     b.append("<h2 id='rec'>Recommendation</h2>")
