@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from analytics.db import q
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BLUE, RED, fig, paired_columns, pct, save, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BLUE, RED, fig, paired_columns, pct, save, sig, table
 
 YEAR = 2025
 REST = "Q2 to Q4"
@@ -122,8 +122,9 @@ def fig_stages_report():
         ax.set_title(label, fontsize=11)
         ax.set_xlabel("Mean working days per job")
     h, lab = axes[0].get_legend_handles_labels()
-    f.legend(h, lab, frameon=False, fontsize=9, ncol=2, loc="lower center")
     f.tight_layout(rect=(0, 0.05, 1, 1))
+    between = (axes[0].get_position().x1 + axes[1].get_position().x0) / 2
+    f.legend(h, lab, frameon=False, fontsize=9, ncol=2, loc="lower center", bbox_to_anchor=(float(sig(between, 4)), 0.0))
     return save(f, "lead_time_stage_decomposition", "Lead time by stage, on-time and late jobs")
 
 
@@ -230,7 +231,6 @@ ws_year, ws_rest = wl_year / wl_year.sum(), wl_rest / wl_rest.sum()
 _named = ["press_brake", "laser", "outside_processing"]
 ws_other = ws_year.drop(_named)
 other_centers = [x for x in ws_other.index if x != "complete, not shipped"]
-wip_ordinary = llq.loc[pd.to_datetime(llq["period_start"]) != pd.Timestamp(f"{YEAR}-01-01"), "wip_mean"]      # every quarter but the one that carried the backlog
 wk["week_start"] = pd.to_datetime(wk["week_start"])
 q3_24 = wk[(wk["week_start"] >= "2024-07-01") & (wk["week_start"] <= "2024-09-29")]
 q4_24 = wk[(wk["week_start"] >= "2024-09-30") & (wk["week_start"] <= "2024-12-29")].reset_index(drop=True)
@@ -331,13 +331,13 @@ def report():
              f"{YEAR} and {hit['repeat part'][1]} in {RT}), 15 days for new parts ({hit['new part'][0]} and {hit['new part'][1]}) and 20 days for outside processing "
              f"({hit['outside processing'][0]} and {hit['outside processing'][1]}). {see('1')}</p>")
     b.append(f"<p>{pct(ya['on_time_delivery'], 0)} of jobs shipped by the promised date in {YEAR} and {pct(ra['on_time_delivery'], 0)} in {RT}, against the "
-             f"{pct(required, 0)} target that the key accounts require. The 90th-percentile lead time is {d1(ya['lead_time_p90'])} days for {YEAR} and "
+             f"shop's {pct(required, 0)} target. The 90th-percentile lead time for all jobs is {d1(ya['lead_time_p90'])} days for {YEAR} and "
              f"{d1(ra['lead_time_p90'])} in {RT}. Late jobs have a median lead time of {d1(ya['lead_time_median_late'])} days against "
              f"{d1(ya['lead_time_median_on_time'])} for on-time jobs.</p>")
     b.append(chart("Actual vs. Quoted Lead Times, by Routing Class", fig_distribution()))
 
     b.append("<h2 id='f2'>2. Lead time decomposition</h2>")
-    b.append(f"<p>In {YEAR}, the brake queue was {pct(st(SY, bq, 'share'), 0)} of lead time and accounted for the largest share of the extra days on "
+    b.append(f"<p>In {YEAR}, the brake queue was {pct(st(SY, bq, 'share'), 0)} of all jobs' lead time and accounted for the largest share of the extra days on "
              f"late jobs: {d2(st(SY, bq, 'late'))} days against {d2(st(SY, bq, 'on time'))} for on-time jobs. This was due to the first quarter's backlog: the "
              f"2024 year-end build released more work than the brakes could absorb and put {n0(q1['late_jobs'])} of the year's {n0(ya['late_jobs'])} late jobs "
              f"into Q1. In {RT}, with the backlog cleared, late and on-time jobs waited a similar number of days at the brakes "
@@ -360,35 +360,34 @@ def report():
 
     b.append("<h2 id='f3'>3. Work in Process</h2>")
     spare = wr["wip_at_quoted_lead_times"] - wr["wip_mean"]
-    lo, hi = (int(round(v / 10.0)) * 10 for v in (wip_ordinary.min(), wip_ordinary.max()))
-    b.append(f"<p>In {YEAR}, the shop carried an average of {n0(wy['wip_mean'])} WIP jobs against about {n0(wy['throughput_per_day'])} shipped a day, so a job spent "
-             f"about {n0(wy['wip_over_throughput_days'])} working days on the floor. WIP runs at {lo} to {hi} jobs in an ordinary quarter and peaks every December: "
-             f"{n0(peaks[2023]['peak'])} jobs in 2023, {n0(peaks[2024]['peak'])} in 2024 and {n0(peaks[2025]['peak'])} in 2025.</p>")
+    b.append(f"<p>In {YEAR}, the shop carried an average of {n0(wy['wip_mean'])} WIP jobs against a throughput of about {n0(wy['throughput_per_day'])} shipped a day, "
+             f"so a job spent about {n0(wy['wip_over_throughput_days'])} working days on the floor. WIP averaged {n0(wipd['wip'].mean())} jobs over the past three "
+             f"years and peaks every December: {n0(peaks[2023]['peak'])} jobs in 2023, {n0(peaks[2024]['peak'])} in 2024 and {n0(peaks[2025]['peak'])} in 2025.</p>")
     turn = lambda a, c: "falls" if c < a else "rises"
-    b.append(f"<p>By location, including queue and run together, the brakes hold {pct(ws_year['press_brake'], 0)} of WIP in {YEAR}, while the lasers hold "
+    b.append(f"<p>By location, the brakes (queue and run together) hold {pct(ws_year['press_brake'], 0)} of WIP in {YEAR}, while the laser cutting stations hold "
              f"{pct(ws_year['laser'], 0)} and outside processing {pct(ws_year['outside_processing'], 0)}. The other {NUMBER[len(other_centers)]} work centers and jobs "
              f"complete but not yet shipped hold the remaining {pct(ws_other.sum(), 0)} between them, none above {pct(ws_other.max(), 0)}. In {RT} the brakes' share "
              f"{turn(ws_year['press_brake'], ws_rest['press_brake'])} to {pct(ws_rest['press_brake'], 0)} and the lasers' "
              f"{turn(ws_year['laser'], ws_rest['laser'])} to {pct(ws_rest['laser'], 0)}, as a result of the Q1 backlog having been worked through.</p>")
     b.append(f"<p>The {YEAR} average floor WIP of {n0(wy['wip_mean'])} jobs was {d2(wy['wip_ratio'])}x higher than the quoted lead times imply at measured "
-             f"throughput; in {RT} it was {n0(wr['wip_mean'])} against {n0(wr['wip_at_quoted_lead_times'])} ({d2(wr['wip_ratio'])}x). The excess for the year is a "
+             f"throughput; in {RT} it was {n0(wr['wip_mean'])} WIP jobs against {n0(wr['wip_at_quoted_lead_times'])} implied ({d2(wr['wip_ratio'])}x). The excess for the year is a "
              f"result of the first-quarter backlog. In {RT} the floor carried "
              f"{n0(round(wr['wip_at_quoted_lead_times']) - round(wr['wip_mean']))} fewer jobs than its quoted lead times allow at the throughput it achieved, so it "
              f"could have taken on about {pct(spare / wr['wip_mean'], 0)} more work, or quoted shorter lead times, and still shipped the average job inside its "
              f"quote. {see('5')}</p>")
-    b.append(chart("Jobs in WIP by Location", fig_wip()))
+    b.append(chart("Average Share of Jobs in WIP by Location", fig_wip()))
     ahead = [qlabel(x) for x in llq_miss.loc[llq_miss["wip_over_throughput_x_lead_time"] > 1, "period_start"]]
     behind = [qlabel(x) for x in llq_miss.loc[llq_miss["wip_over_throughput_x_lead_time"] < 1, "period_start"]]
     assert ahead == ["2024 Q4"] and len(behind) >= 1
-    b.append(f"<p>WIP was within 10% of its expected value (jobs shipped per day times the days each job spent in WIP) in {llq_in} of the last {len(llq)} quarters, "
+    b.append(f"<p>WIP was within 10% of its expected value (measured as throughput x working days) in {llq_in} of the last {len(llq)} quarters, "
              f"meaning the floor was in balance. The {NUMBER[len(llq_miss)]} quarters that miss are the 2024 year-end build ({ahead[0]}), when WIP ran "
              f"ahead of shipments, and the quarters in which a build shipped ({join_and(behind)}), when shipments ran ahead of WIP. {see('6')}</p>")
     b.append(f"<p>WIP peaked at {n0(peaks[2024]['peak'])} jobs at the end of 2024 against a Q3 2024 average of {n0(peaks[2024]['q3'])}. In Q4 2024, the shop "
              f"released {pct(brake_up, 0)} more brake standard hours than in Q3. Over six weeks in Q4 2024, this surge pushed the lasers to "
              f"{pct(laser_six['laser_utilization'].mean(), 0)} of scheduled hours on average, vs. {pct(q3_24['laser_utilization'].mean(), 0)} in Q3. During the "
-             f"first three of those weeks, {n0(laser_three['wip_at_laser'].min())} to {n0(laser_three['wip_at_laser'].max())} jobs were waiting to be cut, "
+             f"three peak weeks, {n0(laser_three['wip_at_laser'].min())} to {n0(laser_three['wip_at_laser'].max())} jobs were waiting to be cut, "
              f"vs. an average of {n0(q3_24['wip_at_laser'].mean())} jobs in Q3. The work then queued at the brakes, which already run at {pct(brake_rest, 0)} in a "
-             f"normal quarter, and the backlog was worked through in Q1 and into Q2 {YEAR}. {see('7')}</p>")
+             f"normal quarter, and it took through Q1 and into Q2 {YEAR} to clear the backlog. {see('7')}</p>")
     b.append(chart("Weekly WIP and Net Inflow, Q3 &rsquo;24 to Q2 &rsquo;25", fig_weekly_year()))
 
     b.append("<h2 id='rec'>Recommendation</h2>")

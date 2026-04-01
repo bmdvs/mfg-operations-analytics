@@ -13,7 +13,7 @@ YEAR = 2025
 REST = "Q2 to Q4"
 RT = "Q2-Q4"                                  # the same quarters as written in the figures
 CODES = ["capacity", "material", "outside processing", "customer change", "quality", "other"]
-CAUSES = ["released late", "constraint queue", "material", "outside processing", "setup overrun", "quality", "other hold", "not attributable"]
+CAUSES = ["constraint queue", "released late", "material", "outside processing", "setup overrun", "quality", "other hold", "not attributable"]
 CAUSE_LABEL = {"released late": "Released late", "constraint queue": "Queue constraint", "material": "Material", "outside processing": "Outside processing",
                "setup overrun": "Setup overrun", "quality": "Quality", "other hold": "Hold", "not attributable": "Not attributed"}
 CAUSE_COLOR = {"released late": AMBER, "constraint queue": BRAND_BLUE, "material": ACCENT, "outside processing": LIGHT_BLUE, "setup overrun": "#8E6BA8",
@@ -300,7 +300,7 @@ def report():
     b = []
     b.append("<h2 id='f1'>1. Drivers behind late jobs</h2>")
     b.append(f"<p>In {YEAR}, the shop had {n0(len(LY))} late jobs that shipped a total of {n0(y['total'])} days late (average of {d1(y['total'] / len(LY))} days late "
-             f"for each job), with {n0(len(LR))} of these late jobs ({pct(len(LR) / len(LY), 0)}) in {REST} which shipped a total of {n0(r['total'])} days late "
+             f"for each job), with {n0(len(LR))} of these late jobs ({pct(len(LR) / len(LY), 0)}) in {REST} that shipped a total of {n0(r['total'])} days late "
              f"(average of {d1(r['total'] / len(LR))} days late for each).</p>")
     b.append("<p>We analyzed the ERP and shop-floor records to arrive at an attribution of lost days (i.e., how many days late the jobs shipped) by driver. "
              "For each late job, we counted the days above the on-time median at each stage as lost, and assigned to a driver by the rules in "
@@ -318,17 +318,18 @@ def report():
     b.append(chart("Lost days by attributed cause", fig_causes()))
     b.append(chart("Lost days by work center and cause", fig_work_center()))
 
-    b.append("<h2 id='f2'>2. The shop's records</h2>")
+    b.append("<h2 id='f2'>2. The shop's own records</h2>")
     b.append(f"<p>Late-reason codes are inputted retroactively on late jobs by the customer service team during the weekly delivery review. These codes are pulled "
              f"from a dropdown list with six choices: capacity, material, outside processing, customer change, quality and other. As seen below, a significant "
-             f"portion of late jobs had no late-reason code entered. {see(2)}</p>")
+             f"portion of late jobs had no late-reason code entered, and this is attributed to the fact these codes are entered in weekly batches, as opposed to "
+             f"shop floor entries at the time the job runs late. {see(2)}</p>")
     b.append(chart("Late-reason codes as entered on late jobs", fig_codes()))
     late = cross.loc[:, "released late"]
-    b.append(f"<p>To validate the accuracy of these codes, we compared them against the lost days attribution calculations under "
-             f"<a href='#f3_1'>Drivers behind late jobs</a>. We first mapped the late-reason codes to the corresponding attribution drivers: queue constraint and setup "
+    b.append(f"<p>To validate the accuracy of these codes, we compared them against the lost days attribution drivers shown above. We first mapped the late-reason codes to the corresponding attribution drivers: queue constraint and setup "
              f"overrun count as capacity; material, outside processing and quality as their own codes; a hold and days not attributed as other. The notable "
              f"exception is that the \"released late\" attribution driver is not a listed option for late-reason codes; those jobs are mostly coded as capacity "
-             f"or other ({n0(late['capacity'] + late['other'])} of the {n0(late.sum())} with a code), and count as other in the comparison.</p>")
+             f"or other ({n0(late['capacity'] + late['other'])} of the {n0(late.sum())} with a code), and count as other in the comparison. We recommend adding this late-reason code into the "
+             f"system, given it accounts for a significant portion of lost days.</p>")
     cq = cross_all["constraint queue"] / cross_all.sum(axis=1)
     rel = cross_all["released late"]
     b.append(f"<p>The entered code agrees with the largest attributed cause on {pct(AG['year']['agree'])} of coded late jobs against {pct(AG['year']['chance'])} "
@@ -378,7 +379,7 @@ def report():
     b.append("<h3>Table 10. Queue constraint and not attributed shares by queue threshold</h3>" + t_sens())
     b.append("<div class='glossary'>Lost days: working days a job shipped after its promised date. Released late: promised inside the standard lead time of 10, 15 or "
              "20 working days. Not attributed: lost days that match no rule.</div>")
-    toc = [("f1", "Drivers behind late jobs"), ("f2", "The shop's records"), ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
+    toc = [("f1", "Drivers behind late jobs"), ("f2", "The shop's own records"), ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
     return {"body": "\n".join(b), "toc": toc[:-3], "meta": HEADER_META}
 
 

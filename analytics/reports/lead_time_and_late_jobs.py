@@ -1,4 +1,4 @@
-"""Lead time and late jobs: the report, from its two halves.
+"""Flow and on-time delivery: the report, from its two halves.
 
 Usage: python -m analytics.reports.lead_time_and_late_jobs
 """
@@ -47,7 +47,8 @@ def arrange(body, toc):
 
 
 def main():
-    write("lead", first, second, ("Lead time decomposition", "Late jobs"), lead=None, same_target=False, header=False, arrange=arrange)
+    write("lead", first, second, ("Lead time decomposition", "Late jobs"), lead=None, same_target=False, header=False, arrange=arrange,
+          heading="Report: Flow and On-time Delivery")
 
 
 if __name__ == "__main__":
