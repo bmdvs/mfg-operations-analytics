@@ -139,7 +139,7 @@ def fig_causes():
     paired_columns(ax, [CAUSE_LABEL[k] for k in CAUSES], list(CA["year"]["share"] * 100), list(CA[REST]["share"] * 100), (f"{YEAR}", RT), percent=True)
     ax.set_ylabel("Share of lost days")
     bottom_legend(f, *ax.get_legend_handles_labels(), ncol=2, space=0.06)
-    return save(f, "late_jobs_lost_days_by_cause", "Lost days by attributed cause")
+    return save(f, "late_jobs_lost_days_by_cause", "Lost days by attributed driver")
 
 
 def fig_work_center():
@@ -170,7 +170,7 @@ def fig_work_center():
     ax.set_xlim(-0.5, len(centers) - 0.5)
     ax.set_ylabel("Lost days")
     bottom_legend(f, [Patch(color=CAUSE_COLOR[k]) for k in causes], [CAUSE_LABEL[k] for k in causes], ncol=4, space=0.1)
-    return save(f, "late_jobs_lost_days_by_work_center", "Lost days by work center and cause")
+    return save(f, "late_jobs_lost_days_by_work_center", "Lost days by work center and attributed driver")
 
 
 def fig_codes():
@@ -311,14 +311,18 @@ def report():
              f"while jobs that were released late accounted for {pct(ys['released late'], 0)}, and jobs that waited on material and outside processing accounted for "
              f"{pct(ys['material'], 0)} and {pct(ys['outside processing'], 0)}, respectively. In {REST}, jobs that were released late accounted for "
              f"{pct(rs['released late'], 0)} of the {n0(r['total'])} lost days, with queue constraint ({pct(rs['constraint queue'], 0)}), material "
-             f"({pct(rs['material'], 0)}) and outside processing ({pct(rs['outside processing'], 0)}) the other main drivers. {see(1, 5, 6)}</p>")
+             f"({pct(rs['material'], 0)}) and outside processing ({pct(rs['outside processing'], 0)}) the other main drivers. Jobs were released late when they went "
+             f"to the floor with fewer working days to the promised date than the standard quoted lead time for their routing class; this was the largest driver "
+             f"on {n0(r['dominant']['released late'])} of the {n0(len(LR))} late jobs in {REST}. Each such release should be a decision: flag the job as a rush at "
+             f"release when its days to promise fall below the standard, with a named approver, and count these releases weekly. [[R:quoting]] sizes the lead "
+             f"time the shop can hold at a given load. {see(1, 5, 6)}</p>")
     queues = [k for k in NAYs.index if k.startswith("queue:") or k == "first-operation queue"]
     b.append(f"<p>{pct(ys['not attributable'], 0)} of lost days in {YEAR} and {pct(rs['not attributable'], 0)} in {REST} have no attribution. Of the "
              f"{n0(NAY.sum())} non-attributed lost days in {YEAR}, {pct(NAYs[queues].sum(), 0)} was from work center queue time above on-time median but below "
              f"the attribution threshold, {pct(NAYs['setup and run'], 0)} from setup and run time above normal with no overrun or rework recorded, and "
-             f"{pct(NAYs['move'], 0)} from movement between stages. The remainder have no discernible cause. {see(9, 10)}</p>")
-    b.append(chart("Lost days by attributed cause", fig_causes()))
-    b.append(chart("Lost days by work center and cause", fig_work_center()))
+             f"{pct(NAYs['move'], 0)} from movement between stages. The remainder have no single discernible driver. {see(9, 10)}</p>")
+    b.append(chart("Lost days by attributed driver", fig_causes()))
+    b.append(chart("Lost days by work center and attributed driver", fig_work_center()))
 
     b.append("<h2 id='f2'>2. The shop's own records</h2>")
     b.append(f"<p>Late-reason codes are inputted retroactively on late jobs by the customer service team during the weekly delivery review. These codes are pulled "

@@ -4,9 +4,10 @@ Built by analytics.reports.lead_time_and_late_jobs.
 """
 import numpy as np
 import pandas as pd
+from matplotlib.patches import FancyBboxPatch, Patch
 
 from analytics.db import q
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BLUE, RED, fig, paired_columns, pct, save, sig, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DARK_GREY as DARK, DOCS, GREEN, GREY, LIGHT_BLUE, RED, TEXT, fig, paired_columns, pct, save, sig, table
 
 YEAR = 2025
 REST = "Q2 to Q4"
@@ -126,6 +127,60 @@ def fig_stages_report():
     between = (axes[0].get_position().x1 + axes[1].get_position().x0) / 2
     f.legend(h, lab, frameon=False, fontsize=9, ncol=2, loc="lower center", bbox_to_anchor=(float(sig(between, 4)), 0.0))
     return save(f, "lead_time_stage_decomposition", "Lead time by stage, on-time and late jobs")
+
+
+WAITING, WORKING = "#DCE6EE", BRAND_BLUE
+
+
+def fig_stages_diagram():
+    """The stages of lead time from release to ship, named as the rows of the stage table."""
+    later = [STAGE[s].replace("Queue: ", "").lower() for s in stage.sort_values("stage_order")["stage"].drop_duplicates() if s.startswith("queue:")]
+    gap, y, h = 0.25, 2.0, 0.86
+    line = [("Release", 0.72, None), ("Release to\ntraveler print", 0.98, WAITING), ("First-operation\nqueue; material wait\nat first operation", 1.3, WAITING),
+            ("Setup and run\n(laser or punch)", 1.08, WORKING), ("Move", 0.6, WAITING), ("Queue", 0.62, WAITING), ("Setup\nand run", 0.72, WORKING),
+            ("Complete\nto ship", 0.82, WAITING), ("Ship", 0.58, None)]
+    branch = 0.5                                   # room after the repeated group for the outside processing branch to rejoin
+    f, ax = fig(h=3.5, w=10.0)
+    ax.axis("off")
+    arrow = dict(arrowstyle="-|>", color=DARK, linewidth=1.1, shrinkA=0, shrinkB=0, mutation_scale=11)
+    box = lambda x0, y0, w, hh, **kw: ax.add_patch(FancyBboxPatch((x0, y0), w, hh, boxstyle="round,pad=0.02,rounding_size=0.06", **kw))
+    x, edges = 0.1, []
+    for k, (name, w, fill) in enumerate(line):
+        box(x, y - h / 2, w, h, facecolor=fill or "white", edgecolor=DARK, linewidth=1.6 if fill is None else 0.8)
+        ax.text(x + w / 2, y, name, ha="center", va="center", fontsize=8.2, color="white" if fill == WORKING else TEXT, fontweight="bold" if fill is None else None)
+        edges.append((x, x + w))
+        x += w + (gap + branch if k == 6 else gap)
+    for (_, a), (c, _) in zip(edges[:-1], edges[1:]):
+        ax.annotate("", (c - 0.03, y), (a + 0.03, y), arrowprops=arrow)
+    total = edges[-1][1] + 0.1
+    # the repeated group, framed and named
+    fa, fb = edges[4][0] - 0.12, edges[6][1] + 0.12
+    ax.add_patch(FancyBboxPatch((fa, y - h / 2 - 0.14), fb - fa, h + 0.28, boxstyle="round,pad=0.0,rounding_size=0.08", facecolor="none", edgecolor=ACCENT,
+                                linewidth=1.0, linestyle="--"))
+    ax.text((fa + fb) / 2, y + h / 2 + 0.24, "each later work center on the routing:\n" + ", ".join(later[:4]) + ",\n" + ", ".join(later[4:]),
+            ha="center", va="bottom", fontsize=8, color=TEXT)
+    # outside processing, for the routings that need it: it leaves the group and rejoins before complete to ship
+    xa, xb, yo, ho = fb - 0.4, (fb + edges[7][0]) / 2, 0.95, 0.62
+    oa, ob = xb - 0.22, edges[-1][1]
+    box(oa, yo - ho / 2, ob - oa, ho, facecolor=WAITING, edgecolor=DARK, linewidth=0.8)
+    ax.text((oa + ob) / 2, yo, "Outside processing\n(PO to receipt)", ha="center", va="center", fontsize=8.2, color=TEXT)
+    ax.text((oa + ob) / 2, yo - ho / 2 - 0.1, "routings that need it", ha="center", va="top", fontsize=8, color=TEXT, style="italic")
+    ax.plot([xa, xa], [y - h / 2 - 0.14, yo], color=DARK, linewidth=1.1)
+    ax.annotate("", (oa - 0.03, yo), (xa, yo), arrowprops=arrow)
+    ax.annotate("", (xb, y - 0.02), (xb, yo + ho / 2 + 0.03), arrowprops=arrow)
+    # holds sit off the path
+    ha_, hb_ = edges[1][0], edges[3][1]
+    box(ha_, yo - ho / 2, hb_ - ha_, ho, facecolor=WAITING, edgecolor=DARK, linewidth=0.8, linestyle=":")
+    ax.text((ha_ + hb_) / 2, yo, "Holds: anywhere on the routing", ha="center", va="center", fontsize=8.2, color=TEXT)
+    # the span that is lead time
+    ax.annotate("", (edges[-1][1], 0.12), (edges[0][0], 0.12), arrowprops=dict(arrowstyle="<|-|>", color=DARK, linewidth=0.8, mutation_scale=9, shrinkA=0, shrinkB=0))
+    ax.text(total / 2, 0.19, "Lead time, working days", ha="center", va="bottom", fontsize=8.2, color=TEXT)
+    ax.set_xlim(0, total)
+    ax.set_ylim(-0.05, 3.5)
+    f.legend([Patch(facecolor=WAITING, edgecolor=DARK, linewidth=0.6), Patch(facecolor=WORKING)], ["Waiting", "Working"], frameon=False, fontsize=9, ncol=2,
+             loc="lower center")
+    f.tight_layout(rect=(0, 0.07, 1, 1))
+    return save(f, "lead_time_stages_diagram", "Lead time stages from release to ship: waiting and working stages on the routing")
 
 
 def fig_queue():
@@ -360,6 +415,14 @@ def report():
 
     b.append("<h2 id='f3'>3. Work in Process</h2>")
     spare = wr["wip_at_quoted_lead_times"] - wr["wip_mean"]
+    b.append("<p>A job's lead time runs from its release to the floor to its shipment, in working days with scheduled Saturdays counted. Work in process is every "
+             "job released and not yet shipped. Between release and shipment a job moves through the stages below. The traveler is printed; the job waits in queue "
+             "at its first operation, the laser or the punch, and for its material where the material is not on hand; it is cut; it then repeats move, queue, and "
+             "setup and run at each later work center on its routing, with outside processing for the routings that need it and holds wherever they are placed; "
+             "and once complete it waits to ship. Queue is arrival at a work center to first start, less the powder scheduling wait. Setup and run is first start "
+             "to last end. Move is the end of one operation to arrival at the next. Recorded holds are taken out of queue and move. Outside processing is purchase "
+             "order to receipt, plus any wait before the order is placed.</p>")
+    b.append(chart("Lead time stages, release to ship", fig_stages_diagram()))
     b.append(f"<p>In {YEAR}, the shop carried an average of {n0(wy['wip_mean'])} WIP jobs against a throughput of about {n0(wy['throughput_per_day'])} shipped a day, "
              f"so a job spent about {n0(wy['wip_over_throughput_days'])} working days on the floor. WIP averaged {n0(wipd['wip'].mean())} jobs over the past three "
              f"years and peaks every December: {n0(peaks[2023]['peak'])} jobs in 2023, {n0(peaks[2024]['peak'])} in 2024 and {n0(peaks[2025]['peak'])} in 2025.</p>")
@@ -369,7 +432,7 @@ def report():
              f"complete but not yet shipped hold the remaining {pct(ws_other.sum(), 0)} between them, none above {pct(ws_other.max(), 0)}. In {RT} the brakes' share "
              f"{turn(ws_year['press_brake'], ws_rest['press_brake'])} to {pct(ws_rest['press_brake'], 0)} and the lasers' "
              f"{turn(ws_year['laser'], ws_rest['laser'])} to {pct(ws_rest['laser'], 0)}, as a result of the Q1 backlog having been worked through.</p>")
-    b.append(f"<p>The {YEAR} average floor WIP of {n0(wy['wip_mean'])} jobs was {d2(wy['wip_ratio'])}x higher than the quoted lead times imply at measured "
+    b.append(f"<p>The {YEAR} average floor WIP of {n0(wy['wip_mean'])} jobs was {d2(wy['wip_ratio'])}x the WIP the quoted lead times imply at measured "
              f"throughput; in {RT} it was {n0(wr['wip_mean'])} WIP jobs against {n0(wr['wip_at_quoted_lead_times'])} implied ({d2(wr['wip_ratio'])}x). The excess for the year is a "
              f"result of the first-quarter backlog. In {RT} the floor carried "
              f"{n0(round(wr['wip_at_quoted_lead_times']) - round(wr['wip_mean']))} fewer jobs than its quoted lead times allow at the throughput it achieved, so it "
@@ -387,7 +450,9 @@ def report():
              f"{pct(laser_six['laser_utilization'].mean(), 0)} of scheduled hours on average, vs. {pct(q3_24['laser_utilization'].mean(), 0)} in Q3. During the "
              f"three peak weeks, {n0(laser_three['wip_at_laser'].min())} to {n0(laser_three['wip_at_laser'].max())} jobs were waiting to be cut, "
              f"vs. an average of {n0(q3_24['wip_at_laser'].mean())} jobs in Q3. The work then queued at the brakes, which already run at {pct(brake_rest, 0)} in a "
-             f"normal quarter, and it took through Q1 and into Q2 {YEAR} to clear this backlog. {see('7')}</p>")
+             f"normal quarter, and it took through Q1 and into Q2 {YEAR} to clear this backlog. The fourth-quarter release is the "
+             f"lever: taking the peak on planned Saturday brake shifts from November through February is the option that raised on-time delivery, while a cap on "
+             f"release lowered it. <a href='options_tested.html'>Options tested</a> sizes both. {see('7')}</p>")
     b.append(chart("Weekly WIP and Net Inflow, Q3 &rsquo;24 to Q2 &rsquo;25", fig_weekly_year()))
 
     b.append("<h2 id='rec'>Recommendation</h2>")
