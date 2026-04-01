@@ -7,7 +7,7 @@ import pandas as pd
 
 from analytics.db import q
 from analytics.leading_indicators import analysis as A
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BLUE, RED, fig, pct, save, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BLUE, RED, fig, pct, save_conformed as save, table
 
 YEAR, REST = A.YEAR, "Q2 to Q4"
 D = A.load()

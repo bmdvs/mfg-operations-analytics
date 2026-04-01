@@ -426,7 +426,9 @@ def report():
              "20 with outside processing. On time: shipped on or before the promised date as last revised.</div>")
     toc = [("f1", "Lead time against the quote"), ("f2", "Lead time decomposition"), ("f3", "Work in Process"),
            ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
-    return {"body": "\n".join(b), "toc": toc[:-3], "meta": ""}
+    scope = (f"Jobs shipped in {YEAR}, whole year and {REST}; records from January 2023 to December 2025.<br>"
+             f"Sources: ERP, shop-floor data collection, quality, maintenance and attendance exports (batch {batch}).")
+    return {"body": "\n".join(b), "toc": toc[:-3], "meta": scope}
 
 
 # ── target, countermeasures and follow-up ──────────────────────────────────

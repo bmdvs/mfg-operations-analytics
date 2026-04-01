@@ -18,6 +18,7 @@ GREEN = "#1A7A3A"
 GREY = "#AAAAAA"
 DARK_GREY = "#555555"
 TEXT = "#222222"
+CREDIT = "Created by Brian Davis, 2026"
 
 ROOT = Path(__file__).resolve().parents[2]
 DOCS = ROOT / "docs"
@@ -63,6 +64,35 @@ def save(f, name, alt="", up=1):
     return f'<img alt="{alt}" src="{"../" * up}figures/{name}.png">'
 
 
+def save_conformed(f, name, alt="", up=1):
+    """save, with the report convention applied first: the ordinary quarters written Q2-Q4, and one legend along the bottom of the figure."""
+    from matplotlib.text import Text
+    from matplotlib.ticker import FixedFormatter
+    fix = lambda t: t.replace("Q2 to Q4", "Q2-Q4")
+    for ax in f.axes:
+        for axis in (ax.xaxis, ax.yaxis):
+            fmt = axis.get_major_formatter()
+            if isinstance(fmt, FixedFormatter):
+                fmt.seq = [fix(x) for x in fmt.seq]
+    for t in f.findobj(Text):
+        if "Q2 to Q4" in t.get_text():
+            t.set_text(fix(t.get_text()))
+    if not f.legends:
+        handles, labels = [], []
+        for ax in f.axes:
+            leg = ax.get_legend()
+            if leg is None:
+                continue
+            for h, t in zip(leg.legend_handles, leg.get_texts()):
+                if t.get_text() not in labels:
+                    handles.append(h)
+                    labels.append(t.get_text())
+            leg.remove()
+        if handles:
+            f.legend(handles, labels, frameon=False, fontsize=9, ncol=min(len(labels), 4), loc="upper center", bbox_to_anchor=(0.5, 0.02))
+    return save(f, name, alt, up)
+
+
 def pct(x, d=1):
     return f"{x * 100:.{d}f}%"
 
@@ -93,6 +123,7 @@ header.doc {{ border-bottom: 3px solid var(--brand); padding-bottom: 14px; margi
 header.doc .kicker {{ color: var(--accent); font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; font-weight: 600; }}
 header.doc h1 {{ margin: 4px 0 6px; font-size: 28px; color: var(--brand); }}
 header.doc .meta {{ color: var(--muted); font-size: 13px; }}
+header.doc .credit {{ color: var(--muted); font-size: 11px; margin-top: 4px; }}
 h2 {{ color: var(--brand); font-size: 21px; margin: 36px 0 8px; border-bottom: 1px solid var(--rule); padding-bottom: 4px; }}
 h3 {{ color: var(--brand); font-size: 16px; margin: 22px 0 6px; }}
 p {{ margin: 8px 0 12px; }}
@@ -147,7 +178,7 @@ def shell(title, kicker, meta, body, toc=None):
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title><style>{CSS}</style></head>
 <body><div class="page">
-<header class="doc"><div class="kicker">{kicker}</div><h1>{title}</h1><div class="meta">{meta}</div></header>
+<header class="doc"><div class="kicker">{kicker}</div><h1>{title}</h1><div class="meta">{meta}</div><div class="credit">{CREDIT}</div></header>
 {nav}{body}
 </div></body></html>"""
 
@@ -159,7 +190,7 @@ def report_shell(title, kicker, meta, body, toc):
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title><style>{REPORT_CSS}</style></head>
-<body><div class="page-header"><h1>{title}</h1></div>
+<body><div class="page-header"><h1>{title}</h1><div class="sub">{CREDIT}</div></div>
 <div class="layout">{nav}
 <main class="content">{head}{body}
 </main></div></body></html>"""
