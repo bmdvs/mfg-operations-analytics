@@ -9,7 +9,7 @@ import pandas as pd
 from analytics.db import q
 from analytics.p8_technology_roi import analysis as A
 from analytics.p8_technology_roi.scenarios import ASSUME, PACKAGE, QUEUE, S0
-from analytics.style.style import AMBER, BRAND_BLUE, DOCS, GREEN, GREY, RED, a3_shell, fig, pct, save, shell, sig, table
+from analytics.style.style import AMBER, BRAND_BLUE, DOCS, GREEN, GREY, RED, a3_shell, fig, pct, save, report_shell, sig, table
 
 YEAR, REST = A.YEAR, "Q2 to Q4"
 df = A.runs()
@@ -409,7 +409,7 @@ def report():
     toc = [("f1", "Measured inputs"), ("f2", "On the floor"), ("f3", "Tool changer"), ("f4", "Robotic cell"), ("f5", "Laser tower"), ("f6", "Payback and NPV"),
            ("f7", "Added to the package"), ("f8", "Package against machines"), ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
     (DOCS / "reports").mkdir(parents=True, exist_ok=True)
-    (DOCS / "reports" / "p8_technology_roi.html").write_text(shell("Technology ROI", "Project 8 report", HEADER_META, "\n".join(b), toc), encoding="utf8")
+    (DOCS / "reports" / "p8_technology_roi.html").write_text(report_shell("Technology ROI", "Project 8 report", HEADER_META, "\n".join(b), toc), encoding="utf8")
 
 
 COUNTERMEASURES = [

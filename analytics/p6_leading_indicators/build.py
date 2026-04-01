@@ -7,7 +7,7 @@ import pandas as pd
 
 from analytics.db import q
 from analytics.p6_leading_indicators import analysis as A
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, shell, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, report_shell, table
 
 YEAR, REST = A.YEAR, "Q2 to Q4"
 D = A.load()
@@ -440,7 +440,7 @@ def report():
            ("f7", "Kit completeness"), ("f8", "Not leading"), ("f9", "Review set"), ("rec", "Recommendation"), ("method", "Method and data"),
            ("appendix", "Appendix")]
     (DOCS / "reports").mkdir(parents=True, exist_ok=True)
-    (DOCS / "reports" / "p6_leading_indicators.html").write_text(shell("Leading indicators", "Project 6 report", HEADER_META, "\n".join(b), toc), encoding="utf8")
+    (DOCS / "reports" / "p6_leading_indicators.html").write_text(report_shell("Leading indicators", "Project 6 report", HEADER_META, "\n".join(b), toc), encoding="utf8")
 
 
 COUNTERMEASURES = [
