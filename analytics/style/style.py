@@ -159,6 +159,7 @@ nav.toc { width: 210px; flex-shrink: 0; margin: 0; padding: 36px 20px 40px 0; po
 nav.toc .toc-title { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; font-weight: 700; }
 nav.toc a { display: block; color: var(--muted); margin-right: 0; padding: 4px 0 4px 10px; border-left: 2px solid transparent; line-height: 1.4; }
 nav.toc a:hover { color: var(--brand); border-left-color: var(--brand); }
+nav.toc a.sub { font-size: 12px; padding-left: 22px; }
 .content { flex: 1; min-width: 0; max-width: 880px; padding: 30px 0 80px 52px; }
 .content header.doc { border-bottom: 1px solid var(--rule); padding-bottom: 12px; margin-bottom: 8px; }
 .content > h2:first-child { margin-top: 6px; }
@@ -187,7 +188,8 @@ def shell(title, kicker, meta, body, toc=None):
 
 def report_shell(title, kicker, meta, body, toc):
     """A report page: the title in a bar across the top, the contents down the left, the report beside them."""
-    nav = '<nav class="toc"><div class="toc-title">Contents</div>' + "".join(f'<a href="#{a}">{t}</a>' for a, t in toc) + "</nav>"
+    nav = ('<nav class="toc"><div class="toc-title">Contents</div>'
+           + "".join(f'<a{" class=" + chr(34) + "sub" + chr(34) if len(x) > 2 else ""} href="#{x[0]}">{x[1]}</a>' for x in toc) + "</nav>")
     head = f'<header class="doc"><div class="kicker">{kicker}</div><div class="meta">{meta}</div></header>\n' if kicker or meta else ""
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">

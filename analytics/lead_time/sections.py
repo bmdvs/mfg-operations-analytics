@@ -348,14 +348,14 @@ def report():
     b.append(f"<p>Throughout {YEAR} the brake queue was {pct(st(SY, bq, 'share'), 0)} of lead time and accounted for the largest share of the extra days on "
              f"late jobs: {d2(st(SY, bq, 'late'))} days against {d2(st(SY, bq, 'on time'))} for on-time jobs. This was due to the first quarter's backlog: the "
              f"2024 year-end build released more work than the brakes could absorb and put {n0(q1['late_jobs'])} of the year's {n0(ya['late_jobs'])} late jobs "
-             f"into Q1 (Section 3). In {RT}, with the backlog cleared, late and on-time jobs waited a similar number of days at the brakes "
+             f"into Q1 (Section 1). In {RT}, with the backlog cleared, late and on-time jobs waited a similar number of days at the brakes "
              f"({d2(st(SR, bq, 'late'))} and {d2(st(SR, bq, 'on time'))}).</p>")
     b.append(f"<p>The extra days on late jobs in {RT} were instead due to material wait at the first operation "
              f"({d2(st(SR, 'material wait at first operation', 'late'))} days for late jobs vs. {d2(st(SR, 'material wait at first operation', 'on time'))} for "
              f"on-time jobs), outside processing ({d2(st(SR, 'outside processing', 'late'))} vs. {d2(st(SR, 'outside processing', 'on time'))}), "
              f"the robotic weld queue ({d2(st(SR, 'queue: robotic weld', 'late'))} vs. {d2(st(SR, 'queue: robotic weld', 'on time'))}) and "
              f"setup and run ({d2(st(SR, 'setup and run', 'late'))} vs. {d2(st(SR, 'setup and run', 'on time'))}; the average lot size for late jobs was "
-             f"{n0(lot_late)} pieces vs. {n0(lot_on)} for on-time jobs). [[S:second]] provide more "
+             f"{n0(lot_late)} pieces vs. {n0(lot_on)} for on-time jobs). <a href='#f3'>Section 3</a> provides more "
              f"detail on these drivers. {see('2a', '2b')}</p>")
     b.append(chart("Lead time by stage, on-time vs. late jobs", fig_stages_report()))
     g, i, pb = "grind_deburr", "inspection_pack", "press_brake"
@@ -395,7 +395,7 @@ def report():
     b.append("<h2 id='rec'>Recommendation</h2>")
     b.append(f"<p>Restate the fixed quote as a percentile of the measured lead-time distribution by routing class ([[R:quoting]]): the 10-day repeat quote is met on "
              f"{hit['repeat part'][1]} of jobs in an ordinary quarter. Plan the fourth-quarter peak with planned Saturday brake shifts from November through February and the setup program, sized on the shop model ([[R:options]]); "
-             f"the 2024 build put {n0(q1['late_jobs'])} jobs late in the first quarter of {YEAR}. Ordinary-quarter lateness is taken up in [[S:second]], where material, vendor and "
+             f"the 2024 build put {n0(q1['late_jobs'])} jobs late in the first quarter of {YEAR}. Ordinary-quarter lateness is taken up in <a href='#f3'>Section 3</a>, where material, vendor and "
              f"robotic weld causes are attributed job by job.</p>")
 
     b.append("<h2 id='method'>Method and data</h2>")
