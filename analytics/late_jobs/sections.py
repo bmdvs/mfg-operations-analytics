@@ -1,25 +1,29 @@
-"""Why jobs are late: the sections, tables and figures of its half of the report, read from the marts.
+"""Late jobs: the sections, tables and figures of its half of the report, read from the marts.
 
 Built by analytics.reports.lead_time_and_late_jobs.
 """
 import numpy as np
 import pandas as pd
+from matplotlib.patches import Patch
 
 from analytics.db import q
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BLUE, RED, fig, pct, save_conformed as save, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, GREEN, GREY, LIGHT_BLUE, fig, paired_columns, pct, save_conformed as save, sig, table
 
 YEAR = 2025
 REST = "Q2 to Q4"
+RT = "Q2-Q4"                                  # the same quarters as written in the figures
 CODES = ["capacity", "material", "outside processing", "customer change", "quality", "other"]
 CAUSES = ["released late", "constraint queue", "material", "outside processing", "setup overrun", "quality", "other hold", "not attributable"]
-CAUSE_LABEL = {"released late": "Released late", "constraint queue": "Constraint queue", "material": "Material", "outside processing": "Outside processing",
-               "setup overrun": "Setup overrun", "quality": "Quality", "other hold": "Other hold", "not attributable": "Unexplained"}
+CAUSE_LABEL = {"released late": "Released late", "constraint queue": "Queue constraint", "material": "Material", "outside processing": "Outside processing",
+               "setup overrun": "Setup overrun", "quality": "Quality", "other hold": "Hold", "not attributable": "Not attributed"}
 CAUSE_COLOR = {"released late": AMBER, "constraint queue": BRAND_BLUE, "material": ACCENT, "outside processing": LIGHT_BLUE, "setup overrun": "#8E6BA8",
                "quality": GREEN, "other hold": "#B9A36B", "not attributable": GREY}
 CODED_CAUSES = ["constraint queue", "setup overrun", "material", "outside processing", "quality"]
 WC = {"press_brake": "Press brake", "grind_deburr": "Grind and deburr", "inspection_pack": "Inspection and pack", "hardware": "Hardware", "weld": "Weld",
       "robotic_weld": "Robotic weld", "assembly": "Assembly", "powder_coat": "Powder coat", "laser": "Laser", "punch": "Punch",
       "outside_processing": "Outside processing", "shipping": "Shipping", "order entry": "Order entry (promise)", "none": "No stage above normal"}
+WC_SHORT = {"press_brake": "Press\nbrake", "grind_deburr": "Grind and\ndeburr", "inspection_pack": "Inspection\nand pack", "robotic_weld": "Robotic\nweld",
+            "powder_coat": "Powder\ncoat", "outside_processing": "Outside\nprocessing"}
 STAGE = {"queue: press brake": "Queue: press brake", "setup and run": "Setup and run", "move": "Move", "complete to ship": "Complete to ship",
          "queue: assembly": "Queue: assembly", "first-operation queue": "First-operation queue", "queue: grind deburr": "Queue: grind and deburr",
          "material wait at first operation": "Material wait at first operation", "queue: robotic weld": "Queue: robotic weld",
@@ -79,6 +83,7 @@ by_year = L_all.groupby("ship_year").agg(late=("job_id", "size"), blank=("late_r
                                          capacity=("late_reason_code", lambda x: (x.dropna() == "capacity").mean()))
 cross = pd.crosstab(LY.dropna(subset=["late_reason_code"])["late_reason_code"], LY.dropna(subset=["late_reason_code"])["dominant_cause"])
 cross = cross.reindex(index=CODES, columns=CAUSES).fillna(0).astype(int)
+cross_all = pd.crosstab(LY["late_reason_code"].fillna("blank"), LY["dominant_cause"]).reindex(index=["blank"] + CODES, columns=CAUSES).fillna(0).astype(int)
 mat_jobs = set(AY.loc[AY["cause"] == "material", "job_id"])
 mat_coded = int((LY[LY["job_id"].isin(mat_jobs)]["late_reason_code"] == "material").sum())
 
@@ -124,56 +129,88 @@ def sv(period, pctl, cause):
 
 
 # ── figures ─────────────────────────────────────────────────────────────────
-def fig_pareto(name="late_jobs_paired_pareto", h=5.4):
-    f, axes = fig(h=h, ncols=2, nrows=2, grid="x")
-    for row, (per, label) in enumerate((("year", f"{YEAR}"), (REST, f"{YEAR} {REST}"))):
-        cs, ca = CS[per], CA[per]
-        L = PER[per][0]
-        codes = pd.Series({"blank": cs["blank"], **{k: (L["late_reason_code"] == k).mean() for k in CODES}}).sort_values()
-        ax = axes[row, 0]
-        ax.barh([k.capitalize() for k in codes.index], codes.values * 100, color=[GREY if k == "blank" else ACCENT for k in codes.index])
-        ax.set_title(f"Late-reason code as entered, {label}", fontsize=10.5)
-        ax.set_xlabel("Share of late jobs (%)")
-        sh = ca["share"].sort_values()
-        ax = axes[row, 1]
-        ax.barh([CAUSE_LABEL[k] for k in sh.index], sh.values * 100, color=[CAUSE_COLOR[k] for k in sh.index])
-        ax.set_title(f"Attributed lost days, {label}", fontsize=10.5)
-        ax.set_xlabel("Share of lost days (%)")
-    f.tight_layout()
-    return save(f, name, "Late-reason codes as entered against attributed lost days")
+def bottom_legend(f, handles, labels, ncol, space):
+    f.legend(handles, labels, frameon=False, fontsize=9, ncol=ncol, loc="lower center")
+    f.tight_layout(rect=(0, space, 1, 1))
+
+
+def fig_causes():
+    f, ax = fig(h=3.7)
+    paired_columns(ax, [CAUSE_LABEL[k] for k in CAUSES], list(CA["year"]["share"] * 100), list(CA[REST]["share"] * 100), (f"{YEAR}", RT), percent=True)
+    ax.set_ylabel("Share of lost days")
+    bottom_legend(f, *ax.get_legend_handles_labels(), ncol=2, space=0.06)
+    return save(f, "late_jobs_lost_days_by_cause", "Lost days by attributed cause")
 
 
 def fig_work_center():
-    w = WR.iloc[::-1]
-    f, ax = fig(h=3.8, grid="x")
-    left = np.zeros(len(w))
-    for k in CAUSES:
-        ax.barh([WC.get(x, x) for x in w.index], w[k].values, left=left, color=CAUSE_COLOR[k], label=CAUSE_LABEL[k])
-        left += w[k].values
-    ax.set_xlabel("Lost days")
-    ax.legend(frameon=False, fontsize=8.5, ncol=2, loc="lower right")
-    f.tight_layout()
+    """Lost days at each work center by cause: one stacked column for the year and one for the ordinary quarters."""
+    centers = [w for w in WY.index if w not in ("order entry", "none")]
+    causes = [k for k in CAUSES if k != "released late"]
+    f, ax = fig(h=4.5)
+    x = np.arange(len(centers))
+    ticks, names = [], []
+    for dx, W, name in ((-0.2, WY, f"{YEAR}"), (0.2, WR, RT)):
+        bottom = np.zeros(len(centers))
+        for k in causes:
+            v = sig(W[k].reindex(centers).fillna(0.0).values)
+            ax.bar(x + dx, v, width=0.36, bottom=bottom, color=CAUSE_COLOR[k])
+            bottom += v
+        ticks += list(x + dx)
+        names += [name] * len(centers)
+    for xi in x[:-1]:
+        ax.axvline(xi + 0.5, color="#D5D5D5", linewidth=0.9)
+    ax.set_xticks(ticks)
+    ax.set_xticklabels(names, rotation=90, fontsize=7.5)
+    ax.tick_params(axis="x", length=0)
+    for xi, w in zip(x, centers):
+        ax.annotate(WC_SHORT.get(w, WC.get(w, w)), (xi, 0), xycoords=("data", "axes fraction"), xytext=(0, -36), textcoords="offset points",
+                    ha="center", va="top", fontsize=8)
+    ax.set_xlim(-0.5, len(centers) - 0.5)
+    ax.set_ylabel("Lost days")
+    bottom_legend(f, [Patch(color=CAUSE_COLOR[k]) for k in causes], [CAUSE_LABEL[k] for k in causes], ncol=4, space=0.1)
     return save(f, "late_jobs_lost_days_by_work_center", "Lost days by work center and cause")
 
 
-def fig_cross():
-    f, ax = fig(h=3.4, grid="x")
+def fig_codes():
+    keys = CODES + ["blank"]
+    share = lambda L: [float((L["late_reason_code"].fillna("blank") == k).mean()) * 100 for k in keys]
+    f, ax = fig(h=3.7)
+    paired_columns(ax, [k.capitalize() for k in keys], share(LY), share(LR), (f"{YEAR}", RT), percent=True)
+    ax.set_ylabel("Share of late jobs")
+    bottom_legend(f, *ax.get_legend_handles_labels(), ncol=2, space=0.06)
+    return save(f, "late_jobs_codes_entered", "Late-reason codes as entered on late jobs")
+
+
+def fig_mosaic():
+    """One column per entered code, as wide as its share of the year's late jobs, stacked by the largest attributed cause of its jobs."""
+    width = cross_all.sum(axis=1) / cross_all.values.sum()
+    gap = 0.008
+    f, ax = fig(h=4.6)
     ax.grid(False)
-    m = cross.values
-    ax.imshow(m, cmap="Blues", aspect="auto", vmin=0, vmax=m.max() * 1.15)
-    ax.set_xticks(range(len(CAUSES)))
-    ax.set_xticklabels([CAUSE_LABEL[k] for k in CAUSES], rotation=25, ha="right")
-    ax.set_yticks(range(len(CODES)))
-    ax.set_yticklabels([k.capitalize() for k in CODES])
-    for i in range(m.shape[0]):
-        for j in range(m.shape[1]):
-            ax.text(j, i, str(m[i, j]), ha="center", va="center", fontsize=9.5, color="white" if m[i, j] > m.max() * 0.55 else "#222222")
-    ax.set_xlabel("Largest attributed cause")
-    ax.set_ylabel("Code entered")
-    for s in ("left", "bottom"):
-        ax.spines[s].set_visible(False)
-    f.tight_layout()
-    return save(f, "late_jobs_code_against_cause", "Entered code against largest attributed cause")
+    left, centers = 0.0, []
+    for code in cross_all.index:
+        share = cross_all.loc[code] / cross_all.loc[code].sum()
+        bottom = 0.0
+        for k in CAUSES:
+            v = float(sig(share[k] * 100))
+            if v == 0:
+                continue
+            ax.bar(left, v, width=width[code], bottom=bottom, align="edge", color=CAUSE_COLOR[k], edgecolor="white", linewidth=0.5)
+            if width[code] >= 0.06 and v >= 6:
+                ax.text(left + width[code] / 2, bottom + v / 2, f"{v:.0f}%", ha="center", va="center", fontsize=8,
+                        color="white" if k in ("constraint queue", "material", "setup overrun", "quality") else "#222222")
+            bottom += v
+        centers.append(left + width[code] / 2)
+        left += width[code] + gap
+    ax.set_xlim(0, left - gap)
+    ax.set_ylim(0, 100)
+    ax.yaxis.set_major_formatter(lambda v, _: f"{v:.0f}%")
+    ax.set_ylabel("Share of the code's late jobs")
+    ax.set_xticks(centers)
+    ax.set_xticklabels([f"{k.capitalize()}, {pct(width[k], 0)}" for k in cross_all.index], rotation=40, ha="right", fontsize=9)
+    labels = [CAUSE_LABEL[k] if k != "not attributable" else "Not attributed by rule" for k in CAUSES]
+    bottom_legend(f, [Patch(color=CAUSE_COLOR[k]) for k in CAUSES], labels, ncol=4, space=0.1)
+    return save(f, "late_jobs_code_against_cause", "What the shop coded against what the data shows")
 
 
 # ── tables ──────────────────────────────────────────────────────────────────
@@ -221,7 +258,7 @@ def t_na():
     idx = list(NAY.index)
     rows = [[STAGE.get(k, k), n0(NAY[k]), pct(NAYs[k]), n0(NAR.get(k, 0.0)), pct(NARs.get(k, 0.0))] for k in idx]
     rows.append(["Total", n0(NAY.sum()), "100.0%", n0(NAR.sum()), "100.0%"])
-    return table(pd.DataFrame(rows, columns=["Stage", f"Unexplained days, {YEAR}", "Share", f"Unexplained days, {REST}", f"Share, {REST}"]))
+    return table(pd.DataFrame(rows, columns=["Stage", f"Days not attributed, {YEAR}", "Share", f"Days not attributed, {REST}", f"Share, {REST}"]))
 
 
 def t_sens():
@@ -229,12 +266,12 @@ def t_sens():
     for p in (70, 80, 90):
         rows.append([f"{p}th percentile" + (" (the rule)" if p == 80 else ""), pct(sv("year", p, "constraint queue")[0]), pct(sv("year", p, "not attributable")[0]),
                      pct(sv(REST, p, "constraint queue")[0]), pct(sv(REST, p, "not attributable")[0])])
-    return table(pd.DataFrame(rows, columns=["Queue threshold of the constraint rule", f"Constraint queue, {YEAR}", f"Unexplained, {YEAR}",
-                                             f"Constraint queue, {REST}", f"Unexplained, {REST}"]))
+    return table(pd.DataFrame(rows, columns=["Queue threshold of the constraint rule", f"Queue constraint, {YEAR}", f"Not attributed, {YEAR}",
+                                             f"Queue constraint, {REST}", f"Not attributed, {REST}"]))
 
 
 def t_cross():
-    d = cross.copy()
+    d = cross_all.copy()
     d.columns = [CAUSE_LABEL[c] for c in d.columns]
     d.insert(0, "Code entered", [k.capitalize() for k in d.index])
     return table(d.reset_index(drop=True))
@@ -247,72 +284,69 @@ HEADER_META = (f"Custom sheet-metal fabrication job shop, about 120 employees, o
                f"Lost days in working days, scheduled Saturdays counted.")
 
 
+def see(*tables):
+    """One sentence pointing to appendix tables; the report links each."""
+    t = [str(x) for x in tables]
+    return f"See Appendix Table{'s' if len(t) > 1 else ''} {t[0] if len(t) == 1 else ', '.join(t[:-1]) + ' and ' + t[-1]} for additional detail."
+
+
+def chart(title, img):
+    return f"<div class='chart-title'>{title}</div>{img}"
+
+
 def report():
     y, r = CA["year"], CA[REST]
     ys, rs = y["share"], r["share"]
-    first_year = int(by_year.index.min())
-    rel_dom_top10 = int((CR["largest"] == "released late").sum())
-    two_y, two_r = CY["share"].iloc[:2].sum(), CR["share"].iloc[:2].sum()
     b = []
-    b.append("<h2 id='f1'>1. The shop's record</h2>")
-    b.append(f"<p>{pct(CS['year']['blank'], 0)} of late jobs carry no reason code. \"Capacity\" is {pct(CS['year']['share']['capacity'], 0)} of entered codes for the year "
-             f"and {pct(CS[REST]['share']['capacity'], 0)} in {REST}, up from {pct(by_year.loc[first_year, 'capacity'])} in {first_year}. The entered code agrees with "
-             f"the largest attributed cause on {pct(AG['year']['agree'])} of coded late jobs against {pct(AG['year']['chance'])} expected by chance "
-             f"({pct(AG[REST]['agree'])} against {pct(AG[REST]['chance'])} in {REST}): the codes carry almost no information beyond their own frequencies. "
-             f"On the {n0(AGC['year']['n'])} coded jobs whose largest cause has a code of its own, agreement is {pct(AGC['year']['agree'])} against "
-             f"{pct(AGC['year']['chance'])} by chance.</p>")
-    b.append(fig_pareto())
-    b.append(f"<div class='caption'>Figure 1. Late-reason codes as entered and lost days by attributed cause, {YEAR} and {REST}.</div>")
+    b.append("<h2 id='f1'>1. Drivers behind late jobs</h2>")
+    b.append(f"<p>In {YEAR}, the shop had {n0(len(LY))} late jobs that shipped a total of {n0(y['total'])} days late (average of {d1(y['total'] / len(LY))} days late "
+             f"for each job), with {n0(len(LR))} of these late jobs ({pct(len(LR) / len(LY), 0)}) in {REST} which shipped a total of {n0(r['total'])} days late "
+             f"(average of {d1(r['total'] / len(LR))} days late for each).</p>")
+    b.append("<p>We analyzed the ERP and shop-floor records to arrive at an attribution of lost days (i.e., how many days late the jobs shipped) by driver. "
+             "For each late job, we counted the days above the on-time median at each stage as lost, and assigned to a driver by the rules in "
+             "<a href='#method'>Method and data</a>.</p>")
+    b.append(f"<p>In {YEAR}, jobs waiting at work centers (i.e., queue constraints) accounted for {pct(ys['constraint queue'], 0)} of the {n0(y['total'])} lost days, "
+             f"while jobs that were released late accounted for {pct(ys['released late'], 0)}, and jobs that waited on material and outside processing accounted for "
+             f"{pct(ys['material'], 0)} and {pct(ys['outside processing'], 0)}, respectively. In {REST}, jobs that were released late accounted for "
+             f"{pct(rs['released late'], 0)} of the {n0(r['total'])} lost days, with queue constraint ({pct(rs['constraint queue'], 0)}), material "
+             f"({pct(rs['material'], 0)}) and outside processing ({pct(rs['outside processing'], 0)}) the other main drivers. {see(1, 5, 6)}</p>")
+    queues = [k for k in NAYs.index if k.startswith("queue:") or k == "first-operation queue"]
+    b.append(f"<p>{pct(ys['not attributable'], 0)} of lost days in {YEAR} and {pct(rs['not attributable'], 0)} in {REST} have no attribution. Of the "
+             f"{n0(NAY.sum())} non-attributed lost days in {YEAR}, {pct(NAYs[queues].sum(), 0)} was from work center queue time above on-time median but below "
+             f"the attribution threshold, {pct(NAYs['setup and run'], 0)} from setup and run time above normal with no overrun or rework recorded, and "
+             f"{pct(NAYs['move'], 0)} from movement between stages. The remainder have no discernible cause. {see(9, 10)}</p>")
+    b.append(chart("Lost days by attributed cause", fig_causes()))
+    b.append(chart("Lost days by work center and cause", fig_work_center()))
 
-    b.append("<h2 id='f2'>2. Lost days by cause</h2>")
-    b.append(f"<p>For the year, constraint queue is {pct(ys['constraint queue'], 0)} of the {n0(y['total'])} lost days, unexplained {pct(ys['not attributable'], 0)}, "
-             f"released late {pct(ys['released late'], 0)}, material {pct(ys['material'])} and outside processing {pct(ys['outside processing'], 0)}; "
-             f"the year is the 2024 year-end build shipping in the first quarter.</p>")
-    b.append(f"<p>In {REST}, released late is {pct(rs['released late'], 0)} of the {n0(r['total'])} lost days and the largest cause on "
-             f"{n0(r['dominant']['released late'])} of {n0(len(LR))} late jobs; constraint queue is {pct(rs['constraint queue'], 0)}, unexplained "
-             f"{pct(rs['not attributable'], 0)}, material {pct(rs['material'], 0)} and outside processing {pct(rs['outside processing'], 0)}. "
-             f"In an ordinary quarter, close to half the days lost are on jobs promised inside the standard lead time before any work started.</p>")
-    b.append(t_causes())
-    b.append(f"<div class='caption'>Table 1. Lost days of late jobs by attributed cause, {YEAR} and {REST}.</div>")
-
-    b.append("<h2 id='f3'>3. Where the days are lost</h2>")
-    b.append(f"<p>In {REST}, order entry holds {pct(WR.loc['order entry', 'share'], 0)} of lost days (promises inside the standard lead time), the laser "
-             f"{pct(WR.loc['laser', 'share'], 0)} ({n0(WR.loc['laser', 'material'])} of its {n0(WR.loc['laser', 'lost'])} days are material waits at the first cut), "
-             f"robotic weld {pct(WR.loc['robotic_weld', 'share'])} and the brakes {pct(WR.loc['press_brake', 'share'], 0)}. For the year the brakes hold "
-             f"{pct(WY.loc['press_brake', 'share'], 0)}, the laser {pct(WY.loc['laser', 'share'], 0)} (the first-operation queue of November and December 2024) "
-             f"and order entry {pct(WY.loc['order entry', 'share'], 0)}.</p>")
-    b.append(fig_work_center())
-    b.append(f"<div class='caption'>Figure 2. Lost days by work center and attributed cause, {REST}.</div>")
-
-    b.append("<h2 id='f4'>4. Whose jobs</h2>")
-    b.append(f"<p>The top ten customers hold {pct(CY['cum'].iloc[-1], 0)} of lost days for the year and "
-             f"{'all are' if CY['key_account'].all() else str(int(CY['key_account'].sum())) + ' are'} key accounts. In {REST} released late is the largest cause for "
-             f"{rel_dom_top10} of the ten. {CY['customer_name'].iloc[0]} and {CY['customer_name'].iloc[1]} hold {pct(two_y, 0)} of lost days for the year and "
-             f"{pct(two_r, 0)} in {REST}.</p>")
-
-    b.append("<h2 id='f5'>5. Where the codes and the data disagree</h2>")
-    b.append(f"<p>{n0(cross.loc['capacity', 'released late'])} jobs coded \"capacity\" were released late and {n0(cross.loc['capacity', 'not attributable'])} coded "
-             f"\"capacity\" have no attributable cause as their largest. Of the {n0(cross.loc['other'].sum())} jobs coded \"other\", "
-             f"{n0(cross.loc['other', 'released late'])} were released late; of the {n0(cross.loc['capacity'].sum())} coded \"capacity\", "
-             f"{n0(cross.loc['capacity', 'constraint queue'])} had constraint queue as their largest cause. Material was coded on {mat_coded} of the {len(mat_jobs)} late jobs with a material wait, and on "
-             f"{n0(cross.loc['material', 'material'])} of the {n0(y['dominant']['material'])} where material is the largest cause.</p>")
-    b.append(fig_cross())
-    b.append(f"<div class='caption'>Figure 3. Late jobs of {YEAR} with a code entered, by code and largest attributed cause.</div>")
-
-    b.append("<h2 id='f6'>6. The unexplained share</h2>")
-    top3 = list(NAYs.index[:3])
-    assert top3 == ["queue: press brake", "setup and run", "move"], top3
-    b.append(f"<p>{pct(ys['not attributable'], 0)} of lost days for the year and {pct(rs['not attributable'], 0)} in {REST} match no rule. Of the {n0(NAY.sum())} "
-             f"unexplained days for the year, {pct(NAYs[top3[0]], 0)} are brake queue above the on-time normal but below the threshold of the constraint rule, "
-             f"{pct(NAYs[top3[1]], 0)} are setup and run above normal with no overrun or rework recorded, and {pct(NAYs[top3[2]], 0)} are move. "
-             f"With the queue threshold at the 70th percentile the unexplained share is {pct(sv('year', 70, 'not attributable')[0], 0)}; at the 90th, "
-             f"{pct(sv('year', 90, 'not attributable')[0], 0)}. {no_cause['year'][0]} of {n0(no_cause['year'][1])} late jobs "
-             f"({pct(no_cause['year'][0] / no_cause['year'][1])}) have no cause assigned at all; {no_cause[REST][0]} of {n0(no_cause[REST][1])} in {REST}.</p>")
+    b.append("<h2 id='f2'>2. The shop's records</h2>")
+    b.append(f"<p>Late-reason codes are inputted retroactively on late jobs by the customer service team during the weekly delivery review. These codes are pulled "
+             f"from a dropdown list with six choices: capacity, material, outside processing, customer change, quality and other. As seen below, a significant "
+             f"portion of late jobs had no late-reason code entered. {see(2)}</p>")
+    b.append(chart("Late-reason codes as entered on late jobs", fig_codes()))
+    late = cross.loc[:, "released late"]
+    b.append(f"<p>To validate the accuracy of these codes, we compared them against the lost days attribution calculations under "
+             f"<a href='#f3_1'>Drivers behind late jobs</a>. We first mapped the late-reason codes to the corresponding attribution drivers: queue constraint and setup "
+             f"overrun count as capacity; material, outside processing and quality as their own codes; a hold and days not attributed as other. The notable "
+             f"exception is that the \"released late\" attribution driver is not a listed option for late-reason codes; those jobs are mostly coded as capacity "
+             f"or other ({n0(late['capacity'] + late['other'])} of the {n0(late.sum())} with a code), and count as other in the comparison.</p>")
+    cq = cross_all["constraint queue"] / cross_all.sum(axis=1)
+    rel = cross_all["released late"]
+    b.append(f"<p>The entered code agrees with the largest attributed cause on {pct(AG['year']['agree'])} of coded late jobs against {pct(AG['year']['chance'])} "
+             f"expected by chance ({pct(AG[REST]['agree'])} against {pct(AG[REST]['chance'])} in {REST}). Queue constraint is the largest attributed cause on "
+             f"{pct(cq['capacity'], 0)} of the jobs coded capacity, and on {pct(cq['blank'], 0)} of the jobs with no code and {pct(cq['material'], 0)} of those coded "
+             f"material. Material is the largest cause on {n0(cross_all.loc['material', 'material'])} of the {n0(cross_all.loc['material'].sum())} jobs coded "
+             f"material, outside processing on {n0(cross_all.loc['outside processing', 'outside processing'])} of the "
+             f"{n0(cross_all.loc['outside processing'].sum())} coded outside processing and quality on {n0(cross_all.loc['quality', 'quality'])} of the "
+             f"{n0(cross_all.loc['quality'].sum())} coded quality. Of the {n0(rel.sum())} jobs where released late is the largest cause, {n0(rel['capacity'])} are "
+             f"coded capacity, {n0(rel['blank'])} carry no code and {n0(rel['other'])} are coded other. {see(3, 4)} From this analysis, we conclude that the "
+             f"late-reason codes carry almost no relevant information. In the <a href='#rec'>Recommendation</a> section, we lay out our proposed solution for the "
+             f"shop going forward.</p>")
+    b.append(chart("What the shop coded against what the data shows", fig_mosaic()))
 
     b.append("<h2 id='rec'>Recommendation and control</h2>")
     b.append("<p>Replace the late-reason code on the shipment with a buffer status record kept by production control: each job's time buffer in thirds, and a reason "
              "captured when the job turns red, from this list: promise inside the standard lead time; queue at a named work center; material short at the first cut; "
-             "outside processing late; quality; hold by reason; unexplained. Review the record weekly in place of the late-reason Pareto.</p>")
+             "outside processing late; quality; hold by reason; not attributed. Review the record weekly in place of the late-reason Pareto.</p>")
     b.append("<p>Require the rush flag and a named approver on every promise inside the standard lead time ([[R:quoting]] sizes the quote). Extend the kit check to stock sheet "
              "items ([[R:quoting]] measures kit completeness).</p>")
 
@@ -320,18 +354,19 @@ def report():
     b.append(f"<p>Coverage: {n0(len(LY))} late jobs and {n0(y['total'])} lost days in {YEAR}; {n0(len(LR))} and {n0(r['total'])} in {REST}. A job's lost days are its "
              f"working days late. Lost days at a stage are the stage days above the median of on-time jobs of the same routing class shipped in the same quarter; "
              f"the powder scheduling wait is not lost time.<br>"
-             f"Rules. Released late: the standard lead time of 10, 15 or 20 working days less the promised lead time, capped at days late, allocated first. Constraint queue: an operation with queue above "
+             f"Rules. Released late: the standard lead time of 10, 15 or 20 working days less the promised lead time, capped at days late, allocated first. Queue constraint: an operation with queue above "
              f"its work center's 80th percentile for the quarter, or first-operation queue above its 80th percentile. Material: material wait at the first operation "
              f"with a kit shortage or material hold recorded; a material hold at a later operation; or first-operation queue where the sheet issue came after planned "
              f"start and followed a stock receipt of the same item, with the first work center's queue that week below its median. Outside processing: a line received "
              f"after its promised date. Setup overrun: setup above standard by more than 2 hours and by more than twice standard. Quality: a recorded quality hold, "
-             f"or setup and run above normal on a job with a rework operation. Other hold: a recorded engineering, customer or tooling hold. Not attributable: the rest.<br>"
-             f"The days late remaining after released late are split across the stages' lost days in proportion; days at stages with no matching rule are unexplained.<br>"
-             f"Agreement compares the entered code with the cause holding the most lost days on the job: constraint queue and setup overrun count as capacity; material, "
-             f"outside processing and quality as their own codes; released late, other hold and unexplained as other. The chance level is the agreement expected if codes "
+             f"or setup and run above normal on a job with a rework operation. Hold: a recorded engineering, customer or tooling hold. Not attributed: the rest.<br>"
+             f"The days late remaining after released late are split across the stages' lost days in proportion; days at stages with no matching rule are not attributed.<br>"
+             f"Agreement compares the entered code with the cause holding the most lost days on the job: queue constraint and setup overrun count as capacity; material, "
+             f"outside processing and quality as their own codes; released late, hold and days not attributed as other. The chance level is the agreement expected if codes "
              f"were assigned at the shop's code frequencies independently of the cause.</p>")
 
     b.append("<h2 id='appendix'>Appendix</h2>")
+    b.append(f"<h3>Table 1. Lost days of late jobs by attributed cause, {YEAR} and {REST}</h3>" + t_causes())
     b.append("<h3>Table 2. Late-reason codes by period shipped</h3>" + t_codes())
     b.append("<h3>Table 3. Agreement of the entered code with the largest attributed cause</h3>" + t_agree())
     b.append(f"<h3>Table 4. Entered code against largest attributed cause, {YEAR}</h3>" + t_cross())
@@ -339,12 +374,11 @@ def report():
     b.append(f"<h3>Table 6. Lost days by work center and cause, {YEAR} {REST}</h3>" + t_wc(WR))
     b.append(f"<h3>Table 7. Lost days by customer, top ten, {YEAR}</h3>" + t_cust(CY))
     b.append(f"<h3>Table 8. Lost days by customer, top ten, {YEAR} {REST}</h3>" + t_cust(CR))
-    b.append("<h3>Table 9. Stage composition of the unexplained lost days</h3>" + t_na())
-    b.append("<h3>Table 10. Constraint queue and unexplained shares by queue threshold</h3>" + t_sens())
+    b.append("<h3>Table 9. Stage composition of the lost days not attributed</h3>" + t_na())
+    b.append("<h3>Table 10. Queue constraint and not attributed shares by queue threshold</h3>" + t_sens())
     b.append("<div class='glossary'>Lost days: working days a job shipped after its promised date. Released late: promised inside the standard lead time of 10, 15 or "
-             "20 working days. Unexplained: lost days that match no rule.</div>")
-    toc = [("f1", "The shop's record"), ("f2", "Lost days by cause"), ("f3", "By work center"), ("f4", "By customer"), ("f5", "Codes against data"),
-           ("f6", "Unexplained share"), ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
+             "20 working days. Not attributed: lost days that match no rule.</div>")
+    toc = [("f1", "Drivers behind late jobs"), ("f2", "The shop's records"), ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
     return {"body": "\n".join(b), "toc": toc[:-3], "meta": HEADER_META}
 
 

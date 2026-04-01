@@ -8,6 +8,7 @@ import pandas as pd
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.ticker import FuncFormatter  # noqa: E402
 
 BRAND_BLUE = "#3D5166"
 ACCENT = "#6B8FA8"
@@ -93,6 +94,22 @@ def save_conformed(f, name, alt="", up=1):
         if handles:
             f.legend(handles, labels, frameon=False, fontsize=9, ncol=min(len(labels), 4), loc="upper center", bbox_to_anchor=(0.5, 0.02))
     return save(f, name, alt, up)
+
+
+def paired_columns(ax, labels, a, b, names, percent=False):
+    """Two columns per label, each with its value above it; `names` are the legend entries of the two series."""
+    fmt = (lambda v: f"{v:.0f}%") if percent else (lambda v: f"{v:.0f}")
+    x = np.arange(len(labels))
+    for dx, v, color, lab in ((-0.2, a, LIGHT_BLUE, names[0]), (0.2, b, BRAND_BLUE, names[1])):
+        v = sig(v)
+        ax.bar(x + dx, v, width=0.38, color=color, label=lab)
+        for xi, vi in zip(x, v):
+            ax.text(xi + dx, vi, fmt(vi), ha="center", va="bottom", fontsize=7.5)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, rotation=20, ha="right")
+    ax.set_ylim(0, max(max(a), max(b)) * 1.1)
+    if percent:
+        ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:.0f}%"))
 
 
 def pct(x, d=1):
