@@ -1,13 +1,12 @@
-"""Build every deliverable from the marts and the saved model runs: the eight reports, the dashboard, the README and the index.
+"""Build every deliverable from the marts and the saved model runs: the four reports, the dashboard, the README and the index.
 
 Usage: python -m analytics.build_all
 """
 import subprocess
 import sys
 
-MODULES = ["analytics.p1_lead_time.build", "analytics.p2_late_jobs.build", "analytics.p3_constraint.build", "analytics.p4_setups.build",
-           "analytics.p5_release_control.build", "analytics.p6_leading_indicators.build", "analytics.p7_quoting.build", "analytics.p8_technology_roi.build",
-           "analytics.dashboard.build", "analytics.readme_image", "analytics.site"]
+MODULES = ["analytics.reports.lead_time_and_late_jobs", "analytics.reports.brakes_capacity_and_setups", "analytics.reports.options_tested",
+           "analytics.reports.quoting_and_early_warning", "analytics.dashboard.build", "analytics.readme_image", "analytics.site"]
 
 
 def main():

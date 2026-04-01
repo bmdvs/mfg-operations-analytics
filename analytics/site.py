@@ -23,53 +23,52 @@ def page_links(text):
     return re.sub(r"\]\((docs/[^)]+\.html)\)", lambda m: f"]({PAGES}{m.group(1)})", text)
 
 
-def _p1():
+LEAD, BRAKES, OPTIONS, QUOTING = "lead_time_and_late_jobs", "brakes_capacity_and_setups", "options_tested", "quoting_and_early_warning"
+
+
+def _lead_time():
     share, late, on_time = re.search(r"the brake queue was ([\d.]+%) of lead time .*?: ([\d.]+) days against ([\d.]+) for on-time jobs\.",
-                                     report_text("p1_lead_time", "f2")).groups()
+                                     report_text(LEAD, "f2")).groups()
     median, quote, rest = re.search(r"shipped in ([\d.]+) working days against an average quoted lead time of ([\d.]+); ([\d.]+) in Q2-Q4",
-                                    section_text("p1_lead_time", "f1")).groups()
+                                    section_text(LEAD, "f1")).groups()
     return (f"Queue at the brakes is {share} of lead time and the stage that separates late jobs from on-time jobs ({late} days against {on_time}); the median job "
-            f"ships in {median} working days against an average quoted lead time of {quote}, {rest} in Q2 to Q4.")
+            f"ships in {median} working days against an average quoted lead time of {quote}, {rest} in Q2 to Q4. " + finding(LEAD, "f5", 0))
 
 
-def _p5():
-    t = finding("p5_release_control", "f9", 1)
+def _brakes():
+    return finding(BRAKES, "f1", 0) + " " + finding(BRAKES, "f8", 0)
+
+
+def _options():
+    t = finding(OPTIONS, "f9", 1)
     year, gain, rest = re.search(r"takes the year to ([\d.]+%) on time, up ([\d.]+ points \([\d.]+ to [\d.]+\)).*Q2 to Q4 reaches ([\d.]+%)", t).groups()
+    t = finding(OPTIONS, "f15", 1)
+    cell, changer = re.search(r"robotic cell pays back in ([\d.]+) years, the tool changer on B3 in ([\d.]+), the tower not at all", t).groups()
     return (f"A WIP cap and dispatch rules do not help; the setup program, a second shift on the robotic weld cell and planned Saturdays from November through "
-            f"February take the year to {year} on time, up {gain}, and Q2 to Q4 to {rest}.")
+            f"February take the year to {year} on time, up {gain}, and Q2 to Q4 to {rest}. " + finding(OPTIONS, "f15", 0) +
+            f" With half the released brake hours sold, the robotic cell pays back in {cell} years, the tool changer on B3 in {changer}, the laser tower not at all.")
 
 
-def _p6():
-    t = report_text("p6_leading_indicators", "f4")
-    assert "moved before all four" in t
-    return finding("p6_leading_indicators", "f2", 0) + " It moved before all four declines in on-time delivery; no other weekly measure leads in ordinary weeks."
-
-
-def _p7():
-    t = finding("p7_quoting", "f3", 0)
+def _quoting():
+    t = finding(QUOTING, "f3", 0)
     y, r, fy, fr, ly, lr = re.search(r"is met on ([\d.]+%) of non-rush jobs for the year and ([\d.]+%) in Q2 to Q4 .* against ([\d.]+%) and ([\d.]+%) for the fixed "
                                      r"quote; it is longer than the fixed quote on ([\d.]+%) and ([\d.]+%)", t).groups()
+    assert "moved before all four" in report_text(QUOTING, "f13")
     return (f"The fixed quote is met on {fy} of non-rush jobs for the year and {fr} in Q2 to Q4; a quote by routing class and brake backlog at release, never below "
-            f"the fixed quote, is met on {y} and {r} out of sample and lengthens {ly} and {lr} of promises.")
+            f"the fixed quote, is met on {y} and {r} out of sample and lengthens {ly} and {lr} of promises. " + finding(QUOTING, "f11", 0) +
+            " It moved before all four declines in on-time delivery; no other weekly measure leads in ordinary weeks.")
 
 
-def _p8():
-    t = finding("p8_technology_roi", "f6", 1)
-    cell, changer = re.search(r"robotic cell pays back in ([\d.]+) years, the tool changer on B3 in ([\d.]+), the tower not at all", t).groups()
-    return (finding("p8_technology_roi", "f6", 0) + f" With half the released brake hours sold, the robotic cell pays back in {cell} years, the tool changer on B3 "
-            f"in {changer}, the laser tower not at all.")
-
-
-# project, file stem, title, question, the headline: a (finding section, sentence number) of the report, or a function composing it from the report's sentences
-PROJECTS = [
-    ("P1", "p1_lead_time", "Lead time decomposition", "Where does the lead time go, and does the floor's WIP match the quoted lead times?", _p1),
-    ("P2", "p2_late_jobs", "Why jobs are late", "What makes jobs late, and do the shop's late-reason codes say so?", ("f2", 0)),
-    ("P3", "p3_constraint", "The constraint, utilization and variability", "Which work center is the constraint, and how does its queue respond to load?", ("f1", 0)),
-    ("P4", "p4_setups", "Setups and standards", "What do setups cost at the brakes, and where is the overrun?", ("f1", 0)),
-    ("P5", "p5_release_control", "Release control and the shop model", "Do release control and dispatch rules help, and what does?", _p5),
-    ("P6", "p6_leading_indicators", "Leading indicators", "Which weekly measures move before on-time delivery does?", _p6),
-    ("P7", "p7_quoting", "Lead-time quoting and quote analytics", "What lead time should be quoted, and what wins quotes?", _p7),
-    ("P8", "p8_technology_roi", "Technology ROI", "Do the capital options pay back?", _p8),
+# file stem, title, question, the finding composed from the report's sentences
+REPORTS = [
+    (LEAD, "Lead time and late jobs",
+     "Where does the lead time go, and does the floor's WIP match the quoted lead times? What makes jobs late, and do the shop's late-reason codes say so?", _lead_time),
+    (BRAKES, "The brakes: capacity, utilization and setups",
+     "Which work center is the constraint, and how does its queue respond to load? What do setups cost at the brakes, and where is the overrun?", _brakes),
+    (OPTIONS, "Options tested: release rules, scheduling, shifts and equipment",
+     "Do release control and dispatch rules help, and what does? Do the capital options pay back?", _options),
+    (QUOTING, "Quoting and early warning from load",
+     "What lead time should be quoted, and what wins quotes? Which weekly measures move before on-time delivery does?", _quoting),
 ]
 SYSTEMS = [
     ("erp", "ERP", "customer, part, routing operation, quote, quote line, sales order, order line, job, job operation, inventory item, inventory transaction, "
@@ -87,7 +86,7 @@ def sentences(text):
 
 def report_text(stem, section):
     s = (DOCS / "reports" / f"{stem}.html").read_text(encoding="utf8")
-    m = re.search(rf"<h2 id='{section}'>.*?</h2>\s*<p>(.*?)</p>", s, flags=re.S)
+    m = re.search(rf"<h2 id='{section}'>.*?</h2>\s*(?:<p class='lead'>.*?</p>\s*)?<p>(.*?)</p>", s, flags=re.S)
     return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", m.group(1)))).strip()
 
 
@@ -101,10 +100,6 @@ def section_text(stem, section):
 def finding(stem, section, k):
     out = sentences(report_text(stem, section))[k].strip()
     return out if out.endswith(".") else out + "."
-
-
-def headline(stem, spec):
-    return spec() if callable(spec) else finding(stem, *spec)
 
 
 def batch_id():
@@ -123,9 +118,9 @@ def sources():
 
 PIPELINE = ("`pipeline/load` loads the CSV exports under `data/raw` into DuckDB with dlt, one text table per file. The dbt project under `pipeline/dbt` builds the "
             "staging models (one per export, typed), the intermediate models (working-day clock, machine time, queue, lead time by stage, WIP, utilization, setups, "
-            "late-job attribution) and the marts, with tests on keys. The scripts under `analytics/` read the marts and write each project's report and figures "
-            "under `docs/`, the dashboard and this file. The shop model under `analytics/p5_release_control/` replays the released jobs for the scenarios of P5 and "
-            "P8; its runs are saved under `results/` and each run repeats exactly from its scenario and replication number.")
+            "late-job attribution) and the marts, with tests on keys. The scripts under `analytics/` read the marts and write the four reports and their figures "
+            "under `docs/`, the dashboard and this file. The shop model under `analytics/release_control/` replays the released jobs for the scenarios of the options report; "
+            "its runs are saved under `results/` and each run repeats exactly from its scenario and replication number.")
 RUN = """```
 python -m venv .venv
 .venv\\Scripts\\activate            # Windows; on Linux or macOS: source .venv/bin/activate
@@ -137,9 +132,9 @@ cd ../..
 python -m analytics.build_all
 ```"""
 RERUN = """```
-python -m analytics.p5_release_control.scenarios 30 6
-python -m analytics.p8_technology_roi.scenarios 30 6
-python -m analytics.p8_technology_roi.scenarios 30 6 laser_queue
+python -m analytics.release_control.scenarios 30 6
+python -m analytics.technology_roi.scenarios 30 6
+python -m analytics.technology_roi.scenarios 30 6 laser_queue
 ```"""
 
 
@@ -189,9 +184,9 @@ def readme():
     lines += ["", "## Business context", ""]
     for x in CONTEXT:
         lines += [x, ""]
-    lines += ["## Studies", "", "| Project | Question | Finding | Deliverable |", "|---|---|---|---|"]
-    for p, stem, title, question, spec in PROJECTS:
-        lines.append(f"| {p}. {title} | {question} | {headline(stem, spec)} | [report](docs/reports/{stem}.html) |")
+    lines += ["## Studies", "", "| Report | Question | Finding | Deliverable |", "|---|---|---|---|"]
+    for stem, title, question, spec in REPORTS:
+        lines.append(f"| {title} | {question} | {spec()} | [report](docs/reports/{stem}.html) |")
     lines += ["", "**Dashboard.** [docs/dashboard/index.html](docs/dashboard/index.html). Index of deliverables: [docs/index.html](docs/index.html). "
               f"The week of {current_week()} is the current week; every panel carries a one-line definition in the reports' wording.", "", "## Methods", ""]
     for x in METHODS:
@@ -205,9 +200,9 @@ def readme():
 
 def index():
     rows = []
-    for p, stem, title, question, spec in PROJECTS:
-        rows.append([f"{p}. {title}", question, headline(stem, spec), f"<a href='reports/{stem}.html'>Report</a>"])
-    body = (table(pd.DataFrame(rows, columns=["Project", "Question", "Finding", "Report"])) +
+    for stem, title, question, spec in REPORTS:
+        rows.append([title, question, spec(), f"<a href='reports/{stem}.html'>Report</a>"])
+    body = (table(pd.DataFrame(rows, columns=["Report", "Question", "Finding", "Deliverable"])) +
             "<p><a href='dashboard/index.html'>Operations dashboard</a></p>")
     meta = f"{SHOP}<br>{SCOPE} Sources: ERP, shop-floor data collection, QMS, maintenance and HR exports (batch {batch_id()})."
     (DOCS / "index.html").write_text(shell("Operations analytics", "Deliverables", meta, body), encoding="utf8")

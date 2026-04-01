@@ -163,20 +163,3 @@ def report_shell(title, kicker, meta, body, toc):
 <div class="layout">{nav}
 <main class="content">{head}{body}
 </main></div></body></html>"""
-
-
-PROJECT_REPORTS = {"P1": "p1_lead_time", "P2": "p2_late_jobs", "P3": "p3_constraint", "P4": "p4_setups", "P5": "p5_release_control",
-                   "P6": "p6_leading_indicators", "P7": "p7_quoting", "P8": "p8_technology_roi"}
-
-
-def project_links(text):
-    """A project named in brackets, or as "the P5 report", as a link to that project's report."""
-    link = lambda k: f"<a href='{PROJECT_REPORTS[k]}.html'>{k}</a>"
-    text = re.sub(r"\([^)]*\)", lambda m: re.sub(r"\bP[1-8]\b", lambda k: link(k.group(0)), m.group(0)), text)
-    return re.sub(r"\b(P[1-8]) report\b", lambda m: f"<a href='{PROJECT_REPORTS[m.group(1)]}.html'>{m.group(1)} report</a>", text)
-
-
-def recommendation_block(target, countermeasures, follow=None):
-    """Target, countermeasures (action, owner, when) and follow-up, placed after a report's recommendation."""
-    rows = pd.DataFrame([(project_links(a), o, w) for a, o, w in countermeasures], columns=["Action", "Owner", "When"])
-    return f"<p>Target: {target}</p>" + table(rows) + (f"<p>Follow-up: {follow}</p>" if follow else "")
