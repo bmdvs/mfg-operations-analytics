@@ -75,7 +75,7 @@ def references(body):
     return re.sub(r"\[\[([RN]):(\w+)\]\]", one, body)
 
 
-def write(key, first, second, titles, lead=None, same_target=False, header=True, arrange=None, heading=None):
+def write(key, first, second, titles, lead=None, same_target=False, header=True, arrange=None, heading=None, closing=True):
     stem, title, _ = REPORTS[key]
     a, b = first.report(), second.report()
     A, B = split(a["body"]), split(b["body"])
@@ -96,10 +96,10 @@ def write(key, first, second, titles, lead=None, same_target=False, header=True,
     scope1 = scope2 = ""
     if not header:                       # no header block on the page: each half's scope and sources open its method note
         scope1, scope2 = f"<p>{a['meta']}</p>", f"<p>{b['meta'].replace(SHOP, '', 1)}</p>"
+    ending = ["<h2 id='rec'>Recommendation</h2>", A["rec"], B["rec"], targets, table(rows), follow,
+              "<h2 id='method'>Method and data</h2>", f"<h3>{titles[0]}</h3>", scope1, A["method"], f"<h3>{titles[1]}</h3>", scope2, method2]
     body = "\n".join([
-        A["sections"], B["sections"],
-        "<h2 id='rec'>Recommendation</h2>", A["rec"], B["rec"], targets, table(rows), follow,
-        "<h2 id='method'>Method and data</h2>", f"<h3>{titles[0]}</h3>", scope1, A["method"], f"<h3>{titles[1]}</h3>", scope2, method2,
+        A["sections"], B["sections"], *(ending if closing else []),      # a report can end at its sections, with the appendix after them
         "<h2 id='appendix'>Appendix</h2>", table_anchors(A["appendix"]), table_anchors(B["appendix"]), A["glossary"], B["glossary"]])
     body = chart_titles(body)
     span = {"first": (1, n_sections), "second": (n_sections + 1, n_sections + n_second)}
@@ -110,7 +110,7 @@ def write(key, first, second, titles, lead=None, same_target=False, header=True,
     if arrange:
         body, sections_toc = arrange(body, sections_toc)
     toc = (sections_toc
-           + [("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")])
+           + ([("rec", "Recommendation"), ("method", "Method and data")] if closing else []) + [("appendix", "Appendix")])
     meta = ""
     if header:
         rest = b["meta"].replace(SHOP, "", 1)

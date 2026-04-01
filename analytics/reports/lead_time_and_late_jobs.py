@@ -18,7 +18,7 @@ TABLES = [("5", "1"), ("6", "2"), ("7", "3"), ("1", "4"), ("5a", "5"), ("2a", "6
 def arrange(body, toc):
     """Three sections: work in process, lead time and late jobs, the last two with their parts under unnumbered headings; the appendix tables follow that order."""
     start = body.index("<h2 id='f1'>")
-    end = body.index("<h2 id='rec'>")
+    end = body.index("<h2 id='appendix'>")
     parts = re.split(r"<h2 id='f(\d+)'>\d+\. (.*?)</h2>", body[start:end])
     old = {int(parts[k]): (parts[k + 1], parts[k + 2]) for k in range(1, len(parts), 3)}
     out, new_toc = [], []
@@ -48,7 +48,7 @@ def arrange(body, toc):
 
 def main():
     write("lead", first, second, ("Lead time decomposition", "Late jobs"), lead=None, same_target=False, header=False, arrange=arrange,
-          heading="Report: Flow and On-time Delivery")
+          heading="Report: Flow and On-time Delivery", closing=False)
 
 
 if __name__ == "__main__":
