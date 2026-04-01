@@ -27,7 +27,7 @@ LEAD, BRAKES, OPTIONS, QUOTING = "lead_time_and_late_jobs", "brakes_capacity_and
 
 
 def _lead_time():
-    share, late, on_time = re.search(r"the brake queue was ([\d.]+%) of lead time .*?: ([\d.]+) days against ([\d.]+) for on-time jobs\.",
+    share, late, on_time = re.search(r"the brake queue was ([\d.]+%) of all jobs' lead time .*?: ([\d.]+) days against ([\d.]+) for on-time jobs\.",
                                      report_text(LEAD, "f2_2")).groups()
     median, quote, rest = re.search(r"shipped in ([\d.]+) working days vs\. an average quoted lead time of ([\d.]+); in Q2-Q4, it was ([\d.]+) vs\.",
                                     section_text(LEAD, "f2_1")).groups()
@@ -62,7 +62,7 @@ def _quoting():
 
 # file stem, title, question, the finding composed from the report's sentences
 REPORTS = [
-    (LEAD, "Lead time and late jobs",
+    (LEAD, "Flow and On-time Delivery",
      "Where does the lead time go, and does the floor's WIP match the quoted lead times? What makes jobs late, and do the shop's late-reason codes say so?", _lead_time),
     (BRAKES, "The brakes: capacity, utilization and setups",
      "Which work center is the constraint, and how does its queue respond to load? What do setups cost at the brakes, and where is the overrun?", _brakes),

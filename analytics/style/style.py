@@ -1,4 +1,5 @@
 """Shared palette, chart helpers and the HTML shells for the reports and the dashboard."""
+import hashlib
 import re
 from pathlib import Path
 
@@ -62,7 +63,8 @@ def save(f, name, alt="", up=1):
     out.mkdir(parents=True, exist_ok=True)
     f.savefig(out / f"{name}.png", format="png", bbox_inches="tight", dpi=CHART_DPI)
     plt.close(f)
-    return f'<img alt="{alt}" src="{"../" * up}figures/{name}.png">'
+    version = hashlib.sha1((out / f"{name}.png").read_bytes()).hexdigest()[:8]
+    return f'<img alt="{alt}" src="{"../" * up}figures/{name}.png?v={version}">'
 
 
 def save_conformed(f, name, alt="", up=1):

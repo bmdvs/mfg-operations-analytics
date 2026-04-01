@@ -6,7 +6,7 @@ import pandas as pd
 from analytics.style.style import DOCS, report_shell, table
 
 REPORTS = {
-    "lead": ("lead_time_and_late_jobs", "Lead time and late jobs", "the lead time report"),
+    "lead": ("lead_time_and_late_jobs", "Flow and On-time Delivery", "the flow report"),
     "brakes": ("brakes_capacity_and_setups", "The brakes: capacity, utilization and setups", "the brakes report"),
     "options": ("options_tested", "Options tested: release rules, scheduling, shifts and equipment", "the options report"),
     "quoting": ("quoting_and_early_warning", "Quoting and early warning from load", "the quoting report"),
@@ -75,7 +75,7 @@ def references(body):
     return re.sub(r"\[\[([RN]):(\w+)\]\]", one, body)
 
 
-def write(key, first, second, titles, lead=None, same_target=False, header=True, arrange=None):
+def write(key, first, second, titles, lead=None, same_target=False, header=True, arrange=None, heading=None):
     stem, title, _ = REPORTS[key]
     a, b = first.report(), second.report()
     A, B = split(a["body"]), split(b["body"])
@@ -117,7 +117,7 @@ def write(key, first, second, titles, lead=None, same_target=False, header=True,
         meta = (a["meta"] + ("<br>" + rest if rest and rest != a["meta"] else "")).replace("Q2 to Q4", "Q2-Q4")
     out = DOCS / "reports"
     out.mkdir(parents=True, exist_ok=True)
-    (out / f"{stem}.html").write_text(report_shell(title, "", meta, body, toc), encoding="utf8")
+    (out / f"{stem}.html").write_text(report_shell(heading or title, "", meta, body, toc), encoding="utf8")
     print(f"wrote docs/reports/{stem}.html: sections 1 to {n_sections} and {n_sections + 1} to {n_sections + n_second}; tables of the second half moved up by {last_table}; "
           f"{len(rows)} countermeasures; method sentences stated once: {len(dropped)}")
     return dropped
