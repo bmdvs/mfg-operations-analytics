@@ -42,7 +42,7 @@ def arrange(body, toc):
     held = {re.match(r"<h3 id='t(\w+)'>", x).group(1): x for x in blocks[1:]}
     assert sorted(held) == sorted(new), sorted(set(held) ^ set(new))
     tables = [re.sub(r"^<h3 id='t\w+'>Table \w+\.", f"<h3 id='t{to}'>Table {to}.", held[frm]) for frm, to in TABLES]
-    body = body[:i] + blocks[0] + "".join(tables) + body[j:]
+    body = body[:i] + blocks[0] + "".join(tables)          # the appendix ends at its last table, with no glossary lines
     return body, new_toc
 
 
