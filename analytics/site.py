@@ -24,9 +24,10 @@ def page_links(text):
 
 
 def _p1():
-    share, late, on_time = re.search(r"the brake queue is ([\d.]+%) of lead time .*: ([\d.]+) days against ([\d.]+)\.", finding("p1_lead_time", "f2", 0)).groups()
-    median, quote, rest = re.search(r"ships in ([\d.]+) working days against an average quoted lead time of ([\d.]+); ([\d.]+) in Q2 to Q4",
-                                    finding("p1_lead_time", "f1", 0)).groups()
+    share, late, on_time = re.search(r"the brake queue was ([\d.]+%) of lead time .*?: ([\d.]+) days against ([\d.]+) for on-time jobs\.",
+                                     report_text("p1_lead_time", "f2")).groups()
+    median, quote, rest = re.search(r"shipped in ([\d.]+) working days against an average quoted lead time of ([\d.]+); ([\d.]+) in Q2-Q4",
+                                    section_text("p1_lead_time", "f1")).groups()
     return (f"Queue at the brakes is {share} of lead time and the stage that separates late jobs from on-time jobs ({late} days against {on_time}); the median job "
             f"ships in {median} working days against an average quoted lead time of {quote}, {rest} in Q2 to Q4.")
 
@@ -88,6 +89,13 @@ def report_text(stem, section):
     s = (DOCS / "reports" / f"{stem}.html").read_text(encoding="utf8")
     m = re.search(rf"<h2 id='{section}'>.*?</h2>\s*<p>(.*?)</p>", s, flags=re.S)
     return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", m.group(1)))).strip()
+
+
+def section_text(stem, section):
+    """Every paragraph of a report section as one line of text."""
+    s = (DOCS / "reports" / f"{stem}.html").read_text(encoding="utf8")
+    m = re.search(rf"<h2 id='{section}'>.*?</h2>(.*?)(?=<h2 id=|$)", s, flags=re.S)
+    return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", " ".join(re.findall(r"<p>(.*?)</p>", m.group(1), flags=re.S))))).strip()
 
 
 def finding(stem, section, k):
