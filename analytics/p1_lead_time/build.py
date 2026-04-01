@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from analytics.db import q
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, report_shell, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, report_shell, table
 
 YEAR = 2025
 REST = "Q2 to Q4"
@@ -183,22 +183,21 @@ def fig_wip():
 
 
 def fig_weekly_year():
-    """Weekly WIP, releases and shipments from the third quarter of 2024 through the second quarter of 2025."""
+    """Weekly WIP and the net inflow to it, from the third quarter of 2024 through the second quarter of 2025."""
     d = wk[(wk["week_start"] >= "2024-07-01") & (wk["week_start"] <= "2025-06-29")].copy()
-    f, ax = fig(h=4.0)
+    net = d["releases"] - d["jobs_shipped"]
+    f, ax = fig(h=4.2)
     x = pd.to_datetime(d["week_start"])
-    ax.plot(x, d["wip_mean"], color=BRAND_BLUE, linewidth=2.2, label="Total WIP (left)")
-    ax.plot(x, d["wip_at_laser"], color=ACCENT, linewidth=1.4, linestyle="--", label="WIP at the laser (left)")
-    ax.plot(x, d["wip_at_brakes"], color=AMBER, linewidth=1.4, linestyle="--", label="WIP at the brakes (left)")
+    ax.plot(x, d["wip_mean"], color=BRAND_BLUE, linewidth=2.4, label="Total WIP (left)")
+    ax.plot(x, d["wip_at_laser"], color=GREEN, linewidth=1.9, label="WIP at the laser (left)")
+    ax.plot(x, d["wip_at_brakes"], color=AMBER, linewidth=1.9, label="WIP at the brakes (left)")
     ax.set_ylabel("Jobs in WIP")
     ax2 = ax.twinx()
-    for xs, wd in zip(x, d["weekdays"]):
-        if wd < 5:
-            ax2.axvspan(xs - pd.Timedelta(days=3.5), xs + pd.Timedelta(days=3.5), color="#F1E3CF", zorder=0)
-    ax2.bar(x - pd.Timedelta(days=1.3), d["releases"], width=2.4, color=LIGHT_BLUE, label="Releases (right)", zorder=2)
-    ax2.bar(x + pd.Timedelta(days=1.3), d["jobs_shipped"], width=2.4, color=GREY, label="Shipments (right)", zorder=2)
+    ax2.bar(x, net, width=4.6, color=LIGHT_BLUE, label="Net inflow to WIP (releases less shipments, right)", zorder=2)
+    ax2.axhline(0, color=RED, linewidth=1.3, linestyle="--", zorder=3)
+    lim = float(np.ceil(net.abs().max() / 25) * 25)
     ax2.set_ylabel("Jobs per week")
-    ax2.set_ylim(0, 200)
+    ax2.set_ylim(-lim, lim)
     ax2.grid(False)
     for s in ("top",):
         ax2.spines[s].set_visible(False)
@@ -208,9 +207,12 @@ def fig_weekly_year():
     h2, l2 = ax2.get_legend_handles_labels()
     ax.set_ylim(0, d["wip_mean"].max() * 1.08)
     ax.set_xlim(x.min() - pd.Timedelta(days=6), x.max() + pd.Timedelta(days=6))
-    ax.legend(h1 + h2, l1 + l2, frameon=False, fontsize=8.5, ncol=5, loc="upper center", bbox_to_anchor=(0.5, -0.12))
+    right = x.max() + pd.Timedelta(days=4)
+    ax2.text(right, lim * 0.06, "build", color=RED, fontsize=8.5, ha="right", va="bottom", zorder=4)
+    ax2.text(right, -lim * 0.06, "drain", color=RED, fontsize=8.5, ha="right", va="top", zorder=4)
+    ax.legend(h1 + h2, l1 + l2, frameon=False, fontsize=8.5, ncol=2, loc="upper center", bbox_to_anchor=(0.5, -0.11))
     f.tight_layout()
-    return save(f, "p1_year_end_build", "Weekly WIP, releases and shipments, July 2024 to June 2025")
+    return save(f, "p1_year_end_build", "Weekly WIP and net inflow, July 2024 to June 2025")
 
 
 def build_weeks():
@@ -444,8 +446,7 @@ def report():
              f"first three of those weeks, {n0(laser_three['wip_at_laser'].min())} to {n0(laser_three['wip_at_laser'].max())} jobs were waiting to be cut, "
              f"vs. an average of {n0(q3_24['wip_at_laser'].mean())} jobs in Q3. The work then queued at the brakes, which already run at {pct(brake_rest, 0)} in a "
              f"normal quarter, and the backlog was worked through in Q1 and into Q2 {YEAR}. {see('7')}</p>")
-    b.append(chart("Weekly WIP, Releases and Shipments, Q3 &rsquo;24 to Q2 &rsquo;25", fig_weekly_year(),
-                   "Note: yellow shaded weeks have fewer than five working days"))
+    b.append(chart("Weekly WIP, Releases and Shipments, Q3 &rsquo;24 to Q2 &rsquo;25", fig_weekly_year()))
 
     b.append("<h2 id='rec'>Recommendation</h2>")
     b.append(f"<p>Restate the fixed quote as a percentile of the measured lead-time distribution by routing class (P7): the 10-day repeat quote is met on "
