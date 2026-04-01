@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 
 from analytics.db import q
-from analytics.p3_constraint import analysis as P3
-from analytics.p6_leading_indicators import analysis as P6
+from analytics.constraint import analysis as CONSTRAINT
+from analytics.leading_indicators import analysis as INDICATORS
 from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, CSS, DOCS, GREEN, GREY, LIGHT_BLUE, RED, fig, pct, table
 from analytics.style import style
 
@@ -22,7 +22,7 @@ CAUSES = [("constraint_queue", "Constraint queue"), ("released_late", "Released 
 PALETTE = [BRAND_BLUE, AMBER, GREEN, ACCENT, RED, LIGHT_BLUE, "#7A5C99", GREY, "#B8A04A", "#4F8F8B", "#C97B63", "#555555"]
 
 # ── data ────────────────────────────────────────────────────────────────────
-D6 = P6.load()
+D6 = INDICATORS.load()
 I = D6["w"]                                                    # weekly indicators, from the first week kept
 W = q("select * from marts.mart_dashboard_weekly order by week_start")
 W["week_start"] = pd.to_datetime(W["week_start"])
@@ -48,7 +48,7 @@ CW = W.index[W["weekdays"] == 5].max()                         # the current wee
 PARTIAL = [t for t in W.index if t > CW]
 V = list(W.index[(W.index <= CW)][-VIEW:])
 VP = V + PARTIAL
-DEC = P6.declines(D6)
+DEC = INDICATORS.declines(D6)
 
 
 def wk(ts):
@@ -144,7 +144,7 @@ def panel_delivery():
         mark_declines(ax)
     f.tight_layout()
     b = save(f, "dashboard_delivery_trend", "On-time delivery and lead time by ship week, trend")
-    return ("<h2 id='p1'>1. On-time delivery and lead time</h2>" +
+    return ("<h2 id='panel1'>1. On-time delivery and lead time</h2>" +
             tiles([(pct(c["on_time_delivery"]), "On-time delivery"), (n0(c["jobs_shipped"]), "Jobs shipped"), (d1(c["lead_time_median"]), "Median lead time (days)"),
                    (d1(c["lead_time_p90"]), "90th-percentile lead time (days)")]) +
             a + cap(f"On-time delivery with the {pct(TARGET, 0)} target line, and median and 90th-percentile lead time, by ship week.") +
@@ -158,8 +158,8 @@ def panel_delivery():
 def trigger(col, sign):
     """Per week: the 4-week mean, the mean and standard deviation of the 13 weeks before that window, the trigger level, and whether the mean is beyond it."""
     s = I[col]
-    m4 = s.rolling(P6.WINDOW).mean()
-    b = s.shift(P6.WINDOW).rolling(P6.BASE)
+    m4 = s.rolling(INDICATORS.WINDOW).mean()
+    b = s.shift(INDICATORS.WINDOW).rolling(INDICATORS.BASE)
     mean, sd = b.mean(), b.std(ddof=1)
     return pd.DataFrame(dict(value=s, m4=m4, mean=mean, sd=sd, level=mean + sign * sd, beyond=sign * (m4 - mean) > sd))
 
@@ -221,18 +221,18 @@ def panel_leading():
     ax.legend(frameon=False, fontsize=8, loc="upper left")
     f.tight_layout()
     c3 = save(f, "dashboard_flags_trend", "The three job-level flags as weekly counts")
-    thr, sp = P6.backlog_threshold(D6).set_index("period"), P6.short_promises(D6).set_index("period")
+    thr, sp = INDICATORS.backlog_threshold(D6).set_index("period"), INDICATORS.short_promises(D6).set_index("period")
     j = D6["j"][D6["j"]["on_time"].notna() & D6["j"]["kit_result"].notna()]
     rows = []
-    for per in ("2023 to 2025", f"{P6.YEAR} Q2 to Q4"):
-        jj = dict(P6.periods(j))[per]
+    for per in ("2023 to 2025", f"{INDICATORS.YEAR} Q2 to Q4"):
+        jj = dict(INDICATORS.periods(j))[per]
         rows += [[per, "Released above 3 days of brake backlog", pct(thr.loc[per, "share_of_all_jobs_above"]), pct(thr.loc[per, "late_rate_above"]),
                   pct(thr.loc[per, "late_rate_below"])],
                  [per, "Promised inside the standard lead time", pct(sp.loc[per, "share_of_jobs"]), pct(sp.loc[per, "late_rate_inside"]), pct(sp.loc[per, "late_rate_other"])],
                  [per, "Short kit at the kit check", pct((jj["kit_result"] == "short").mean()), pct(jj.loc[jj["kit_result"] == "short", "late"].mean()),
                   pct(jj.loc[jj["kit_result"] != "short", "late"].mean())]]
     t = wrap(table(pd.DataFrame(rows, columns=["Jobs released in", "Flag", "Share of jobs flagged", "Late rate, flagged", "Late rate, not flagged"])))
-    return ("<h2 id='p2'>2. Leading set</h2>" + tiles(items) + a +
+    return ("<h2 id='panel2'>2. Leading set</h2>" + tiles(items) + a +
             cap("The on-time start rate and jobs waiting at the lasers by week, with the 4-week mean, the band of the prior 13 weeks and the weeks beyond the trigger "
                 "shaded.") + b + f"<div class='caption'>The same from {wk(I.index.min())}, with the declines in on-time delivery marked.</div>" + c3 +
             "<div class='caption'>Jobs released above 3 days of brake backlog, lines promised inside the standard lead time, and short kits, by week.</div>" + t +
@@ -280,11 +280,11 @@ def panel_wip():
     axes[0].set_ylabel("Jobs, weekly mean", fontsize=9)
     axes[0].legend(frameon=False, fontsize=8, loc="upper left")
     axes[1].plot(I.index, I["brake_backlog_days_at_release"], color=BRAND_BLUE, linewidth=1.2)
-    axes[1].axhline(P6.BACKLOG_THRESHOLD, color=RED, linewidth=1, linestyle="--")
+    axes[1].axhline(INDICATORS.BACKLOG_THRESHOLD, color=RED, linewidth=1, linestyle="--")
     axes[1].set_ylabel("Brake backlog at release (days)", fontsize=9)
     f.tight_layout()
     b = save(f, "dashboard_wip_trend", "WIP and brake backlog at release, trend")
-    return ("<h2 id='p3'>3. WIP and queue by work center</h2>" +
+    return ("<h2 id='panel3'>3. WIP and queue by work center</h2>" +
             tiles([(n0(total[CW]), "Jobs released and not shipped"), (n0(WIP.loc[CW, "press_brake"]), "Jobs at the brakes"), (n0(WIP.loc[CW, "laser"]), "Jobs at the lasers"),
                    (d1(I.loc[CW, "brake_backlog_days_at_release"]), "Brake backlog at release (days)")]) +
             a + cap("WIP by work center, weekly mean, and mean queue by work center for operations started in the 13 weeks.") +
@@ -329,7 +329,7 @@ def panel_causes():
     f.tight_layout()
     b = save(f, "dashboard_causes_trend", "Cause shares of lost days and late jobs with no reason code, by quarter")
     v13 = W.loc[V]
-    return ("<h2 id='p4'>4. Late jobs by attributed cause</h2>" +
+    return ("<h2 id='panel4'>4. Late jobs by attributed cause</h2>" +
             tiles([(n0(c["late_jobs"]), "Late jobs shipped"), (n0(c["lost_days"]), "Lost days"),
                    (f"{n0(c['late_jobs_without_reason_code'])} of {n0(c['late_jobs'])}", "Late jobs with no reason code"),
                    (pct(v13["late_jobs_without_reason_code"].sum() / v13["late_jobs"].sum()), f"No reason code, {VIEW} weeks ({n0(v13['late_jobs'].sum())} late jobs)")]) +
@@ -343,21 +343,21 @@ def panel_causes():
 
 # ── 5 brake utilization and the queue curve ─────────────────────────────────
 def panel_brakes():
-    fits, _ = P3.curves(P3.load(), 13)
+    fits, _ = CONSTRAINT.curves(CONSTRAINT.load(), 13)
     fb = fits[fits["work_center"] == "press_brake"].iloc[0]
     k, m = float(fb["k"]), int(fb["machines"])
     c = U.loc[CW]
     f, axes = fig(h=3.2, ncols=2)
     ax = axes[0]
     u = np.linspace(0.55, 0.985, 200)
-    ax.plot(u, style.sig(k * P3.vut_factor(u, m)), color=GREY, linewidth=1.5, label="Curve fitted on 2023 to 2025")
+    ax.plot(u, style.sig(k * CONSTRAINT.vut_factor(u, m)), color=GREY, linewidth=1.5, label="Curve fitted on 2023 to 2025")
     ax.scatter(style.sig(U.loc[V, "utilization"]), style.sig(U.loc[V, "queue_mean"]), color=BRAND_BLUE, s=22, zorder=3, label=f"{VIEW} weeks")
     ax.scatter(style.sig([c["utilization"]]), style.sig([c["queue_mean"]]), color=RED, s=46, zorder=4, label="Current week")
     for t in PARTIAL:
         ax.scatter(style.sig([U.loc[t, "utilization"]]), style.sig([U.loc[t, "queue_mean"]]), facecolors="white", edgecolors=BRAND_BLUE, s=22, zorder=3)
     ax.set_xlabel("Brake utilization", fontsize=9)
     ax.set_ylabel("Mean brake queue (working days)", fontsize=9)
-    ax.set_ylim(0, max(float(U.loc[VP, "queue_mean"].max()) * 1.4, float(k * P3.vut_factor(0.95, m))))
+    ax.set_ylim(0, max(float(U.loc[VP, "queue_mean"].max()) * 1.4, float(k * CONSTRAINT.vut_factor(0.95, m))))
     ax.legend(frameon=False, fontsize=8, loc="upper left")
     ax = axes[1]
     line13(ax, U["utilization"], BRAND_BLUE)
@@ -385,9 +385,9 @@ def panel_brakes():
                      n0(v13["operations"].sum()), f"{qm:.2f}", d1(v13["downtime_hours"].sum())])
     t = wrap(table(pd.DataFrame(rows, columns=["Brake", "Utilization, current week", f"Utilization, {VIEW} weeks", f"Operations, {VIEW} weeks",
                                                f"Mean queue (days), {VIEW} weeks", f"Downtime hours, {VIEW} weeks"])))
-    return ("<h2 id='p5'>5. Brake utilization against the queue curve</h2>" +
+    return ("<h2 id='panel5'>5. Brake utilization against the queue curve</h2>" +
             tiles([(f"{c['utilization']:.3f}", "Brake utilization"), (f"{c['queue_mean']:.2f}", "Mean brake queue (days)"),
-                   (n0(c["operations"]), "Brake operations started"), (f"{k * float(P3.vut_factor(c['utilization'], m)):.2f}", "Queue on the curve at this utilization (days)")]) +
+                   (n0(c["operations"]), "Brake operations started"), (f"{k * float(CONSTRAINT.vut_factor(c['utilization'], m)):.2f}", "Queue on the curve at this utilization (days)")]) +
             a + cap("Mean brake queue against brake utilization for the 13 weeks on the curve fitted on 2023 to 2025, the current week marked; and brake utilization by "
                     "week.") + t + "<div class='caption'>The five brakes: utilization on crewed weekday shifts, operations, queue and downtime.</div>" +
             b + f"<div class='caption'>Brake utilization and mean brake queue by week from {wk(U.index.min())}.</div>" +
@@ -430,7 +430,7 @@ def panel_overtime():
     ax.legend(frameon=False, fontsize=8, loc="upper left")
     f.tight_layout()
     b = save(f, "dashboard_overtime_trend", "Overtime labor hours at the brakes, Saturday and extended, trend")
-    return ("<h2 id='p6'>6. Overtime by attributed cause</h2>" +
+    return ("<h2 id='panel6'>6. Overtime by attributed cause</h2>" +
             tiles([(d1(typ.loc[CW, "Saturday shift"]), "Saturday labor hours at the brakes"), (d1(typ.loc[CW, "extended shift"]), "Extended-shift labor hours at the brakes"),
                    (d1(tot), f"Overtime labor hours, {VIEW} weeks"), ("none" if not tot else pct(er), f"Enclosure and rush share, {VIEW} weeks")]) +
             a + cap("Overtime labor hours at the brakes by part family, with the hours on rush jobs marked.") +
@@ -478,7 +478,7 @@ def panel_quoting():
     axes[1].set_ylabel("Quotes sent within 3 days (%)", fontsize=9)
     f.tight_layout()
     b = save(f, "dashboard_quoting_trend", "Quote hit rates by release week and share of quotes sent within 3 days, trend")
-    return ("<h2 id='p7'>7. Quoting</h2>" +
+    return ("<h2 id='panel7'>7. Quoting</h2>" +
             tiles([(pct(r["fixed_quote_met"]), f"Fixed quote met, jobs released in the week of {wk(last)}"),
                    (pct(r["quote_table_met"]), f"Quote table met, jobs released in the week of {wk(last)}"),
                    (pct(c["sent_within_3_days"]), f"Quotes sent within 3 days, of {n0(c['quotes_sent'])} sent"),
@@ -488,7 +488,7 @@ def panel_quoting():
                     f"{pct(SHIPPED_SHARE, 0)} of its jobs shipped; and win rate by turnaround for quotes sent in the {VIEW} weeks.") +
             b + f"<div class='caption'>Quote hit rates by release week and the share of quotes sent within 3 days by week from {wk(QW.index.min())}; the line is 80%.</div>" +
             definition("A quote is met when the working days from the release day to the ship day are at or under it; rush lines are left out. The fixed quote is 10 days "
-                       "for repeat parts, 15 for new parts and 20 with outside processing. The quote table is the table fitted on 2023 to 2025 (P7 Table 2): the "
+                       "for repeat parts, 15 for new parts and 20 with outside processing. The quote table is the table fitted on 2023 to 2025 (Quoting and early warning from load, Table 2): the "
                        "80th-percentile lead time of the routing class and brake backlog band at release, rounded up, never below the fixed quote. Turnaround is weekdays "
                        "from RFQ received to quote sent. Win rate is won over quotes sent, with no decision counted as not won."))
 
@@ -500,7 +500,7 @@ def main():
             f"trend from {wk(W.index.min())}.<br>Sources: ERP, shop-floor data collection, QMS, maintenance and HR exports (batch {batch}). Weeks start on Monday; "
             f"durations in working days.")
     body = "\n".join([panel_delivery(), panel_leading(), panel_wip(), panel_causes(), panel_brakes(), panel_overtime(), panel_quoting()])
-    toc = [("p1", "Delivery"), ("p2", "Leading set"), ("p3", "WIP and queue"), ("p4", "Late jobs by cause"), ("p5", "Brakes"), ("p6", "Overtime"), ("p7", "Quoting")]
+    toc = [("panel1", "Delivery"), ("panel2", "Leading set"), ("panel3", "WIP and queue"), ("panel4", "Late jobs by cause"), ("panel5", "Brakes"), ("panel6", "Overtime"), ("panel7", "Quoting")]
     out = DOCS / "dashboard"
     out.mkdir(parents=True, exist_ok=True)
     (out / "index.html").write_text(style.shell("Operations dashboard", "Dashboard", meta, body, toc), encoding="utf8")

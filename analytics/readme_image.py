@@ -30,7 +30,7 @@ def main():
         page = browser.new_page(viewport={"width": WIDTH, "height": 900}, device_scale_factor=1)
         page.goto(PAGE.as_uri())
         page.wait_for_load_state("networkidle")
-        height = int(page.evaluate("Math.ceil(document.querySelector('#p3').getBoundingClientRect().top + window.scrollY) - 12"))
+        height = int(page.evaluate("Math.ceil(document.querySelector('#panel3').getBoundingClientRect().top + window.scrollY) - 12"))
         page.screenshot(path=str(OUT), full_page=True, clip={"x": 0, "y": 0, "width": WIDTH, "height": height})
         browser.close()
     print(f"wrote {OUT.relative_to(DOCS.parent).as_posix()} ({WIDTH} x {height})")

@@ -8,7 +8,7 @@ jobs as (
     select c.release_week as week_start, c.ship_date is not null as shipped, l.wip_days, c.quoted_lead_days, t.quote_days
     from {{ ref('mart_job_release_conditions') }} c
     left join {{ ref('mart_job_lead_time') }} l using (job_id)
-    join {{ ref('mart_p7_quote_table') }} t
+    join {{ ref('mart_quote_table') }} t
         on t.routing_class = c.routing_class
        and t.backlog_band = case when c.brake_backlog_days <= 2 then 'under 2' when c.brake_backlog_days <= 3 then '2 to 3'
                                  when c.brake_backlog_days <= 5 then '3 to 5' else 'over 5' end
