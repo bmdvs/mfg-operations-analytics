@@ -11,7 +11,7 @@ import pandas as pd
 from analytics.db import q
 from analytics.p5_release_control.scenarios import OUT, QUARTERS, summarize, versus
 from analytics.p5_release_control.validate import TOLERANCE, measured
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, shell, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, report_shell, table
 
 YEAR, REST = 2025, "Q2 to Q4"
 RES = Path(__file__).resolve().parent / "results"
@@ -385,7 +385,7 @@ def report():
     toc = [("f1", "Validation"), ("f2", "Release control"), ("f3", "Dispatch"), ("f4", "Capacity at the constraint"), ("f5", "Weld cell"), ("f6", "The peak"),
            ("f8", "Promise rules"), ("f9", "Packages"), ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
     (DOCS / "reports").mkdir(parents=True, exist_ok=True)
-    (DOCS / "reports" / "p5_release_control.html").write_text(shell("Release control and the shop model", "Project 5 report", HEADER_META, "\n".join(b), toc),
+    (DOCS / "reports" / "p5_release_control.html").write_text(report_shell("Release control and the shop model", "Project 5 report", HEADER_META, "\n".join(b), toc),
                                                               encoding="utf8")
 
 

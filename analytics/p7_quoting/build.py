@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from analytics.p7_quoting import analysis as A
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, shell, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, report_shell, table
 
 YEAR, REST = A.YEAR, "Q2 to Q4"
 PY, PR, PX = f"{YEAR}", f"{YEAR} {REST}", f"{YEAR}, released from {YEAR} Q1"
@@ -404,7 +404,7 @@ def report():
            ("f6", "Rush RFQs"), ("f7", "Customers and families"), ("f8", "Estimators"), ("f9", "Lost reasons"), ("rec", "Recommendation"),
            ("method", "Method and data"), ("appendix", "Appendix")]
     (DOCS / "reports").mkdir(parents=True, exist_ok=True)
-    (DOCS / "reports" / "p7_quoting.html").write_text(shell("Lead-time quoting and quote analytics", "Project 7 report", HEADER_META, "\n".join(b), toc),
+    (DOCS / "reports" / "p7_quoting.html").write_text(report_shell("Lead-time quoting and quote analytics", "Project 7 report", HEADER_META, "\n".join(b), toc),
                                                      encoding="utf8")
 
 

@@ -113,6 +113,27 @@ nav.toc a {{ color: var(--accent); text-decoration: none; margin-right: 14px; }}
 @media print {{ body {{ background: white; }} .page {{ padding: 0; max-width: none; }} }}
 """
 
+REPORT_CSS = CSS + """
+body { background: white; }
+.page-header { background: var(--brand); color: white; padding: 14px 40px; display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+.page-header h1 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -0.3px; color: white; }
+.page-header .sub { font-size: 12px; white-space: nowrap; }
+.layout { display: flex; max-width: 1200px; margin: 0 auto; padding: 0 40px; }
+nav.toc { width: 210px; flex-shrink: 0; margin: 0; padding: 36px 20px 40px 0; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+          border-right: 1px solid var(--rule); font-size: 13px; }
+nav.toc .toc-title { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; font-weight: 700; }
+nav.toc a { display: block; color: var(--muted); margin-right: 0; padding: 4px 0 4px 10px; border-left: 2px solid transparent; line-height: 1.4; }
+nav.toc a:hover { color: var(--brand); border-left-color: var(--brand); }
+.content { flex: 1; min-width: 0; max-width: 880px; padding: 30px 0 80px 52px; }
+.content header.doc { border-bottom: 1px solid var(--rule); padding-bottom: 12px; margin-bottom: 8px; }
+@media (max-width: 900px) {
+  .page-header { padding: 12px 16px; } .layout { display: block; padding: 0 16px; }
+  nav.toc { position: static; width: auto; height: auto; border-right: 0; border-bottom: 1px solid var(--rule); padding: 16px 0 12px; }
+  .content { padding: 16px 0 40px; }
+}
+@media print { nav.toc { display: none; } .layout { display: block; max-width: none; padding: 0; } .content { max-width: none; padding: 0; } }
+"""
+
 A3_CSS = CSS + """
 .a3 { max-width: 1500px; padding: 26px 32px 30px; }
 .a3 header.doc { margin-bottom: 14px; padding-bottom: 8px; }
@@ -145,6 +166,19 @@ def shell(title, kicker, meta, body, toc=None):
 <header class="doc"><div class="kicker">{kicker}</div><h1>{title}</h1><div class="meta">{meta}</div></header>
 {nav}{body}
 </div></body></html>"""
+
+
+def report_shell(title, kicker, meta, body, toc):
+    """A report page: the title in a bar across the top, the contents down the left, the report beside them."""
+    nav = '<nav class="toc"><div class="toc-title">Contents</div>' + "".join(f'<a href="#{a}">{t}</a>' for a, t in toc) + "</nav>"
+    return f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title}</title><style>{REPORT_CSS}</style></head>
+<body><div class="page-header"><h1>{title}</h1></div>
+<div class="layout">{nav}
+<main class="content"><header class="doc"><div class="kicker">{kicker}</div><div class="meta">{meta}</div></header>
+{body}
+</main></div></body></html>"""
 
 
 def a3_shell(title, kicker, meta, left, right):

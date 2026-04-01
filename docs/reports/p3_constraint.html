@@ -30,10 +30,30 @@ nav.toc { font-size: 13.5px; margin: 0 0 24px; }
 nav.toc a { color: var(--accent); text-decoration: none; margin-right: 14px; }
 @media (max-width: 700px) { .page { padding: 20px 16px 40px; } }
 @media print { body { background: white; } .page { padding: 0; max-width: none; } }
+
+body { background: white; }
+.page-header { background: var(--brand); color: white; padding: 14px 40px; display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+.page-header h1 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -0.3px; color: white; }
+.page-header .sub { font-size: 12px; white-space: nowrap; }
+.layout { display: flex; max-width: 1200px; margin: 0 auto; padding: 0 40px; }
+nav.toc { width: 210px; flex-shrink: 0; margin: 0; padding: 36px 20px 40px 0; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+          border-right: 1px solid var(--rule); font-size: 13px; }
+nav.toc .toc-title { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; font-weight: 700; }
+nav.toc a { display: block; color: var(--muted); margin-right: 0; padding: 4px 0 4px 10px; border-left: 2px solid transparent; line-height: 1.4; }
+nav.toc a:hover { color: var(--brand); border-left-color: var(--brand); }
+.content { flex: 1; min-width: 0; max-width: 880px; padding: 30px 0 80px 52px; }
+.content header.doc { border-bottom: 1px solid var(--rule); padding-bottom: 12px; margin-bottom: 8px; }
+@media (max-width: 900px) {
+  .page-header { padding: 12px 16px; } .layout { display: block; padding: 0 16px; }
+  nav.toc { position: static; width: auto; height: auto; border-right: 0; border-bottom: 1px solid var(--rule); padding: 16px 0 12px; }
+  .content { padding: 16px 0 40px; }
+}
+@media print { nav.toc { display: none; } .layout { display: block; max-width: none; padding: 0; } .content { max-width: none; padding: 0; } }
 </style></head>
-<body><div class="page">
-<header class="doc"><div class="kicker">Project 3 report</div><h1>The constraint, utilization and variability</h1><div class="meta">Custom sheet-metal fabrication job shop, about 120 employees, one plant. Operations started in 2025, whole year and Q2 to Q4; records from January 2023 to December 2025.<br>Sources: ERP, shop-floor data collection, maintenance and attendance exports (batch 20261003T152921Z-20250101). Queue in working days per operation, scheduled Saturdays counted.</div></header>
-<nav class="toc"><a href="#f1">Load against uptime</a><a href="#f2">The brakes</a><a href="#f3">Queue against load</a><a href="#f4">Robotic weld</a><a href="#f5">Powder line</a><a href="#f6">Variability</a><a href="#f7">Lasers</a><a href="#rec">Recommendation</a><a href="#method">Method and data</a><a href="#appendix">Appendix</a></nav><h2 id='f1'>1. Load against uptime</h2>
+<body><div class="page-header"><h1>The constraint, utilization and variability</h1></div>
+<div class="layout"><nav class="toc"><div class="toc-title">Contents</div><a href="#f1">Load against uptime</a><a href="#f2">The brakes</a><a href="#f3">Queue against load</a><a href="#f4">Robotic weld</a><a href="#f5">Powder line</a><a href="#f6">Variability</a><a href="#f7">Lasers</a><a href="#rec">Recommendation</a><a href="#method">Method and data</a><a href="#appendix">Appendix</a></nav>
+<main class="content"><header class="doc"><div class="kicker">Project 3 report</div><div class="meta">Custom sheet-metal fabrication job shop, about 120 employees, one plant. Operations started in 2025, whole year and Q2 to Q4; records from January 2023 to December 2025.<br>Sources: ERP, shop-floor data collection, maintenance and attendance exports (batch 20261003T152921Z-20250101). Queue in working days per operation, scheduled Saturdays counted.</div></header>
+<h2 id='f1'>1. Load against uptime</h2>
 <p>The brakes run at 0.91 of scheduled hours net of downtime, the robotic weld cell at 0.83, the lasers at 0.74, assembly through hardware at 0.66 to 0.69 and the powder line at 0.56. Machine uptime is 0.96 to 0.98 at every work center and does not distinguish the constraint.</p>
 <img alt="Utilization and machine uptime by work center" src="../figures/p3_utilization_uptime.png">
 <div class='caption'>Figure 1. Utilization and machine uptime by work center, 2025.</div>
@@ -72,4 +92,4 @@ nav.toc a { color: var(--accent); text-decoration: none; margin-right: 14px; }
 <h3>Table 8. Laser weeks, November and December 2024</h3><table class="data"><thead><tr><th>Week starting</th><th>Working weekdays</th><th>Laser utilization</th><th>First operations started</th><th>First-operation queue, mean</th><th>90th percentile</th></tr></thead><tbody><tr><td class="">2024-11-04</td><td class="">5</td><td class="">0.73</td><td class="">82</td><td class="">0.56</td><td class="">1.8</td></tr><tr><td class="">2024-11-11</td><td class="">5</td><td class="">0.98</td><td class="">62</td><td class="">1.90</td><td class="">4.6</td></tr><tr><td class="">2024-11-18</td><td class="">5</td><td class="">0.95</td><td class="">114</td><td class="">2.54</td><td class="">6.4</td></tr><tr><td class="">2024-11-25</td><td class="">3</td><td class="">0.93</td><td class="">27</td><td class="">1.37</td><td class="">5.6</td></tr><tr><td class="">2024-12-02</td><td class="">5</td><td class="">0.89</td><td class="">126</td><td class="">3.96</td><td class="">10.3</td></tr><tr><td class="">2024-12-09</td><td class="">5</td><td class="">0.94</td><td class="">107</td><td class="">2.85</td><td class="">7.9</td></tr><tr><td class="">2024-12-16</td><td class="">5</td><td class="">0.84</td><td class="">113</td><td class="">4.95</td><td class="">13.6</td></tr></tbody></table>
 <h3>Table 9. Brake queue with the spread of setup time halved, and the inputs</h3><table class="data"><thead><tr><th>Period</th><th>Brake utilization</th><th>Queue on the curve</th><th>Queue with setup spread halved</th><th>Utilization giving the same queue</th><th>Brake hours a week released</th></tr></thead><tbody><tr><td class="">2025</td><td class="">0.912</td><td class="">3.08</td><td class="">2.98</td><td class="">0.915</td><td class="">0.8</td></tr><tr><td class="">2025 Q2 to Q4</td><td class="">0.908</td><td class="">2.91</td><td class="">2.81</td><td class="">0.911</td><td class="">0.9</td></tr></tbody></table><table class="data"><thead><tr><th>Input</th><th>Value</th></tr></thead><tbody><tr><td class="">Setup time per operation, coefficient of variation</td><td class="">0.95</td></tr><tr><td class="">Setup and run per operation, squared coefficient of variation</td><td class="">1.91</td></tr><tr><td class="">The same with setup spread halved</td><td class="">1.77</td></tr><tr><td class="">Daily arrivals at the brakes, variance over mean</td><td class="">2.16</td></tr><tr><td class="">Curve scale k</td><td class="">1.692</td></tr><tr><td class="">Curve scale with setup spread halved</td><td class="">1.635</td></tr><tr><td class="">Setup share of brake hours</td><td class="">37.2%</td></tr><tr><td class="">Scheduled brake hours a week net of downtime</td><td class="">343</td></tr></tbody></table>
 <div class='glossary'>Utilization: machine time over scheduled hours net of downtime. Uptime: scheduled hours not lost to downtime. Color-day wait: the wait at the powder line for the next scheduled day of the job's color.</div>
-</div></body></html>
+</main></div></body></html>

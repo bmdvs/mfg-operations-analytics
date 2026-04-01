@@ -7,7 +7,7 @@ import pandas as pd
 
 from analytics.db import q
 from analytics.p3_constraint import analysis as A
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, sig, shell, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, sig, report_shell, table
 
 YEAR, REST = A.YEAR, "Q2 to Q4"
 WC = {"press_brake": "Press brake", "grind_deburr": "Grind and deburr", "inspection_pack": "Inspection and pack", "hardware": "Hardware", "weld": "Weld",
@@ -313,7 +313,7 @@ def report():
     toc = [("f1", "Load against uptime"), ("f2", "The brakes"), ("f3", "Queue against load"), ("f4", "Robotic weld"), ("f5", "Powder line"),
            ("f6", "Variability"), ("f7", "Lasers"), ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
     (DOCS / "reports").mkdir(parents=True, exist_ok=True)
-    (DOCS / "reports" / "p3_constraint.html").write_text(shell("The constraint, utilization and variability", "Project 3 report", HEADER_META, "\n".join(b), toc),
+    (DOCS / "reports" / "p3_constraint.html").write_text(report_shell("The constraint, utilization and variability", "Project 3 report", HEADER_META, "\n".join(b), toc),
                                                          encoding="utf8")
 
 
