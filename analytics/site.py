@@ -28,11 +28,11 @@ LEAD, BRAKES, OPTIONS, QUOTING = "lead_time_and_late_jobs", "brakes_capacity_and
 
 def _lead_time():
     share, late, on_time = re.search(r"the brake queue was ([\d.]+%) of lead time .*?: ([\d.]+) days against ([\d.]+) for on-time jobs\.",
-                                     report_text(LEAD, "f2")).groups()
+                                     report_text(LEAD, "f2_2")).groups()
     median, quote, rest = re.search(r"shipped in ([\d.]+) working days against an average quoted lead time of ([\d.]+); ([\d.]+) in Q2-Q4",
-                                    section_text(LEAD, "f1")).groups()
+                                    section_text(LEAD, "f2_1")).groups()
     return (f"Queue at the brakes is {share} of lead time and the stage that separates late jobs from on-time jobs ({late} days against {on_time}); the median job "
-            f"ships in {median} working days against an average quoted lead time of {quote}, {rest} in Q2-Q4. " + finding(LEAD, "f5", 0))
+            f"ships in {median} working days against an average quoted lead time of {quote}, {rest} in Q2-Q4. " + finding(LEAD, "f3_2", 0))
 
 
 def _brakes():
@@ -86,14 +86,14 @@ def sentences(text):
 
 def report_text(stem, section):
     s = (DOCS / "reports" / f"{stem}.html").read_text(encoding="utf8")
-    m = re.search(rf"<h2 id='{section}'>.*?</h2>\s*(?:<p class='lead'>.*?</p>\s*)?<p>(.*?)</p>", s, flags=re.S)
+    m = re.search(rf"<h[23] id='{section}'>.*?</h[23]>\s*(?:<p class='lead'>.*?</p>\s*)?<p>(.*?)</p>", s, flags=re.S)
     return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", m.group(1)))).strip()
 
 
 def section_text(stem, section):
     """Every paragraph of a report section as one line of text."""
     s = (DOCS / "reports" / f"{stem}.html").read_text(encoding="utf8")
-    m = re.search(rf"<h2 id='{section}'>.*?</h2>(.*?)(?=<h2 id=|$)", s, flags=re.S)
+    m = re.search(rf"<h[23] id='{section}'>.*?</h[23]>(.*?)(?=<h[23] id=|$)", s, flags=re.S)
     return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", " ".join(re.findall(r"<p>(.*?)</p>", m.group(1), flags=re.S))))).strip()
 
 
