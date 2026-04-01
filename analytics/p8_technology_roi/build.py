@@ -1,4 +1,4 @@
-"""P8 technology ROI: report, A3 and figures, from the scenario runs, the marts and the assumptions file.
+"""P8 technology ROI: report and figures, from the scenario runs, the marts and the assumptions file.
 
 Usage: python -m analytics.p8_technology_roi.build
 The scenario runs come from analytics.p8_technology_roi.scenarios (results/scenario_runs.csv and results/laser_queue_november_2024.csv).
@@ -9,7 +9,8 @@ import pandas as pd
 from analytics.db import q
 from analytics.p8_technology_roi import analysis as A
 from analytics.p8_technology_roi.scenarios import ASSUME, PACKAGE, QUEUE, S0
-from analytics.style.style import AMBER, BRAND_BLUE, DOCS, GREEN, GREY, RED, a3_shell, fig, pct, save, report_shell, sig, table
+from analytics.style.style import AMBER, BRAND_BLUE, DOCS, GREEN, GREY, RED, fig, pct, save, report_shell, sig, table
+from analytics.style.style import recommendation_block
 
 YEAR, REST = A.YEAR, "Q2 to Q4"
 df = A.runs()
@@ -376,6 +377,8 @@ def report():
              f"({n0(ec['breakeven_hours'])} without the package). Take the tool changer on B3 only if {breakeven(ea, False)} of its released hours "
              f"({n0(ea['breakeven_hours'])} a year) will be sold. Do not buy the laser tower.</p>")
 
+    b.append(control())
+
     b.append("<h2 id='method'>Method and data</h2>")
     alone_js = max(abs(v(n, "jobs_shipped", col="diff")) for n in BASE + [ATC_ALL])
     b.append(f"<p>The options run on the P5 shop model, {REPS} replications each; current practice and the no-capital package are the P5 runs. The tool changer "
@@ -413,45 +416,23 @@ def report():
 
 
 COUNTERMEASURES = [
-    ("Implement the no-capital package: setup program (May 2026), weld cell second shift (April 2026), planned Saturdays (November 2026), as in the P5 A3",
+    ("Implement the no-capital package: setup program (May 2026), weld cell second shift (April 2026), planned Saturdays (November 2026), as in the P5 report",
      "Brake supervisor, production manager, plant manager", "April to November 2026"),
     ("Prepare the robotic bending cell case with a sold-hours test", "Plant manager, sales manager", "June 2026"),
     ("Decline the laser tower", "Plant manager", "January 2026"),
 ]
 
 
-def a3():
-    ea, et, ec, epk = E[ATC], E[TOWER], E[CELL], E[PACKAGE]
-    left, right = [], []
-    left.append(f"<section><h2>Background and problem</h2><p>The no-capital package takes on-time delivery to {pct(v(PACKAGE, 'on_time_delivery'))} for the year "
-                f"against the {pct(required, 0)} target.<br>Three capital options are before the shop: a press brake with automatic tool changing "
-                f"({usd(ea['one_time'])}), a second automated laser tower ({usd(et['one_time'])}) and a robotic bending cell ({usd(ec['one_time'])}).</p></section>")
-    left.append(f"<section><h2>Current condition</h2>{t_measured(short=True)}<div class='caption'>Measured inputs for {YEAR}.</div></section>")
-    left.append(f"<section><h2>Target</h2><p>{pct(required, 0)} on time in every quarter.</p></section>")
-    right.append(
-        f"<section><h2>Analysis</h2>{fig_npv('p8_a3_npv_by_share_sold', 2.4)}<div class='caption'>NPV over {HORIZON} years against the share of released brake hours "
-        f"sold.</div><ul>"
-        f"<li>On overtime and labor alone no option pays back within {HORIZON} years; the package is net negative by {k(-epk['net_without_throughput'])} a year.</li>"
-        f"<li>NPV reaches zero at {breakeven(ec, False)} of released brake hours sold for the cell, {breakeven(ea, False)} for the tool changer on B3 and "
-        f"{breakeven(epk, False)} for the package; the tower releases none.</li>"
-        f"<li>The cell raises on-time delivery {pts(CELL)} points for the year, the tool changer {pts(ATC)}, the package {pts(PACKAGE)}; every capital option adds "
-        f"under a point in {REST}.</li>"
-        f"<li>The tower cuts the November 2024 laser queue from {n0(v(S0, 'laser_queue_nov_2024'))} to {n0(v(TOWER, 'laser_queue_nov_2024'))} jobs and leaves those "
-        f"jobs' delivery at {pct(v(TOWER, 'on_time_released_nov_2024'))}.</li></ul></section>")
-    right.append(f"<section><h2>Countermeasures</h2>{table(pd.DataFrame(COUNTERMEASURES, columns=['Action', 'Owner', 'When']))}</section>")
-    right.append(f"<section><h2>Expected results</h2><p>Expected from the model: the robotic cell on the package raises on-time delivery by "
-                 f"{byp(S.loc[(N_CELL, 'year', 'on_time_delivery')])} to {pct(v(N_CELL, 'on_time_delivery'))} for the year; its NPV reaches zero when "
-                 f"{n0(EP[N_CELL]['breakeven_hours'])} released brake hours a year are sold ({breakeven(EP[N_CELL], False)}). No option reaches the target on the promises as made; "
-                 f"quoted lead times are P7.</p></section>")
-    right.append("<section><h2>Follow-up</h2><p>Released brake hours sold tracked monthly against the break-even once the package is in place.</p></section>")
-    (DOCS / "a3").mkdir(parents=True, exist_ok=True)
-    (DOCS / "a3" / "p8_technology_roi.html").write_text(a3_shell("Technology ROI", "Project 8 A3", HEADER_META, "\n".join(left), "\n".join(right)), encoding="utf8")
+def control():
+    """The target, the countermeasures and the follow-up, for the Recommendation section."""
+    target = (f"{pct(required, 0)} on time in every quarter.")
+    follow = ("Released brake hours sold tracked monthly against the break-even once the package is in place.")
+    return recommendation_block(target, COUNTERMEASURES, follow)
 
 
 def main():
     report()
-    a3()
-    print("wrote docs/reports/p8_technology_roi.html and docs/a3/p8_technology_roi.html")
+    print("wrote docs/reports/p8_technology_roi.html")
 
 
 if __name__ == "__main__":

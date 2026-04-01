@@ -1,8 +1,10 @@
-"""Shared palette, chart helpers and the HTML shells for the reports, the A3 pages and the dashboard."""
+"""Shared palette, chart helpers and the HTML shells for the reports and the dashboard."""
+import re
 from pathlib import Path
 
 import matplotlib
 import numpy as np
+import pandas as pd
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
@@ -136,26 +138,6 @@ nav.toc a:hover { color: var(--brand); border-left-color: var(--brand); }
 @media print { nav.toc { display: none; } .layout { display: block; max-width: none; padding: 0; } .content { max-width: none; padding: 0; } }
 """
 
-A3_CSS = CSS + """
-.a3 { max-width: 1500px; padding: 26px 32px 30px; }
-.a3 header.doc { margin-bottom: 14px; padding-bottom: 8px; }
-.a3 header.doc h1 { font-size: 22px; margin: 2px 0 4px; }
-.a3 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px; }
-.a3 .grid > div { display: grid; gap: 12px; align-content: start; }
-.a3 section { border: 1px solid var(--rule); border-top: 3px solid var(--brand); padding: 8px 12px 10px; font-size: 12.5px; line-height: 1.4; }
-.a3 section h2 { font-size: 14px; margin: 0 0 4px; border: 0; padding: 0; text-transform: uppercase; letter-spacing: 0.6px; }
-.a3 section p { margin: 4px 0 6px; }
-.a3 section ul { margin: 4px 0 4px 16px; padding: 0; }
-.a3 section li { margin-bottom: 3px; }
-.a3 img { margin: 4px 0 2px; max-height: 360px; }
-.a3 .caption { font-size: 11px; margin-bottom: 4px; }
-.a3 table.data { font-size: 11.5px; margin: 4px 0 4px; }
-.a3 table.data th, .a3 table.data td { padding: 3px 6px; }
-@page { size: A3 landscape; margin: 9mm; }
-@media print { .a3 { max-width: none; padding: 0; } .a3 .grid { gap: 8px 14px; } .a3 section { break-inside: avoid; } }
-@media (max-width: 900px) { .a3 .grid { grid-template-columns: 1fr; } }
-"""
-
 
 def shell(title, kicker, meta, body, toc=None):
     nav = ""
@@ -183,11 +165,18 @@ def report_shell(title, kicker, meta, body, toc):
 </main></div></body></html>"""
 
 
-def a3_shell(title, kicker, meta, left, right):
-    return f"""<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{title}</title><style>{A3_CSS}</style></head>
-<body><div class="page a3">
-<header class="doc"><div class="kicker">{kicker}</div><h1>{title}</h1><div class="meta">{meta}</div></header>
-<div class="grid"><div>{left}</div><div>{right}</div></div>
-</div></body></html>"""
+PROJECT_REPORTS = {"P1": "p1_lead_time", "P2": "p2_late_jobs", "P3": "p3_constraint", "P4": "p4_setups", "P5": "p5_release_control",
+                   "P6": "p6_leading_indicators", "P7": "p7_quoting", "P8": "p8_technology_roi"}
+
+
+def project_links(text):
+    """A project named in brackets, or as "the P5 report", as a link to that project's report."""
+    link = lambda k: f"<a href='{PROJECT_REPORTS[k]}.html'>{k}</a>"
+    text = re.sub(r"\([^)]*\)", lambda m: re.sub(r"\bP[1-8]\b", lambda k: link(k.group(0)), m.group(0)), text)
+    return re.sub(r"\b(P[1-8]) report\b", lambda m: f"<a href='{PROJECT_REPORTS[m.group(1)]}.html'>{m.group(1)} report</a>", text)
+
+
+def recommendation_block(target, countermeasures, follow=None):
+    """Target, countermeasures (action, owner, when) and follow-up, placed after a report's recommendation."""
+    rows = pd.DataFrame([(project_links(a), o, w) for a, o, w in countermeasures], columns=["Action", "Owner", "When"])
+    return f"<p>Target: {target}</p>" + table(rows) + (f"<p>Follow-up: {follow}</p>" if follow else "")

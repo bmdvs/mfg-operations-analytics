@@ -123,7 +123,7 @@ def sources():
 
 PIPELINE = ("`pipeline/load` loads the CSV exports under `data/raw` into DuckDB with dlt, one text table per file. The dbt project under `pipeline/dbt` builds the "
             "staging models (one per export, typed), the intermediate models (working-day clock, machine time, queue, lead time by stage, WIP, utilization, setups, "
-            "late-job attribution) and the marts, with tests on keys. The scripts under `analytics/` read the marts and write each project's report, A3 and figures "
+            "late-job attribution) and the marts, with tests on keys. The scripts under `analytics/` read the marts and write each project's report and figures "
             "under `docs/`, the dashboard and this file. The shop model under `analytics/p5_release_control/` replays the released jobs for the scenarios of P5 and "
             "P8; its runs are saved under `results/` and each run repeats exactly from its scenario and replication number.")
 RUN = """```
@@ -145,7 +145,7 @@ python -m analytics.p8_technology_roi.scenarios 30 6 laser_queue
 
 INTRO = ("Delivery, flow, capacity and quoting analytics on a custom sheet-metal fabrication job shop, January 2023 to December 2025, computed on the shop's complete ERP and MES record.")
 INCLUDED = [
-    "Eight connected studies, each delivered as a client report, with an A3 for each improvement project: lead-time decomposition, late-job attribution, the constraint and variability, setups "
+    "Eight connected studies, each delivered as a client report: lead-time decomposition, late-job attribution, the constraint and variability, setups "
     "against standards, release control on a discrete-event model of the floor, leading indicators, lead-time quoting and quote analytics, technology ROI.",
     "One operations dashboard: on-time delivery, lead time, WIP, utilization and queue by work center, setup against standard, overtime, the leading indicators; weekly grain, 13-week view, "
     "three-year trend.",
@@ -169,7 +169,7 @@ METHODS = [
     "assumptions.",
     "Data engineering: raw system exports loaded to DuckDB; a dbt project with schema tests on every mart; one build command that regenerates every table, figure and page byte-identically from "
     "the committed inputs; fixed input ordering and per-scenario seeding so that the floor model reproduces to the digit.",
-    "Framing: the improvement projects are written as DMAIC projects with an A3 each. Every report describes the findings and what to do, in the form a client receives at the end of an engagement.",
+    "Framing: the improvement projects are written as DMAIC projects. Every report describes the findings and what to do, in the form a client receives at the end of an engagement.",
 ]
 RECORD = ("The record carries what these systems carry in practice: blank and miscoded late reasons, operations closed in batches at the end of a shift, standards not updated after routing "
           "changes, and a 2024 year-end build that shows in every queue. The analyses work with the record as it stands and say so where it limits a finding.")
@@ -191,7 +191,7 @@ def readme():
         lines += [x, ""]
     lines += ["## Studies", "", "| Project | Question | Finding | Deliverable |", "|---|---|---|---|"]
     for p, stem, title, question, spec in PROJECTS:
-        lines.append(f"| {p}. {title} | {question} | {headline(stem, spec)} | [report](docs/reports/{stem}.html), [A3](docs/a3/{stem}.html) |")
+        lines.append(f"| {p}. {title} | {question} | {headline(stem, spec)} | [report](docs/reports/{stem}.html) |")
     lines += ["", "**Dashboard.** [docs/dashboard/index.html](docs/dashboard/index.html). Index of deliverables: [docs/index.html](docs/index.html). "
               f"The week of {current_week()} is the current week; every panel carries a one-line definition in the reports' wording.", "", "## Methods", ""]
     for x in METHODS:
@@ -206,8 +206,8 @@ def readme():
 def index():
     rows = []
     for p, stem, title, question, spec in PROJECTS:
-        rows.append([f"{p}. {title}", question, headline(stem, spec), f"<a href='reports/{stem}.html'>Report</a>", f"<a href='a3/{stem}.html'>A3</a>"])
-    body = (table(pd.DataFrame(rows, columns=["Project", "Question", "Finding", "Report", "A3"])) +
+        rows.append([f"{p}. {title}", question, headline(stem, spec), f"<a href='reports/{stem}.html'>Report</a>"])
+    body = (table(pd.DataFrame(rows, columns=["Project", "Question", "Finding", "Report"])) +
             "<p><a href='dashboard/index.html'>Operations dashboard</a></p>")
     meta = f"{SHOP}<br>{SCOPE} Sources: ERP, shop-floor data collection, QMS, maintenance and HR exports (batch {batch_id()})."
     (DOCS / "index.html").write_text(shell("Operations analytics", "Deliverables", meta, body), encoding="utf8")

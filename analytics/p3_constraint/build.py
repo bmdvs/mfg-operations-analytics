@@ -1,4 +1,4 @@
-"""P3 the constraint, utilization and variability: report, A3 and figures.
+"""P3 the constraint, utilization and variability: report and figures.
 
 Usage: python -m analytics.p3_constraint.build
 """
@@ -7,7 +7,8 @@ import pandas as pd
 
 from analytics.db import q
 from analytics.p3_constraint import analysis as A
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, sig, report_shell, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, fig, pct, save, sig, report_shell, table
+from analytics.style.style import recommendation_block
 
 YEAR, REST = A.YEAR, "Q2 to Q4"
 WC = {"press_brake": "Press brake", "grind_deburr": "Grind and deburr", "inspection_pack": "Inspection and pack", "hardware": "Hardware", "weld": "Weld",
@@ -286,6 +287,8 @@ def report():
              f"schedule is a scheduling choice to revisit: {', '.join(two_day[:-1])} and {two_day[-1]} already run two days a week, and a third day for black is a P5 "
              f"scenario. Mean setup time at the brakes is P4.</p>")
 
+    b.append(control())
+
     b.append("<h2 id='method'>Method and data</h2>")
     b.append(f"<p>Coverage: {n0(len(D['ops']))} operations started in {YEAR}, {n0((D['ops']['start_quarter'] >= 2).sum())} in {REST}; curves fitted on 2023 to 2025. "
              f"Utilization is machine time (the union of labor transaction intervals on a machine) over scheduled hours net of downtime, Saturday and extended shifts "
@@ -326,47 +329,21 @@ COUNTERMEASURES = [
 ]
 
 
-def a3():
-    by = UY.loc["press_brake"]
-    worst_q = int(BQ["queue_p90"].idxmax())
-    left, right = [], []
-    left.append(f"<section><h2>Background and problem</h2><p>The brakes run at {d2(by['utilization'])} of scheduled hours with a queue of {d1(by['queue_mean'])} days "
-                f"per operation and a 90th percentile of {d1(by['queue_p90'])} days ({d1(UR.loc['press_brake', 'queue_mean'])} and "
-                f"{d1(UR.loc['press_brake', 'queue_p90'])} in {REST}).<br>Machine uptime is {rng(UY['uptime'].min(), UY['uptime'].max())} at every work center and "
-                f"does not show where the load is.</p></section>")
-    left.append(f"<section><h2>Current condition</h2>{fig_curve('p3_a3_brake_queue_curve', 4.2)}"
-                f"<div class='caption'>Weekly brake queue against weekly utilization, 2023 to 2025, with the curve fitted on 13-week windows.</div></section>")
+def control():
+    """The target, the countermeasures and the follow-up, for the Recommendation section."""
     met = [k for k in sorted(BQ.index) if BQ.loc[k, "queue_p90"] < 5]
     missed = [k for k in sorted(BQ.index) if BQ.loc[k, "queue_p90"] >= 5]
     lab = lambda ks: " and ".join(f"Q{k}" for k in ks)
     val = lambda ks: " and ".join(d1(BQ.loc[k, "queue_p90"]) for k in ks)
-    left.append(f"<section><h2>Target</h2><p>Brake queue 90th percentile under 5 days in every quarter, the first included. Met in {lab(met)} {YEAR} "
-                f"({val(met)} days), not in {lab(missed)} ({val(missed)}).</p></section>")
-    right.append(
-        f"<section><h2>Analysis</h2>{fig_robot('p3_a3_robotic_weld_weekly', 2.9)}<div class='caption'>Robotic weld cell weekly utilization and queue per operation, {YEAR}.</div><ul>"
-        f"<li>B1 and B2 carry precision and expedited work with the shortest queues; B3 to B5 carry the tail (90th percentile "
-        f"{rng(MY.loc[['B3', 'B4', 'B5'], 'queue_p90'].min(), MY.loc[['B3', 'B4', 'B5'], 'queue_p90'].max(), d1)} days).</li>"
-        f"<li>On the fitted curve the brake queue is {d2(FB['queue_at_0.85'])} days at 0.85 utilization, {d2(FB['queue_at_0.90'])} at 0.90 and "
-        f"{d2(FB['queue_at_0.92'])} at 0.92.</li>"
-        f"<li>In {REST} the robotic weld cell has the longest queue: {d1(ROB.loc[REST, 'queue_mean'])} days on one shift at {d2(ROB.loc[REST, 'utilization'])}, "
-        f"at or above 0.95 in {int(ROB.loc[REST, 'weeks_at_0_95'])} of {int(ROB.loc[REST, 'weeks'])} weeks.</li>"
-        f"<li>The powder line runs at {d2(POW.loc['year', 'utilization'])} and holds jobs {d2(POW.loc['year', 'color_day_wait_mean'])} days for the color day.</li>"
-        f"<li>Halving the spread of brake setup time releases {d1(SV.loc['year', 'hours_per_week_released'])} hours a week; the variability is in arrivals and "
-        f"run time.</li></ul></section>")
-    right.append(f"<section><h2>Countermeasures</h2>{table(pd.DataFrame(COUNTERMEASURES, columns=['Action', 'Owner', 'When']))}</section>")
-    right.append(f"<section><h2>Results</h2><p>Measured baseline for {YEAR}: brake utilization {d2(by['utilization'])}, queue {d1(by['queue_mean'])} days per operation, "
-                 f"90th percentile {d1(by['queue_p90'])}; robotic weld queue {d1(ROB.loc['year', 'queue_mean'])} days at {d2(ROB.loc['year', 'utilization'])}. "
-                 f"Results of the countermeasures are reported in P4 and P5.</p></section>")
-    right.append("<section><h2>Follow-up</h2><p>Weekly utilization and queue by work center on the operations dashboard.</p></section>")
-    (DOCS / "a3").mkdir(parents=True, exist_ok=True)
-    (DOCS / "a3" / "p3_constraint.html").write_text(a3_shell("The constraint, utilization and variability", "Project 3 A3", HEADER_META, "\n".join(left),
-                                                             "\n".join(right)), encoding="utf8")
+    target = (f"Brake queue 90th percentile under 5 days in every quarter, the first included. Met in {lab(met)} {YEAR} "
+              f"({val(met)} days), not in {lab(missed)} ({val(missed)}).")
+    follow = ("Weekly utilization and queue by work center on the operations dashboard.")
+    return recommendation_block(target, COUNTERMEASURES, follow)
 
 
 def main():
     report()
-    a3()
-    print("wrote docs/reports/p3_constraint.html and docs/a3/p3_constraint.html")
+    print("wrote docs/reports/p3_constraint.html")
 
 
 if __name__ == "__main__":

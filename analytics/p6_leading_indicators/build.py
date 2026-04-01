@@ -1,4 +1,4 @@
-"""P6 leading indicators: report, A3 and figures, from the marts.
+"""P6 leading indicators: report and figures, from the marts.
 
 Usage: python -m analytics.p6_leading_indicators.build
 """
@@ -7,7 +7,8 @@ import pandas as pd
 
 from analytics.db import q
 from analytics.p6_leading_indicators import analysis as A
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, report_shell, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BLUE, RED, fig, pct, save, report_shell, table
+from analytics.style.style import recommendation_block
 
 YEAR, REST = A.YEAR, "Q2 to Q4"
 D = A.load()
@@ -407,6 +408,8 @@ def report():
              "short kit at the kit check. Drop setup efficiency, schedule adherence, outside-processing receipts and overtime from the leading set; they remain "
              "measures of their own work centers.</p>")
 
+    b.append(control())
+
     b.append("<h2 id='method'>Method and data</h2>")
     b.append(f"<p>Correlations are signed so that positive means the indicator's adverse movement goes with lower on-time delivery; the statistic is the largest "
              f"correlation at a lead of 1 to {A.MAX_LAG} weeks. Shuffled, the specified comparison, puts the indicator's weeks in random order; shifted moves the "
@@ -450,44 +453,16 @@ COUNTERMEASURES = [
 ]
 
 
-def a3():
-    e = CE.loc[OTS]
-    o, la, bk = DL.loc[OTS], DL.loc[LASER], DL.loc[BACKLOG]
-    tr, sr, ky = THR.loc[PR], SHORT.loc[PR], KIT.loc[PY]
-    left, right = [], []
-    left.append(f"<section><h2>Background and problem</h2><p>On-time delivery was {pct(otd['y'])} in {YEAR} ({pct(otd['r'])} in {REST}) and declined by more than "
-                f"5 points {word(len(DEC))} times in 36 months.<br>The largest decline, from the week of {wk(build['onset'])}, took the four-week figure from "
-                f"{pct(build['otd_before'])} to {pct(build['otd_low'])}. Of the {word(len(REVIEW))} measures in the review set, {word(sum(n in ABOVE_E for n in REVIEW))} leads on-time delivery.</p></section>")
-    left.append(f"<section><h2>Current condition</h2>{t_summary(short=True)}<div class='caption'>Largest correlation of each weekly series with on-time delivery "
-                f"at a lead of 1 to {A.MAX_LAG} weeks, and whether it exceeds both chance comparisons.</div></section>")
-    left.append("<section><h2>Target</h2><p>Every decline in on-time delivery preceded by a flagged indicator at least four weeks earlier.</p></section>")
-    right.append(
-        f"<section><h2>Analysis</h2>{fig_lags('p6_a3_correlation_by_lead', 3.0, both=False)}<div class='caption'>Correlation with on-time delivery by weeks of "
-        f"lead, event weeks excluded; the band is the shuffled 95th percentile.</div><ul>"
-        f"<li>In ordinary weeks only the on-time start rate leads: {r2(e['r_best_lead'])} at {e['best_lead_weeks']} week against {r2(e['shuffled_p95'])} and "
-        f"{r2(e['shifted_p95'])} by chance.</li>"
-        f"<li>Jobs waiting at the lasers led the 2024 year-end build by {CA.loc[LASER, 'best_lead_weeks']} weeks ({r2(CA.loc[LASER, 'r_best_lead'])}); the brake "
-        f"series and overtime move with on-time delivery.</li>"
-        f"<li>The on-time start rate moved before {o['preceded']} of {o['declines']} declines against {d1(o['shuffled_expected'])} by chance; no other series is "
-        f"distinguishable from chance on four declines.</li>"
-        f"<li>Lines promised inside the standard lead time are {pct(sr['share_of_jobs'])} of jobs and {pct(sr['share_of_late_jobs'])} of late jobs in {REST}; a "
-        f"short kit carries {pct(ky['share_of_days_short_kit'])} of material lost days.</li></ul></section>")
-    right.append(f"<section><h2>Countermeasures</h2>{table(pd.DataFrame(COUNTERMEASURES, columns=['Action', 'Owner', 'When']))}</section>")
-    right.append(f"<section><h2>Expected results</h2><p>On the record of 2023 to {YEAR}: the on-time start rate moved before {o['preceded']} of {o['declines']} "
-                 f"declines, {int((LT.loc[OTS] >= 4).sum())} of them four weeks or more ahead, with {o['signal_episodes']} episodes and "
-                 f"{o['episodes_followed_by_decline']} followed by a decline; jobs waiting at the lasers before {la['preceded']} of {la['declines']}, with "
-                 f"{la['signal_episodes']} episodes and {la['episodes_followed_by_decline']} followed. {PAIR_TEXT} Brake backlog above 3 days marks "
-                 f"{pct(tr['share_of_all_jobs_above'])} of jobs in {REST}.</p></section>")
-    right.append("<section><h2>Follow-up</h2><p>The signal and decline record reviewed quarterly: episodes, declines preceded, and the lead in weeks.</p></section>")
-    (DOCS / "a3").mkdir(parents=True, exist_ok=True)
-    (DOCS / "a3" / "p6_leading_indicators.html").write_text(a3_shell("Leading indicators", "Project 6 A3", HEADER_META, "\n".join(left), "\n".join(right)),
-                                                            encoding="utf8")
+def control():
+    """The target, the countermeasures and the follow-up, for the Recommendation section."""
+    target = ("Every decline in on-time delivery preceded by a flagged indicator at least four weeks earlier.")
+    follow = ("The signal and decline record reviewed quarterly: episodes, declines preceded, and the lead in weeks.")
+    return recommendation_block(target, COUNTERMEASURES, follow)
 
 
 def main():
     report()
-    a3()
-    print("wrote docs/reports/p6_leading_indicators.html and docs/a3/p6_leading_indicators.html")
+    print("wrote docs/reports/p6_leading_indicators.html")
 
 
 if __name__ == "__main__":

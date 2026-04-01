@@ -1,4 +1,4 @@
-"""P5 release control and the shop model: report, A3 and figures, from the scenario runs and the marts.
+"""P5 release control and the shop model: report and figures, from the scenario runs and the marts.
 
 Usage: python -m analytics.p5_release_control.build
 The scenario runs come from analytics.p5_release_control.scenarios and validate (results/scenario_runs.csv, results/validation_quarters.csv).
@@ -11,7 +11,8 @@ import pandas as pd
 from analytics.db import q
 from analytics.p5_release_control.scenarios import OUT, QUARTERS, summarize, versus
 from analytics.p5_release_control.validate import TOLERANCE, measured
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, report_shell, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, fig, pct, save, report_shell, table
+from analytics.style.style import recommendation_block
 
 YEAR, REST = 2025, "Q2 to Q4"
 RES = Path(__file__).resolve().parent / "results"
@@ -352,6 +353,8 @@ def report():
              f"{d1(-v(PR, NOCAP, 'lead_time_p90', 'diff'))} days shorter. Restate quoted lead times (P7). P8 compares this package with the capital options on the same "
              f"measures.</p>")
 
+    b.append(control())
+
     b.append("<h2 id='method'>Method and data</h2>")
     b.append(f"<p>The model replays the jobs released from January 2024 with their routings, standards, promised dates, rush flags and planned operation dates, each "
              f"machine's shift calendar and recorded downtime, and the powder color schedule. Setup and run times are drawn from {YEAR} actual-over-standard ratios of "
@@ -396,45 +399,17 @@ COUNTERMEASURES = [
 ]
 
 
-def a3():
-    cap = ["S1 WIP cap 240", "S1 WIP cap 210", "S1 WIP cap 180"]
-    edd, cr, s5, s7 = SINGLE[4], SINGLE[5], SINGLE[8], SINGLE[10]
-    m1, m2 = measured(1), measured(2)
-    left, right = [], []
-    left.append(f"<section><h2>Background and problem</h2><p>In {REST} of {YEAR} the 90th-percentile lead time was {d1(m2['lead_time_p90'])} working days against "
-                f"an average quote of {d1(quote_mean)}, with {pct(m2['on_time_delivery'])} on time.<br>The first quarter, carrying the 2024 year-end build, shipped "
-                f"{pct(Q1['otd_m'])} on time and took the year to {pct(m1['on_time_delivery'])}.</p></section>")
-    vt = pd.DataFrame([r for r in VROWS if r[7] != ""], columns=["Period", "Measure", "Measured", "Model", "95% interval", "Difference", "Tolerance", "Result"])
-    left.append(f"<section><h2>Current condition</h2>{table(vt[['Period', 'Measure', 'Measured', 'Model', 'Difference', 'Result']])}"
-                f"<div class='caption'>The shop model under current practice against measured {YEAR}: {V_IN} of {V_TOL} measures within tolerance.</div></section>")
-    left.append(f"<section><h2>Target</h2><p>{pct(required, 0)} of jobs shipped by the promised date in every quarter.</p></section>")
-    right.append(
-        f"<section><h2>Analysis</h2>{fig_effects('p5_a3_scenario_effects', 3.3)}<div class='caption'>Change in on-time delivery and 90th-percentile lead time against "
-        f"current practice, by scenario, with 95% intervals.</div><ul>"
-        f"<li>A WIP cap at 240 to 180 jobs lowers on-time delivery by {pts(PR, cap[0])} to {pts(PR, cap[2])} points in {REST}; the floor already carries less WIP "
-        f"than the quotes allow.</li>"
-        f"<li>Earliest due date makes no difference and critical ratio is {pts(PR, cr)} to {pts(PY, cr)} points worse.</li>"
-        f"<li>The P4 setup reduction raises on-time delivery {pts(PY, S8)} points for the year and shortens the 90th percentile by "
-        f"{d1(-v(PY, S8, 'lead_time_p90', 'diff'))} days.</li>"
-        f"<li>A second shift on the robotic weld cell adds {pts(PR, s5)} points in {REST}.</li>"
-        f"<li>Planned Saturdays from November through February add {pts(PY, s7)} points for the year; a lower bound, the model's peak being shallower than the "
-        f"shop's.</li></ul></section>")
-    right.append(f"<section><h2>Countermeasures</h2>{table(pd.DataFrame(COUNTERMEASURES, columns=['Action', 'Owner', 'When']))}</section>")
-    right.append(f"<section><h2>Expected results</h2><p>Expected from the model, with 95% intervals: on-time delivery {spp(PY.loc[(NOCAP, 'on_time_delivery')])} "
-                 f"for the year and {spp(PR.loc[(NOCAP, 'on_time_delivery')])} in {REST}; 90th-percentile lead time "
-                 f"{sdd(PY.loc[(NOCAP, 'lead_time_p90')])} and {sdd(PR.loc[(NOCAP, 'lead_time_p90')])}. The package does not reach the target on the promises "
-                 f"as made; quoted lead times are P7.</p></section>")
-    right.append("<section><h2>Follow-up</h2><p>Quarterly re-validation of the model against the actual lead time, WIP, utilization and on-time delivery. Saturday shifts and extended hours at the brakes reported "
-                 "monthly against the model's expected values.</p></section>")
-    (DOCS / "a3").mkdir(parents=True, exist_ok=True)
-    (DOCS / "a3" / "p5_release_control.html").write_text(a3_shell("Release control and the shop model", "Project 5 A3", HEADER_META, "\n".join(left), "\n".join(right)),
-                                                         encoding="utf8")
+def control():
+    """The target, the countermeasures and the follow-up, for the Recommendation section."""
+    target = (f"{pct(required, 0)} of jobs shipped by the promised date in every quarter.")
+    follow = ("Quarterly re-validation of the model against the actual lead time, WIP, utilization and on-time delivery. Saturday shifts and extended hours at the brakes reported "
+              "monthly against the model's expected values.")
+    return recommendation_block(target, COUNTERMEASURES, follow)
 
 
 def main():
     report()
-    a3()
-    print("wrote docs/reports/p5_release_control.html and docs/a3/p5_release_control.html")
+    print("wrote docs/reports/p5_release_control.html")
 
 
 if __name__ == "__main__":
