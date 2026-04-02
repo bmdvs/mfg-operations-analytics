@@ -177,7 +177,7 @@ def panel_leading():
                                                   f"<b>{'beyond the trigger' if r['beyond'] else 'inside'}</b>"))
     c = W.loc[CW]
     items += [(n0(c["released_above_3_days_backlog"]), f"Jobs released above 3 days of brake backlog, of {n0(c['jobs_released'])} released"),
-              (n0(c["promised_inside_standard"]), f"Lines promised inside the standard lead time, of {n0(c['jobs_released'])} released"),
+              (n0(c["promised_inside_standard"]), f"Released late, of {n0(c['jobs_released'])} released"),
               (n0(c["short_kits"]), f"Short kits, of {n0(c['kit_checks'])} kit checks")]
 
     def draw(axes, idx, pos, full=None):
@@ -215,7 +215,7 @@ def panel_leading():
     b = save(f, "dashboard_leading_trend", "The on-time start rate and jobs waiting at the lasers with their trigger bands, trend")
     f, ax = fig(h=2.6)
     ax.plot(W.index, W["released_above_3_days_backlog"], color=RED, linewidth=1.1, label="Released above 3 days of brake backlog")
-    ax.plot(W.index, W["promised_inside_standard"], color=BRAND_BLUE, linewidth=1.1, label="Promised inside the standard lead time")
+    ax.plot(W.index, W["promised_inside_standard"], color=BRAND_BLUE, linewidth=1.1, label="Released late")
     ax.plot(W.index, W["short_kits"], color=AMBER, linewidth=1.1, label="Short kits")
     ax.set_ylabel("Jobs in the week", fontsize=9)
     ax.legend(frameon=False, fontsize=8, loc="upper left")
@@ -228,20 +228,20 @@ def panel_leading():
         jj = dict(INDICATORS.periods(j))[per]
         rows += [[per, "Released above 3 days of brake backlog", pct(thr.loc[per, "share_of_all_jobs_above"]), pct(thr.loc[per, "late_rate_above"]),
                   pct(thr.loc[per, "late_rate_below"])],
-                 [per, "Promised inside the standard lead time", pct(sp.loc[per, "share_of_jobs"]), pct(sp.loc[per, "late_rate_inside"]), pct(sp.loc[per, "late_rate_other"])],
+                 [per, "Released late", pct(sp.loc[per, "share_of_jobs"]), pct(sp.loc[per, "late_rate_inside"]), pct(sp.loc[per, "late_rate_other"])],
                  [per, "Short kit at the kit check", pct((jj["kit_result"] == "short").mean()), pct(jj.loc[jj["kit_result"] == "short", "late"].mean()),
                   pct(jj.loc[jj["kit_result"] != "short", "late"].mean())]]
     t = wrap(table(pd.DataFrame(rows, columns=["Jobs released in", "Flag", "Share of jobs flagged", "Late rate, flagged", "Late rate, not flagged"])))
     return ("<h2 id='panel2'>2. Leading set</h2>" + tiles(items) + a +
             cap("The on-time start rate and jobs waiting at the lasers by week, with the 4-week mean, the band of the prior 13 weeks and the weeks beyond the trigger "
                 "shaded.") + b + f"<div class='caption'>The same from {wk(I.index.min())}, with the declines in on-time delivery marked.</div>" + c3 +
-            "<div class='caption'>Jobs released above 3 days of brake backlog, lines promised inside the standard lead time, and short kits, by week.</div>" + t +
+            "<div class='caption'>Jobs released above 3 days of brake backlog, jobs released late, and short kits, by week.</div>" + t +
             "<div class='caption'>Late rate of flagged and unflagged jobs; short kits among jobs with a kit check, late rate of short kits computed for this page.</div>" +
             definition("On-time start rate: in-house operations planned to start in the week that had started by the planned date; operations planned before the "
                        "job's release are left out. Jobs waiting at the lasers: mean daily jobs at the lasers in the week. Trigger: the 4-week mean adverse to the 13 "
                        "weeks before by more than one standard deviation of those weeks. Brake backlog at release: the standard hours of brake operations waiting at "
-                       "10:00 on the release date, at the brakes' actual-over-standard ratio, in days of crewed brake capacity. Promised inside the standard: a promise "
-                       "shorter than the standard 10, 15 or 20 days, rush included. Short kit: kit check result short (job-specific material only)."))
+                       "10:00 on the release date, at the brakes' actual-over-standard ratio, in days of crewed brake capacity. Released late: jobs released with fewer "
+                       "working days to the promised date than the standard quoted lead time for the routing class. Short kit: kit check result short (job-specific material only)."))
 
 
 # ── 3 WIP and queue ─────────────────────────────────────────────────────────

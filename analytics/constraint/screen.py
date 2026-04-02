@@ -8,6 +8,7 @@ from analytics.db import q
 YEAR = 2025
 PERIODS = (("year", 1), ("Q2 to Q4", 2))
 HOT = 0.95
+SERIES_START = "2023-01-30"                     # weekly series leave out the first four weeks, when jobs already in process raise the queue
 LIST_CENTERS = ["grind_deburr", "inspection_pack", "hardware", "weld"]
 HOUR_BANDS = [0, 6, 8, 10, 12, 14, 16, 24]
 HOUR_LABELS = ["Before 06:00", "06:00 to 08:00", "08:00 to 10:00", "10:00 to 12:00", "12:00 to 14:00", "14:00 to 16:00", "After 16:00"]
@@ -136,6 +137,7 @@ def assembly(D):
     years = pd.DataFrame([dict(year=int(y), utilization=pooled_utilization(g), queue=weighted_queue(g), hot_weeks=int((g["utilization"] >= HOT).sum()),
                                weeks=len(g), operations=int(g["operations"].sum())) for y, g in w.groupby("week_year")]).set_index("year")
     wy = w[w["week_year"] == YEAR]
+    first = w[(w["week_year"] == YEAR - 2) & (w["week_start"] >= SERIES_START)]
     a = D["arr"][D["arr"]["work_center"] == "assembly"].copy()
     a["origin"] = np.where(a["has_robotic_weld"], "Robotic weld cell", np.where(a["has_manual_weld"], "Manual weld bays", "No weld"))
     o = D["ops"][D["ops"]["work_center"] == "assembly"].assign(hours=lambda d: d["setup_hours"] + d["run_hours"])
@@ -162,7 +164,7 @@ def assembly(D):
             "The same, robotic weld cell hours one week earlier": wk["utilization"].corr(robot.shift(1)),
             "The same, two weeks earlier": wk["utilization"].corr(robot.shift(2))}
     backlog_weeks = int((wk["hot"] & (wk["week_quarter"] == 1)).sum())
-    return dict(years=years, compare=compare, origin=origin, previous=previous, corr={k: float(v) for k, v in corr.items()}, families=families(D, "assembly"),
+    return dict(years=years, first_year_queue_from_start=weighted_queue(first), compare=compare, origin=origin, previous=previous, corr={k: float(v) for k, v in corr.items()}, families=families(D, "assembly"),
                 backlog_weeks=backlog_weeks, p90=float(o["queue_net_wd"].quantile(0.9)))
 
 

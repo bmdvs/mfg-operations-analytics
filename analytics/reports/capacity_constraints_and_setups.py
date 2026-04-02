@@ -52,7 +52,7 @@ def fig_hot():
 
 
 def fig_assembly():
-    w = X["uw"][X["uw"]["work_center"] == "assembly"].sort_values("week_start")
+    w = X["uw"][(X["uw"]["work_center"] == "assembly") & (X["uw"]["week_start"] >= SC.SERIES_START)].sort_values("week_start")
     f, ax = fig(h=3.3)
     ax.bar(w["week_start"], w["utilization"], width=5, color=LIGHT_BLUE, label="Utilization (left)")
     ax.axhline(0.95, color=GREY, linewidth=1, linestyle="--")
@@ -81,7 +81,9 @@ def t_hot():
                  pct(r["hours_share_hot"], 0)] for w, r in H.sort_values("utilization", ascending=False).iterrows()]
         out += block(per, table(pd.DataFrame(rows, columns=["Work center", "Utilization", "Weeks at 0.95 or above", "Of which full five-day weeks",
                                                              "Queue in those weeks", "Queue in the other weeks", "Share of machine hours in those weeks"])))
-    return out
+    BQ = C.BQ
+    return out + block(f"Brake queue 90th percentile by quarter, {YEAR}",
+                       table(pd.DataFrame([[d1(BQ.loc[k, "queue_p90"]) for k in (1, 2, 3, 4)]], columns=["Q1", "Q2", "Q3", "Q4"])))
 
 
 def t_dispatch():
@@ -92,8 +94,10 @@ def t_dispatch():
         out += block(per, table(pd.DataFrame(rows, columns=["Work center", "Operations", "Start the same working day", "Queue, same day", "Start the next working day", "Queue, next day",
                                                              "Start later", "Queue, later", "Arrive after 10:00", "Arrive after 14:00"])))
     rows = [[k, pct(r["share"], 0), pct(r["same_day"], 0), d2(r["queue"]), pct(BRAKE_HOURS.loc[k, "same_day"], 0)] for k, r in HOURS.iterrows()]
-    return out + block(f"The four work centers together by hour of arrival, {YEAR}, with the brakes beside them",
-                       table(pd.DataFrame(rows, columns=["Arrival", "Share of arrivals", "Start the same day", "Queue", "Start the same day, press brake"])))
+    out += block(f"The four work centers together by hour of arrival, {YEAR}, with the brakes beside them",
+                 table(pd.DataFrame(rows, columns=["Arrival", "Share of arrivals", "Start the same day", "Queue", "Start the same day, press brake"])))
+    return out + block("Next-day wait per shipped job, working days",
+                       table(pd.DataFrame([[d1(NEXT_DAY["year"]), d1(NEXT_DAY[REST])]], columns=[f"{YEAR}", f"{YEAR} {REST}"])))
 
 
 def t_powder():
@@ -117,7 +121,11 @@ def t_robot():
 
 def t_assembly():
     rows = [[str(y), d3(r["utilization"]), d2(r["queue"]), f"{int(r['hot_weeks'])} of {int(r['weeks'])}", n0(r["operations"])] for y, r in ASM["years"].iterrows()]
+    assert abs(ASM["years"].loc[YEAR - 2, "queue"] - ASM["first_year_queue_from_start"]) > 0.1
+    rows[0][0] += "*"
     a = table(pd.DataFrame(rows, columns=["Year", "Utilization", "Queue per operation", "Weeks at 0.95 or above", "Operations"]))
+    a += (f"<p>* {YEAR - 2} includes the first four weeks of the record, when jobs already in process raise the queue; from the week of January 30 the "
+          f"{YEAR - 2} queue is {d2(ASM['first_year_queue_from_start'])} days per operation.</p>")
     h, o = ASM["compare"]["hot"], ASM["compare"]["other"]
     rows = [["Weeks", n0(h["weeks"]), n0(o["weeks"])], ["Utilization", d2(h["utilization"]), d2(o["utilization"])], ["Queue per operation", d2(h["queue"]), d2(o["queue"])],
             ["Arrivals a week", d1(h["arrivals"]), d1(o["arrivals"])],
@@ -230,7 +238,7 @@ def build():
     assert PR["queue_measured"].idxmax() == "robotic_weld"
     listed = UY.loc[SC.LIST_CENTERS, "utilization"]
     b.append(f"<p>Three work centers are followed in <a href='#f3'>Section 3</a>. The brakes run at {d2(UY.loc['press_brake', 'utilization'])} and carry "
-             f"{pct(QSHARE['press_brake'], 0)} of all queue time. The robotic weld cell runs at {d2(UY.loc['robotic_weld', 'utilization'])} on one shift and has the "
+             f"{pct(QSHARE['press_brake'], 0)} of all queue time ({link('lead')}). The robotic weld cell runs at {d2(UY.loc['robotic_weld', 'utilization'])} on one shift and has the "
              f"longest queue in the shop in {REST}. Assembly runs at {d2(UY.loc['assembly', 'utilization'])} for the year but at {d2(ah['utilization'])} in its "
              f"{int(ah['weeks'])} hot weeks, when its queue is {TIMES[round(ah['queue'] / ao['queue'])]} times the other weeks'. The lasers matter at the year-end peak and are "
              f"followed there. The punch is one machine at {d2(UY.loc['punch', 'utilization'])} whose hot weeks raise a short queue "
@@ -247,8 +255,9 @@ def build():
     lo = C.BINS.iloc[:2]
     below = float((lo["queue_mean"] * lo["weeks"]).sum() / lo["weeks"].sum())
     step = float(C.BINS.iloc[2]["queue_mean"])
-    b.append(f"<p>The curve gives the queue expected at a utilization for the number of machines at the work center, with its scale fitted on rolling 13-week "
-             f"windows of 2023 to 2025. On the fitted curve the brake queue is {d2(FB['queue_at_0.75'])} days per operation at 0.75 utilization, "
+    b.append(f"<p>The curve is the queue expected at each level of utilization for the number of machines at the work center, fitted on rolling 13-week windows "
+             f"from 2023 to 2025; for the brakes the fit explains {pct(FB['r2'], 0)} of the variation in the windowed queue with a rank correlation of "
+             f"{d2(FB['rank_correlation'])}, while a single week's queue carries the backlog of the weeks before it. On the fitted curve the brake queue is {d2(FB['queue_at_0.75'])} days per operation at 0.75 utilization, "
              f"{d2(FB['queue_at_0.85'])} at 0.85, {d2(FB['queue_at_0.90'])} at 0.90 and {d2(FB['queue_at_0.92'])} at 0.92; the measured queue is "
              f"{d2(PY.loc['press_brake', 'queue_measured'])} at {d3(PY.loc['press_brake', 'utilization'])} for the year and "
              f"{d2(PR.loc['press_brake', 'queue_measured'])} at {d3(PR.loc['press_brake', 'utilization'])} in {REST}. Week by week, the brake queue steps from about "
@@ -290,7 +299,7 @@ def build():
 
     b.append("<h3 id='f2_2'>Variability</h3>")
     SV, var = C.SV, C.var
-    b.append(f"<p>Halving the spread of brake setup time (each setup time moved halfway to the mean) releases {d1(SV.loc['year', 'hours_per_week_released'])} brake "
+    b.append(f"<p>Halving the spread of brake setup time (each setup time moved halfway to the mean, the curve rescaled for the lower variability of setup and run) releases {d1(SV.loc['year', 'hours_per_week_released'])} brake "
              f"hours a week and cuts the queue on the curve from {d2(SV.loc['year', 'queue_on_curve'])} to {d2(SV.loc['year', 'queue_with_half_setup_spread'])} days. "
              f"The variability at the brakes is in arrivals (daily coefficient of variation {d2(var('Arrivals: jobs released per working day'))}, Mondays "
              f"{d2(var('Arrivals: Monday'))} times the daily mean, the top customer's month-end {d2(var('Arrivals: top customer'))} times) and in run time "
@@ -393,7 +402,8 @@ def build():
     b.append("<h3 id='f4_1'>Where the overrun sits</h3>")
     ho, nho, small, LOT, FML, FAM = S.HO.loc["Handed over at a shift boundary"], S.HO.loc["Not handed over"], S.LOT.loc["under 25"], S.LOT, S.FML, S.FAM
     bump = small["median_ratio"] / LOT.drop("under 25")["median_ratio"].mean() - 1
-    b.append(f"<p>Setups handed over at a shift boundary (setup transactions by different operators one after the other) are {pct(ho['share_of_setups'], 0)} of setups "
+    b.append(f"<p>Setups handed over at a shift boundary (setup transactions by different operators one after the other across the 14:00 or 22:30 shift boundary; two operators at the same time is a two-person "
+             f"setup, not a handover) are {pct(ho['share_of_setups'], 0)} of setups "
              f"and {pct(ho['share_of_overrun'], 0)} of the overrun hours, median {d2(ho['median_ratio'])} against {d2(nho['median_ratio'])}; most of those hours are "
              f"long setups that reached the boundary rather than the handover itself (<a href='#f4_4'>The setup reduction list and the handover</a>). Lots under 25 "
              f"are {pct(small['setups'] / y['setups'], 0)} of setups and {pct(ST['small_lot_overrun_share'], 0)} of the overrun, median {d2(small['median_ratio'])} "
