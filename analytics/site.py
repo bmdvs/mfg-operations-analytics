@@ -44,12 +44,13 @@ def _capacity():
 
 
 def _options():
-    t = finding(OPTIONS, "f9", 1)
-    year, gain, rest = re.search(r"takes the year to ([\d.]+%) on time, up ([\d.]+ points \([\d.]+ to [\d.]+\)).*Q2-Q4 reaches ([\d.]+%)", t).groups()
-    t = finding(OPTIONS, "f15", 1)
-    cell, changer = re.search(r"robotic cell pays back in ([\d.]+) years, the tool changer on B3 in ([\d.]+), the tower not at all", t).groups()
+    year, gain, rest = re.search(r"takes the year to ([\d.]+%) on time, up ([\d.]+ points \([\d.]+ to [\d.]+\)).*?Q2-Q4 reaches ([\d.]+%)",
+                                 section_text(OPTIONS, "f3")).groups()
+    money = section_text(OPTIONS, "f4_3")
+    alone = re.search(r"On overtime and labor alone .*? second shift\)\.", money).group(0)
+    cell, changer = re.search(r"robotic cell pays back in ([\d.]+) years, the tool changer on B3 in ([\d.]+), the tower not at all", money).groups()
     return (f"A WIP cap and dispatch rules do not help; the setup program, a second shift on the robotic weld cell and planned Saturdays from November through "
-            f"February take the year to {year} on time, up {gain}, and Q2-Q4 to {rest}. " + finding(OPTIONS, "f15", 0) +
+            f"February take the year to {year} on time, up {gain}, and Q2-Q4 to {rest}. {alone}"
             f" With half the released brake hours sold, the robotic cell pays back in {cell} years, the tool changer on B3 in {changer}, the laser tower not at all.")
 
 

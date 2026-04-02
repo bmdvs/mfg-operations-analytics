@@ -9,13 +9,12 @@ from analytics.constraint import analysis as CA
 from analytics.constraint import screen as SC
 from analytics.constraint import sections as C
 from analytics.db import q
-from analytics.reports.combine import REPORTS
+from analytics.reports.layout import Tables, block, chart, join_and, link, page, titled
 from analytics.setups import analysis as SA
 from analytics.setups import sections as S
-from analytics.style.style import AMBER, DOCS, GREY, LIGHT_BLUE, fig, paired_columns, pct, report_shell, save_conformed as save, table
+from analytics.style.style import AMBER, GREY, LIGHT_BLUE, fig, paired_columns, pct, save_conformed as save, table
 
 YEAR, REST, RT = SC.YEAR, "Q2 to Q4", "Q2-Q4"
-STEM, TITLE, _ = REPORTS["capacity"]
 WC = C.WC
 NAME = {"press_brake": "the brakes", "robotic_weld": "the robotic weld cell", "assembly": "assembly", "punch": "the punch", "laser": "the lasers",
         "weld": "the manual weld bays", "grind_deburr": "grind and deburr", "inspection_pack": "inspection and pack", "hardware": "hardware",
@@ -36,50 +35,6 @@ ROBOT_BANDS, ROBOT_FAMILIES, ROBOT_STD = SC.bands(X, "robotic_weld"), SC.familie
 ASM = SC.assembly(X)
 LAS = SC.lasers(X)
 QSHARE = q("select work_center, share_of_queue from marts.mart_queue_by_work_center where period = 'year'").set_index("work_center")["share_of_queue"]
-
-
-def link(key, text=None):
-    stem, title, _ = REPORTS[key]
-    return f"<a href='{stem}.html'>{text or title}</a>"
-
-
-def join_and(items):
-    items = list(items)
-    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
-
-
-class Tables:
-    """The appendix tables, numbered in the order the text first refers to them."""
-
-    def __init__(self):
-        self.held, self.order = {}, []
-
-    def add(self, key, title, html):
-        self.held[key] = (title, html)
-
-    def see(self, *keys):
-        for k in keys:
-            assert k in self.held and k not in self.order, k
-            self.order.append(k)
-        links = [f"<a href='#t{self.order.index(k) + 1}'>{self.order.index(k) + 1}</a>" for k in keys]
-        return f"See Appendix Table{'s' if len(links) > 1 else ''} {join_and(links)} for additional detail."
-
-    def appendix(self):
-        assert set(self.order) == set(self.held), set(self.held) - set(self.order)
-        return "\n".join(f"<h3 id='t{n}'>Table {n}. {self.held[k][0]}</h3>{self.held[k][1]}" for n, k in enumerate(self.order, 1))
-
-
-def chart(title, img):
-    return f"<div class='chart-title'>{title}</div>{img}"
-
-
-def titled(img, title):
-    """A figure under its title, with the title as its alt text."""
-    return chart(title, img[:img.index('alt="') + 5] + title + img[img.index('"', img.index('alt="') + 5):])
-
-
-def block(title, html):
-    return f"<p><b>{title}</b></p>{html}"
 
 
 # ── figures ─────────────────────────────────────────────────────────────────
@@ -504,13 +459,8 @@ def build():
 
     b.append("<h2 id='appendix'>Appendix</h2>")
     b.append(T.appendix())
-    body = "\n".join(b).replace(REST, RT)
-    toc = [("f1", "1. The Screen"), ("f2", "2. Queue Against Load"), ("f3", "3. The Constraints"), ("f4", "4. Setups Against Standard"), ("f5", "5. Run Standards"),
-           ("appendix", "Appendix")]
-    out = DOCS / "reports"
-    out.mkdir(parents=True, exist_ok=True)
-    (out / f"{STEM}.html").write_text(report_shell(f"Report: {TITLE}", "", "", body, toc), encoding="utf8")
-    print(f"wrote docs/reports/{STEM}.html: 5 sections, {len(T.order)} appendix tables")
+    toc = [("f1", "1. The Screen"), ("f2", "2. Queue Against Load"), ("f3", "3. The Constraints"), ("f4", "4. Setups Against Standard"), ("f5", "5. Run Standards")]
+    print(f"wrote {page('capacity', chr(10).join(b), toc)}: 5 sections, {len(T.order)} appendix tables")
     return T.order
 
 
