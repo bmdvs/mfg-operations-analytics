@@ -7,9 +7,9 @@ from analytics.style.style import DOCS, report_shell, table
 
 REPORTS = {
     "lead": ("lead_time_and_late_jobs", "Flow and On-time Delivery", "the flow report"),
-    "brakes": ("brakes_capacity_and_setups", "The brakes: capacity, utilization and setups", "the brakes report"),
-    "options": ("options_tested", "Options tested: release rules, scheduling, shifts and equipment", "the options report"),
-    "quoting": ("quoting_and_early_warning", "Quoting and early warning from load", "the quoting report"),
+    "capacity": ("capacity_constraints_and_setups", "Capacity, Constraints and Setups", "the capacity report"),
+    "options": ("options_tested", "Options Tested", "the options report"),
+    "quoting": ("quoting_and_early_warning", "Quoting and Early Warning from Load", "the quoting report"),
 }
 SHOP = "Custom sheet-metal fabrication job shop, about 120 employees, one plant. "
 TABLES = re.compile(r"\b(Tables?) (\d+[a-z]?(?:(?:, | and | to )\d+[a-z]?)*)")

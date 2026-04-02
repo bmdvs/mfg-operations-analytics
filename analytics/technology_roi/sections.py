@@ -155,18 +155,18 @@ def t_measured(short=False):
     nv = M["november_weeks"]
     a = O["press_brake_atc"]
     rows = [
-        ["Brake utilization", f"{M['brake_utilization']:.3f}", "[[N:brakes]]"],
-        ["Brake setup hours per week", d1(M["brake_setup_hours_per_week"]), "[[N:brakes]]"],
-        ["of which tool change, at the assumed share", f"{M['tool_change_hours_per_week']:.1f} ({a['tool_change_share_of_setup']:.0%} of setup, assumption)", "[[N:brakes]], assumption"],
-        ["Setup hours per week on B3", f"{M['b3_setup_hours_per_week']:.1f} ({pct(M['b3_share_of_setup_hours'])} of brake setup hours)", "[[N:brakes]]"],
-        ["Brake hours per week released by the setup levers", d1(M["setup_levers_hours_per_week"]), "[[N:brakes]]"],
-        ["Laser utilization", f"{M['laser_utilization']:.3f}", "[[N:brakes]]"],
+        ["Brake utilization", f"{M['brake_utilization']:.3f}", "[[N:capacity]]"],
+        ["Brake setup hours per week", d1(M["brake_setup_hours_per_week"]), "[[N:capacity]]"],
+        ["of which tool change, at the assumed share", f"{M['tool_change_hours_per_week']:.1f} ({a['tool_change_share_of_setup']:.0%} of setup, assumption)", "[[N:capacity]], assumption"],
+        ["Setup hours per week on B3", f"{M['b3_setup_hours_per_week']:.1f} ({pct(M['b3_share_of_setup_hours'])} of brake setup hours)", "[[N:capacity]]"],
+        ["Brake hours per week released by the setup levers", d1(M["setup_levers_hours_per_week"]), "[[N:capacity]]"],
+        ["Laser utilization", f"{M['laser_utilization']:.3f}", "[[N:capacity]]"],
         ["Laser utilization, weeks of November 11, 18 and 25, 2024", ", ".join(f"{x:.2f}" for x in nv["laser_utilization"]) +
          f" ({join_and([n0(x) for x in nv['wip_at_laser']])} jobs waiting)", "[[N:lead]]"],
-        ["Robotic weld utilization", f"{M['robotic_weld_utilization']:.3f}", "[[N:brakes]]"],
+        ["Robotic weld utilization", f"{M['robotic_weld_utilization']:.3f}", "[[N:capacity]]"],
         ["Saturday brake shifts and extended hours", f"{n0(M['saturday_shifts'])} shifts, {n0(M['extended_hours'])} hours", "[[N:quoting]]"],
         [f"Revenue of jobs shipped in {YEAR}", usd(M["revenue"]), "ERP"],
-        ["Crewed brake hours worked", n0(M["brake_hours"]), "[[N:brakes]]"],
+        ["Crewed brake hours worked", n0(M["brake_hours"]), "[[N:capacity]]"],
         ["Revenue per brake hour", usd(M["revenue_per_brake_hour"]), "the two lines above"],
         ["Brake standard hours a robotic cell can run", f"{pct(M['cell_share_of_brake_standard_hours'])} (light, repeat parts, lots of 25 or more)", "ERP routings"],
     ]

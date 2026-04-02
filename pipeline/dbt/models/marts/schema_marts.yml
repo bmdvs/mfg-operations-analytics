@@ -23,3 +23,11 @@ models:
         data_tests: [unique, not_null]
       - name: quote_days
         data_tests: [not_null]
+  - name: mart_operation_arrivals
+    columns:
+      - name: job_id
+        data_tests: [not_null]
+      - name: arrival_ts
+        data_tests: [not_null]
+      - name: export_batch_id
+        data_tests: [not_null]
