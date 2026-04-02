@@ -24,7 +24,7 @@ INDICATORS = [
     ("outside_receipt_on_time", "Outside-processing receipts on time", -1, "review set"),
     ("kit_complete_rate", "Kit completeness", -1, "review set"),
     ("brake_backlog_days_at_release", "Brake backlog at release (days)", 1, "added"),
-    ("promised_inside_standard_share", "Lines promised inside the standard lead time", 1, "added"),
+    ("promised_inside_standard_share", "Jobs released late", 1, "added"),
     ("brake_std_hours_released", "Brake standard hours released", 1, "floor"),
     ("wip_at_laser", "Jobs waiting at the lasers", 1, "floor"),
     ("wip_at_brakes", "Jobs waiting at the brakes", 1, "floor"),

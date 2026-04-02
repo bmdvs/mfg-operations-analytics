@@ -1,4 +1,4 @@
-"""Lead-time quoting and quote analytics: the sections, tables and figures of its half of the report, from the marts.
+"""Lead-time quoting and quote analytics: the data, tables and figures of its part of the report, from the marts.
 
 Built by analytics.reports.quoting_and_early_warning.
 """
@@ -204,17 +204,18 @@ def t_release_class():
 
 
 def t_promises():
-    rows = [[per, t.capitalize(), n0(r["jobs"]), pct(r["share_of_jobs"]), d1(r["promised_mean"]), n0(r["actual_median"]), pct(r["on_time"]), pct(r["quote_met"]),
+    kind = {"rush": "Rush", "short promise, not rush": "Released late, not rush", "standard promise": "Standard promise"}
+    rows = [[per, kind[t], n0(r["jobs"]), pct(r["share_of_jobs"]), d1(r["promised_mean"]), n0(r["actual_median"]), pct(r["on_time"]), pct(r["quote_met"]),
              n0(r["late_jobs"]), pct(r["share_of_late_jobs"]), n0(r["days_late"]), pct(r["share_of_days_late"]), n0(r["released_late_days"])] for (per, t), r in PROM.iterrows()]
-    return table(pd.DataFrame(rows, columns=["Period", "Promise", "Jobs", "Share of jobs", "Mean promised lead", "Median lead time", "On time to the promise",
+    return table(pd.DataFrame(rows, columns=["Period", "Order line", "Jobs", "Share of jobs", "Mean promised lead time", "Median lead time", "On time to the promised date",
                                              "Within the standard lead time", "Late jobs", "Share of late jobs", "Days late", "Share of days late",
-                                             "Released-late days ([[N:lead]])"]))
+                                             "Released-late days (the flow report)"]))
 
 
 def t_family():
     rows = [[x.period, x.family.capitalize(), CLS[x.routing_class], n0(x.jobs), d1(x.promised_mean), n0(x.actual_median), n0(x.actual_p80), pct(x.quote_met),
              pct(x.on_time)] for x in FAM.itertuples()]
-    return table(pd.DataFrame(rows, columns=["Period", "Part family", "Routing class", "Jobs", "Mean promised lead", "Median lead time", "80th percentile",
+    return table(pd.DataFrame(rows, columns=["Period", "Part family", "Routing class", "Jobs", "Mean promised lead time", "Median lead time", "80th percentile",
                                              "Within the standard lead time", "On time"]))
 
 
@@ -253,173 +254,9 @@ def t_rush():
     return table(pd.DataFrame(rows, columns=["Quoted lead time (days)", "Quotes", "Win rate", "Lost with reason lead time, share of quotes"]))
 
 
-# ── report ──────────────────────────────────────────────────────────────────
-HEADER_META = (f"Custom sheet-metal fabrication job shop, about 120 employees, one plant. Jobs shipped in {YEAR}, whole year and {REST}; quotes with the RFQ received "
-               f"from 2023 to {YEAR}.<br>Sources: ERP quotes, orders, jobs and shipments, shop-floor data collection (batch {D['batch']}). Lead time in working days "
-               f"from the release day to the ship day; turnaround in weekdays.")
-
-
 def fx(per, c, col):
     return FIX.loc[(per, c), col]
 
 
 def pr(per, t, col):
     return PROM.loc[(per, t), col]
-
-
-def report():
-    ti, to, tr, fq = SC[TABLE_IN], SC[TABLE_OUT], SC[TRAIL], SC[FIXED]
-    b = []
-    b.append("<h2 id='f1'>1. The fixed quote in the lead-time distribution</h2>")
-    b.append(f"<p>The 10-day repeat quote sits at the {nth(fx(PY, 'repeat part', 'percentile_of_quote'))} percentile of {YEAR} repeat lead time "
-             f"({nth(fx(PR, 'repeat part', 'percentile_of_quote'))} in {REST}), the 15-day new-part quote at the {nth(fx(PY, 'new part', 'percentile_of_quote'))} "
-             f"({nth(fx(PR, 'new part', 'percentile_of_quote'))}) and the 20-day outside-processing quote at the "
-             f"{nth(fx(PY, 'outside processing', 'percentile_of_quote'))} ({nth(fx(PR, 'outside processing', 'percentile_of_quote'))}). Standard promises shipped "
-             f"{pct(fx(PY, 'all', 'standard_promise_on_time'))} on time for the year and {pct(fx(PR, 'all', 'standard_promise_on_time'))} in {REST}.</p>")
-    b.append(t_fixed())
-    b.append(f"<div class='caption'>Table 1. The fixed quote against the lead time of jobs shipped, by routing class, {YEAR} and {REST}.</div>")
-    b.append(fig_distribution())
-    b.append(f"<div class='caption'>Figure 1. Lead time of jobs shipped in {YEAR} by routing class, with the fixed quote and the quote-table values by brake backlog "
-             f"band marked.</div>")
-
-    b.append("<h2 id='f2'>2. Rush lines and short promises</h2>")
-    b.append(f"<p>Rush lines ship within the standard lead time on {pct(pr(PY, 'rush', 'quote_met'))} of jobs ({pct(pr(PR, 'rush', 'quote_met'))} in {REST}) and on "
-             f"time to their promise on {pct(pr(PY, 'rush', 'on_time'))} ({pct(pr(PR, 'rush', 'on_time'))}); short promises not flagged rush "
-             f"{pct(pr(PY, 'short promise, not rush', 'quote_met'))} ({pct(pr(PR, 'short promise, not rush', 'quote_met'))}) and "
-             f"{pct(pr(PY, 'short promise, not rush', 'on_time'))} ({pct(pr(PR, 'short promise, not rush', 'on_time'))}). They are "
-             f"{pct(pr(PY, 'rush', 'share_of_jobs'))} and {pct(pr(PY, 'short promise, not rush', 'share_of_jobs'))} of jobs and together "
-             f"{pct(pr(PY, 'rush', 'share_of_late_jobs') + pr(PY, 'short promise, not rush', 'share_of_late_jobs'))} of late jobs and "
-             f"{pct(pr(PY, 'rush', 'share_of_days_late') + pr(PY, 'short promise, not rush', 'share_of_days_late'))} of days late for the year, "
-             f"{pct(pr(PR, 'rush', 'share_of_late_jobs') + pr(PR, 'short promise, not rush', 'share_of_late_jobs'))} and "
-             f"{pct(pr(PR, 'rush', 'share_of_days_late') + pr(PR, 'short promise, not rush', 'share_of_days_late'))} in {REST}. [[R:lead]] attributes "
-             f"{n0(pr(PY, 'rush', 'released_late_days') + pr(PY, 'short promise, not rush', 'released_late_days'))} of their "
-             f"{n0(pr(PY, 'rush', 'days_late') + pr(PY, 'short promise, not rush', 'days_late'))} days late to the promise itself.</p>")
-
-    b.append("<h2 id='f3'>3. The quote table</h2>")
-    q = QTAB.set_index(["routing_class", "band"])["p80"]
-    b.append(f"<p>A quote from the 80th-percentile lead time by routing class and brake backlog at release, never below the fixed quote, is met on "
-             f"{pct(to.loc[PY, 'met'])} of non-rush jobs for the year and {pct(to.loc[PR, 'met'])} in {REST} when each job is quoted from the jobs shipped before "
-             f"its release, against {pct(fq.loc[PY, 'met'])} and {pct(fq.loc[PR, 'met'])} for the fixed quote; it is longer than the fixed quote on "
-             f"{pct(to.loc[PY, 'longer'])} and {pct(to.loc[PR, 'longer'])} of jobs. The rule quotes the 80th percentile, so 80% is its hit rate by construction on the "
-             f"jobs quoted. The table as fitted on 2023 to {YEAR} (Table 2) is met in sample on {pct(ti.loc[PY, 'met'])} and {pct(ti.loc[PR, 'met'])} and is longer "
-             f"on {pct(ti.loc[PY, 'longer'])} and {pct(ti.loc[PR, 'longer'])}; the gap for the year is what the table's high-backlog bands learn from the 2024 to "
-             f"{YEAR} event. Under 2 days of backlog the table gives {n0(q[('repeat part', 'under 2')])}, {n0(q[('new part', 'under 2')])} and "
-             f"{n0(q[('outside processing', 'under 2')])} days; its lowest band for repeat parts is {n0(q[('repeat part', 'under 2')])} days against the fixed 10, so "
-             f"every repeat part is quoted at least one day longer, and the median lengthening where longer is {n0(ti.loc[PR, 'median_longer_by'])} day in {REST}. "
-             f"The trailing 13-week rule is met on {pct(tr.loc[PY, 'met'])} and {pct(tr.loc[PR, 'met'])} and is longer on {pct(tr.loc[PY, 'longer'])} and "
-             f"{pct(tr.loc[PR, 'longer'])}.</p>")
-    b.append(t_quote_table())
-    b.append(f"<div class='caption'>Table 2. The quote table: 80th-percentile lead time by routing class and brake backlog at release, jobs shipped 2023 to {YEAR}."
-             f"</div>")
-    b.append(t_rules())
-    b.append(f"<div class='caption'>Table 3. Four quote rules on non-rush jobs shipped in {YEAR}: share meeting the quote, share quoted longer than the fixed quote, "
-             f"mean quote, and share meeting the quote by release quarter.</div>")
-
-    b.append("<h2 id='f4'>4. By release quarter</h2>")
-    q2 = [g for g in SC[TRAIL].index if g.startswith(f"released {YEAR} Q2,")]
-    b.append(f"<p>Jobs released in {qlabel(FIRST_Q)} ({n0(fq.loc[FIRST_Q, 'jobs'])}) met the fixed quote on {pct(fq.loc[FIRST_Q, 'met'])} and the trailing rule on "
-             f"{pct(tr.loc[FIRST_Q, 'met'])}; the quote table as fitted, reading the backlog on the day, quoted them {d1(ti.loc[FIRST_Q, 'mean_quote'])} days on "
-             f"average and was met on {pct(ti.loc[FIRST_Q, 'met'])} ({pct(to.loc[FIRST_Q, 'met'])} out of sample). From jobs released in {YEAR} Q1 onward the quote "
-             f"table is met on {pct(ti.loc[PX, 'met'])} for the year ({pct(to.loc[PX, 'met'])} out of sample), the trailing rule on {pct(tr.loc[PX, 'met'])} and the "
-             f"fixed quote on {pct(fq.loc[PX, 'met'])}. The trailing rule quotes {n0(tr.loc[q2, 'mean_quote'].min())} to {n0(tr.loc[q2, 'mean_quote'].max())} days to "
-             f"jobs released in {YEAR} Q2 and is met on {pct(tr.loc[q2, 'met'].min(), 0)} to {pct(tr.loc[q2, 'met'].max(), 0)} of them; the quote table carries load "
-             f"through the backlog band rather than a window. For jobs released in {YEAR} Q3 and Q4 the out-of-sample quote table and the fixed quote are met at "
-             f"the same rate ({pct(to.loc[RQ[3], 'met'])} against {pct(fq.loc[RQ[3], 'met'])}, {pct(to.loc[RQ[4], 'met'])} against {pct(fq.loc[RQ[4], 'met'])}); "
-             f"the table's gain is on jobs released from {YEAR} Q1 to Q2, into and out of the event.</p>")
-    b.append(fig_hit())
-    b.append(f"<div class='caption'>Figure 2. Share of non-rush jobs meeting the fixed quote, the out-of-sample quote table and the trailing 13-week rule, by release "
-             f"quarter; the line is 80%.</div>")
-
-    b.append("<h2 id='f5'>5. Win rate and turnaround</h2>")
-    b.append(f"<p>Quotes sent within 3 days win {pct(TURN['fast'])} against {pct(TURN['slow'])} for those taking longer, a gap of {d1(TURN['raw_gap'] * 100)} points "
-             f"and {d1(TURN['adjusted_gap'] * 100)} ({d1(TURN['adjusted_low'] * 100)} to {d1(TURN['adjusted_high'] * 100)}) after adjusting for RFQ complexity. Within "
-             f"the eight complexity groups the gap is {d1(STRATA['gap'].min() * 100)} to {d1(STRATA['gap'].max() * 100)} points. The "
-             f"{n0(TBAND.loc[TBAND['turnaround'] == '0 to 1', 'quotes'].iloc[0])} quotes turned in 0 to 1 day hold no new parts, no parts with 8 or more bends and no "
-             f"outside processing. The win rate overall is {pct(TURN['win_rate'])} on {n0(TURN['quotes'])} quotes; {pct(TURN['quotes_fast'] / TURN['quotes'])} are "
-             f"sent within 3 days.</p>")
-    b.append(fig_turnaround())
-    b.append("<div class='caption'>Figure 3. Win rate by quote turnaround, as quoted and adjusted for RFQ complexity, and the gap within each complexity group.</div>")
-
-    b.append("<h2 id='f6'>6. Rush RFQs</h2>")
-    b.append(f"<p>On rush RFQs the win rate falls from {pct(RUSH['win_rate'].iloc[0])} at a quoted lead time of 5 days or fewer to {pct(RUSH['win_rate'].iloc[-1])} at "
-             f"12 or more, and lead time is the entered lost reason on {pct(RUSH['lost_to_lead_time'].iloc[0])} to {pct(RUSH['lost_to_lead_time'].max())} of them. The "
-             f"quote table lengthens {pct(to.loc[PY, 'longer'])} of non-rush promises for the year and {pct(to.loc[PR, 'longer'])} in {REST} out of sample "
-             f"({pct(ti.loc[PY, 'longer'])} and {pct(ti.loc[PR, 'longer'])} as fitted).</p>")
-    b.append(fig_rush())
-    b.append("<div class='caption'>Figure 4. Win rate on rush RFQs by quoted lead time.</div>")
-
-    b.append("<h2 id='f7'>7. Customers, key accounts and part families</h2>")
-    top = CUST.iloc[0]
-    hi, lo = CUST.sort_values("adjusted").iloc[-1], CUST.sort_values("adjusted").iloc[0]
-    k = KEY.set_index("key_account")
-    b.append(f"<p>{top['customer_name']}, the customer with the most quotes ({n0(top['quotes'])}), wins {pct(top['win_rate'])} against {pct(top['expected'])} "
-             f"expected from the complexity of its RFQs. Among the ten customers with the most quotes the adjusted win rate runs from {pct(lo['adjusted'])} "
-             f"({lo['customer_name']}) to {pct(hi['adjusted'])} ({hi['customer_name']}). Key accounts win {pct(k.loc[True, 'win_rate'])} against "
-             f"{pct(k.loc[False, 'win_rate'])} for other customers. By part family the win rate runs from {pct(FAMW['win_rate'].min())} to "
-             f"{pct(FAMW['win_rate'].max())} and, adjusted for complexity, from {pct(FAMW['adjusted'].min())} to {pct(FAMW['adjusted'].max())}.</p>")
-
-    b.append("<h2 id='f8'>8. Estimators</h2>")
-    b.append(f"<p>The four estimators do not differ: median turnaround is {n0(EST['turnaround_median'].min())} days for each, {pct(EST['slow'].min())} to "
-             f"{pct(EST['slow'].max())} of their quotes take over 3 days, and the adjusted win rate is {pct(EST['adjusted'].min())} to {pct(EST['adjusted'].max())}.</p>")
-
-    b.append("<h2 id='f9'>9. Lost reasons as entered</h2>")
-    lost = LOST.set_index("reason")["all"]
-    b.append(f"<p>{n0(lost['blank'])} of {n0(lost.sum())} lost quotes carry no reason ({pct(lost['blank'] / lost.sum(), 0)}); price is entered on {n0(lost['price'])} "
-             f"and lead time on {n0(lost['lead time'])}. {n0(STATUS.get('no decision', 0))} quotes have no decision recorded.</p>")
-
-    b.append("<h2 id='rec'>Recommendation</h2>")
-    b.append(f"<p>Quote from the table at order entry by routing class and the brake backlog on the day of the quote, never below the fixed quote: out of sample it is "
-             f"met on {pct(to.loc[PR, 'met'])} of non-rush jobs in {REST} and lengthens {pct(to.loc[PR, 'longer'])} of them. Refresh the table quarterly from the "
-             f"trailing twelve quarters, all quarters included, so the high-backlog bands keep their counts. Require the rush flag and a named approver on every "
-             f"promise inside the standard lead time ([[R:lead]]). Turn complex RFQs in three days or less. Require a lost reason on every lost quote.</p>")
-
-    b.append("<h2 id='method'>Method and data</h2>")
-    oq = QTAB.set_index(["routing_class", "band"])["jobs_ordinary"]
-    b.append(f"<p>A quote is met when the working days from the release day to the ship day are at or under it. The fixed quote is 10 days for repeat parts, 15 for "
-             f"new parts and 20 with outside processing; a new-part job is the first order against a new-part quote line within 60 days of the quote decision. "
-             f"Standard promises are lines that are not rush and not promised inside the standard lead time.<br>"
-             f"Brake backlog at release is the standard hours of brake operations waiting at 10:00 on the release date, at the brakes' actual-over-standard ratio, "
-             f"in days of crewed brake capacity; bands are under 2, 2 to 3, 3 to 5 and over 5 days. The quote is the 80th-percentile lead time of the routing class "
-             f"and band, rounded up; with fewer than {A.MIN_JOBS} jobs in a band the routing class is used. Out of sample, each job is quoted from jobs shipped "
-             f"before its release date. The ordinary quarters alone hold {n0(oq[('repeat part', 'over 5')])} repeat-part jobs and {n0(oq[('new part', 'over 5')])} "
-             f"new-part jobs over 5 days of backlog. Rush lines are not requoted.<br>"
-             f"Win rate is won over quotes sent, with no decision counted as not won. The adjustment is a logistic model of the win on turnaround over 3 days, new "
-             f"part, 8 or more bends and outside processing; the adjusted rates are the model's mean predicted win rate with every quote set to 3 days or less and "
-             f"to over 3 days, with the interval from 200 resamples of the quotes. Group win rates are adjusted as the overall rate plus the group's rate less the "
-             f"rate expected from its mix of new parts, 8 or more bends, outside processing and rush RFQs.</p>")
-
-    b.append("<h2 id='appendix'>Appendix</h2>")
-    b.append("<h3>Table 4. Rush lines, short promises and standard promises</h3>" + t_promises())
-    b.append("<h3>Table 5. Quote rules by release quarter and routing class</h3>" + t_release_class())
-    b.append("<h3>Table 6. Promised and actual lead time by part family and routing class</h3>" + t_family())
-    b.append("<h3>Table 7. Win rate by turnaround band</h3>" + t_band())
-    b.append("<h3>Table 8. Win rate by complexity group and turnaround</h3>" + t_strata())
-    b.append("<h3>Table 9. Win rate on rush RFQs by quoted lead time</h3>" + t_rush())
-    b.append("<h3>Table 10. Win rate by customer: the ten customers with the most quotes</h3>" + t_group(CUST, "Customer"))
-    b.append("<h3>Table 11. Win rate by key account and part family</h3>" + t_group(KEY, "Customer group", {True: "Key account", False: "Other"}) +
-             t_group(FAMW.assign(family=FAMW["family"].str.capitalize()), "Part family"))
-    b.append("<h3>Table 12. Quote volume and turnaround by estimator</h3>" + t_estimators() + t_group(EST, "Estimator, 2023 to 2025"))
-    b.append("<h3>Table 13. Lost reasons as entered</h3>" + t_lost())
-    toc = [("f1", "The fixed quote"), ("f2", "Rush and short promises"), ("f3", "The quote table"), ("f4", "By release quarter"), ("f5", "Win rate and turnaround"),
-           ("f6", "Rush RFQs"), ("f7", "Customers and families"), ("f8", "Estimators"), ("f9", "Lost reasons"), ("rec", "Recommendation"),
-           ("method", "Method and data"), ("appendix", "Appendix")]
-    return {"body": "\n".join(b), "toc": toc[:-3], "meta": HEADER_META}
-
-
-COUNTERMEASURES = [
-    ("Quote table in the order-entry screen: routing class and the brake backlog on the day, never below the fixed quote", "Customer service manager, IT", "April 2026"),
-    ("Rush flag and a named approver on every promise inside the standard lead time ([[R:lead]])", "Customer service manager", "February 2026"),
-    ("Quote turnaround of three days or less on complex RFQs", "Estimating lead", "March 2026"),
-    ("Lost reason required on every lost quote", "Customer service manager", "February 2026"),
-]
-
-
-def control():
-    """The target, the countermeasures and the follow-up, for the Recommendation section."""
-    target = ("Promised lead times met on 80% of standard promises in every quarter, and quote turnaround of three days or less on 80% "
-              "of RFQs.")
-    follow = ("The quote table refreshed quarterly from the trailing twelve quarters, all quarters included. Hit rate and share of "
-              "quotes longer than the fixed quote reported monthly.")
-    return target, COUNTERMEASURES, follow
-
-
