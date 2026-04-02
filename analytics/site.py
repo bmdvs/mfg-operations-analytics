@@ -55,12 +55,13 @@ def _options():
 
 
 def _quoting():
-    t = finding(QUOTING, "f3", 0)
-    y, r, fy, fr, ly, lr = re.search(r"is met on ([\d.]+%) of non-rush jobs for the year and ([\d.]+%) in Q2-Q4 .* against ([\d.]+%) and ([\d.]+%) for the fixed "
+    t = section_text(QUOTING, "f2")
+    y, r, fy, fr, ly, lr = re.search(r"is met on ([\d.]+%) of non-rush jobs for the year and ([\d.]+%) in Q2-Q4 .*? against ([\d.]+%) and ([\d.]+%) for the fixed "
                                      r"quote; it is longer than the fixed quote on ([\d.]+%) and ([\d.]+%)", t).groups()
-    assert "moved before all four" in report_text(QUOTING, "f13")
+    assert "moved before all four" in section_text(QUOTING, "f4_2")
+    start = re.search(r"The on-time start rate correlates .*? on shifted series\.", section_text(QUOTING, "f4_1")).group(0)
     return (f"The fixed quote is met on {fy} of non-rush jobs for the year and {fr} in Q2-Q4; a quote by routing class and brake backlog at release, never below "
-            f"the fixed quote, is met on {y} and {r} out of sample and lengthens {ly} and {lr} of promises. " + finding(QUOTING, "f11", 0) +
+            f"the fixed quote, is met on {y} and {r} out of sample and lengthens {ly} and {lr} of promised lead times. " + start +
             " It moved before all four declines in on-time delivery; no other weekly measure leads in ordinary weeks.")
 
 
