@@ -1,4 +1,4 @@
-"""Release control and the shop model: the sections, tables and figures of its half of the report, from the scenario runs and the marts.
+"""Release control and the shop model: the data, tables and figures of its part of the report, from the scenario runs and the marts.
 
 Built by analytics.reports.options_tested.
 The scenario runs come from analytics.release_control.scenarios and validate (results/scenario_runs.csv, results/validation_quarters.csv).
@@ -211,7 +211,7 @@ def t_packages():
                          "" if sc == S8 else spts(vs.loc["on_time_delivery"]), d1(v(p, sc, "lead_time_p90")), sdays(p.loc[(sc, "lead_time_p90")]),
                          "" if sc == S8 else sdays(vs.loc["lead_time_p90"]), n0(v(p, sc, "wip_mean")), d1(v(p, sc, "saturday_shifts")), n0(v(p, sc, "extended_hours"))])
         for name, m in (("No-capital package at the load-based quote table", "on_time_delivery_quote_table"),
-                        ("No-capital package at the trailing 13-week promise", "on_time_delivery_load_aware")):
+                        ("No-capital package at the trailing 13-week rule", "on_time_delivery_load_aware")):
             rows.append([name, pct(v(p, NOCAP, m)), paired(period, NOCAP, m, S0, "on_time_delivery"), "", "", "", "", "", "", ""])
         out += f"<h3>{label}</h3>" + table(pd.DataFrame(rows, columns=["Package", "On time", "Against current practice (points)", "Against setup reduction (points)",
                                                                        "90th-percentile lead time", "Against current practice (days)",
@@ -252,153 +252,5 @@ def t_promise():
             for rule, m, lm in (("Load-based quote table", "on_time_delivery_quote_table", "promises_longer_quote_table"),
                                 ("Routing class, trailing 13 weeks", "on_time_delivery_load_aware", "promises_longer_than_fixed_quote")):
                 rows.append([label, name, rule, pct(a["mean"]), pct(v(p, sc, m)), paired(period, sc, m, sc, "on_time_delivery"), pct(v(p, sc, lm), 0)])
-    return table(pd.DataFrame(rows, columns=["Period", "Floor", "Promise rule", "On time at the promises as made", "On time at the rule", "Difference (points)",
-                                             "Non-rush promises longer than the fixed quote"]))
-
-
-# ── report ──────────────────────────────────────────────────────────────────
-HEADER_META = (f"Custom sheet-metal fabrication job shop, about 120 employees, one plant. Shop model of the jobs released from January 2024 to December {YEAR}; "
-               f"results for jobs shipped in {YEAR}, whole year and {REST}.<br>"
-               f"Sources: ERP, shop-floor data collection, maintenance exports (batch {batch}); {REPS} replications per scenario, 95% intervals. "
-               f"Lead time in working days, scheduled Saturdays counted.")
-
-
-def report():
-    cap = ["S1 WIP cap 240", "S1 WIP cap 210", "S1 WIP cap 180"]
-    paced, edd, cr, spt = SINGLE[3], SINGLE[4], SINGLE[5], SINGLE[6]
-    s4, s5, s6, s7 = SINGLE[7], SINGLE[8], SINGLE[9], SINGLE[10]
-    b = []
-    b.append("<h2 id='f1'>1. Validation</h2>")
-    b.append(f"<p>The model of current practice is within tolerance on {V_IN} of {V_TOL} measures. It replays the 2024 year-end build and clears it sooner than the "
-             f"shop did: first-quarter on-time delivery is {pct(Q1['otd_s'])} in the model against {pct(Q1['otd_m'])} measured, and every other quarter is within "
-             f"{OTHER_GAP * 100:.1f} points. Effects on the first-quarter event are therefore lower bounds. The model's brakes run "
-             f"{(v(PY, S0, 'brake_utilization') - measured(1)['brake_utilization']) * 100:.0f} points hotter than measured ({v(PY, S0, 'brake_utilization'):.3f} against "
-             f"{measured(1)['brake_utilization']:.3f}), so the effects of capacity levers in the ordinary quarters are slightly overstated.</p>")
-    b.append(t_validation())
-    b.append(f"<div class='caption'>Table 1. The model under current practice against measured {YEAR}, with tolerances.</div>")
-
-    b.append("<h2 id='f2'>2. Release control does not help this shop</h2>")
-    b.append(f"<p>A WIP cap at 240, 210 and 180 jobs lowers on-time delivery by {pts(PR, cap[0])}, {pts(PR, cap[1])} and {pts(PR, cap[2])} points in {REST} "
-             f"({pts(PY, cap[0])}, {pts(PY, cap[1])} and {pts(PY, cap[2])} for the year) and lengthens the 90th-percentile lead time by "
-             f"{d1(v(PR, cap[0], 'lead_time_p90', 'diff'))} to {d1(v(PR, cap[2], 'lead_time_p90', 'diff'))} days; jobs wait {d1(hold(cap[0]))} to "
-             f"{d1(hold(cap[2]))} days at the gate. Constraint-paced release is {pts(PR, paced)} points worse in {REST}. In an ordinary quarter the "
-             f"floor already carries less WIP than the quoted lead times allow ([[R:lead]]); a cap delays work the floor could have started.</p>")
-    b.append(fig_cap())
-    b.append(f"<div class='caption'>Figure 1. On-time delivery against the days a job waits for release under a WIP cap of 240, 210 and 180 jobs.</div>")
-
-    b.append("<h2 id='f3'>3. Dispatch rules do not help either</h2>")
-    b.append(f"<p>Earliest due date makes no difference for the year, {spp(PY.loc[(edd, 'on_time_delivery')])}, is {pts(PR, edd)} points worse in {REST} and "
-             f"ships {n0(-v(PY, edd, 'jobs_shipped', 'diff'))} fewer jobs. Critical ratio is {pts(PR, cr)} to {pts(PY, cr)} points worse. Shortest processing time at "
-             f"the brakes shortens the median and is {pts(PY, spt)} to {pts(PR, spt)} points worse on time, with {n0(-v(PY, spt, 'jobs_shipped', 'diff'))} fewer jobs "
-             f"shipped in the year. The dispatch list with rush and hot-list precedence is as good as any rule tested.</p>")
-
-    b.append("<h2 id='f4'>4. Capacity at the constraint is the lever</h2>")
-    b.append(f"<p>The setup reduction ([[R:capacity]]) raises on-time delivery by {by(PY.loc[(S8, 'on_time_delivery')])} for the year, shortens the 90th percentile by "
-             f"{d1(-v(PY, S8, 'lead_time_p90', 'diff'))} days, lowers WIP by {n0(-v(PY, S8, 'wip_mean', 'diff'))} jobs and cuts Saturday shifts from "
-             f"{n0(v(PY, S0, 'saturday_shifts'))} to {n0(v(PY, S8, 'saturday_shifts'))} and extended hours from {n0(v(PY, S0, 'extended_hours'))} to "
-             f"{n0(v(PY, S8, 'extended_hours'))}. In {REST} it shortens the 90th percentile by {d1(-v(PR, S8, 'lead_time_p90', 'diff'))} days and leaves on-time delivery "
-             f"unchanged, {spp(PR.loc[(S8, 'on_time_delivery')])}: lateness in those quarters is set by the promise ([[R:lead]]).</p>")
-    b.append(fig_effects())
-    b.append(f"<div class='caption'>Figure 2. Change in on-time delivery and in 90th-percentile lead time against current practice, by scenario, {YEAR} and {REST}, "
-             f"with 95% intervals.</div>")
-
-    b.append("<h2 id='f5'>5. The secondary constraint</h2>")
-    y5 = PY.loc[(s5, "on_time_delivery")]
-    b.append(f"<p>A second shift on the robotic weld cell raises on-time delivery by {by(PR.loc[(s5, 'on_time_delivery')])} in {REST} and shortens the 90th "
-             f"percentile there by {d1(-v(PR, s5, 'lead_time_p90', 'diff'))} days; for the year the effect is {spp(y5)}"
-             + (", not distinguishable from zero." if y5["diff_low"] <= 0 <= y5["diff_high"] else ".") + "</p>")
-
-    b.append("<h2 id='f6'>6. The peak</h2>")
-    b.append(f"<p>A planned Saturday brake shift every week from November through February raises on-time delivery by {by(PY.loc[(s7, 'on_time_delivery')])} "
-             f"for the year and shortens the 90th percentile by {d1(-v(PY, s7, 'lead_time_p90', 'diff'))} days, for "
-             f"{d1(v(PY, s7, 'saturday_shifts') - v(PY, S0, 'saturday_shifts'))} more Saturday shifts in {YEAR} than the queue-triggered practice produced. "
-             f"This is a lower bound.</p>")
-
-    b.append("<h2 id='f7'>7. Two changes that make no difference</h2>")
-    b.append(f"<p>Light work ahead of heavy on B1 and B2, {spp(PY.loc[(s4, 'on_time_delivery')])} for the year, and a third weekly color day for black, "
-             f"{spp(PY.loc[(s6, 'on_time_delivery')])}, do not move on-time delivery or the 90th percentile beyond their intervals.</p>")
-
-    b.append("<h2 id='f8'>8. The promise rules</h2>")
-    b.append(f"<p>At the quote table of [[R:quoting]] (routing class and brake backlog at release, never below the fixed quote) the current floor delivers "
-             f"{pct(v(PY, S0, 'on_time_delivery_quote_table'))} on time for the year and {pct(v(PR, S0, 'on_time_delivery_quote_table'))} in {REST}, with "
-             f"{pct(v(PY, S0, 'promises_longer_quote_table'), 0)} and {pct(v(PR, S0, 'promises_longer_quote_table'), 0)} of non-rush promises longer than the fixed "
-             f"quote; at the 80th percentile of the routing class over the trailing 13 weeks, {pct(v(PY, S0, 'on_time_delivery_load_aware'))} and "
-             f"{pct(v(PR, S0, 'on_time_delivery_load_aware'))}, with {pct(v(PY, S0, 'promises_longer_than_fixed_quote'), 0)} and "
-             f"{pct(v(PR, S0, 'promises_longer_than_fixed_quote'), 0)} longer. Neither touches the floor; the quote table is the rule of [[R:quoting]] and the trailing rule the "
-             f"one first modeled.</p>")
-
-    b.append("<h2 id='f9'>9. Packages</h2>")
-    alone = sum(v(PY, sc, "on_time_delivery", "diff") for sc in (S8, s5, s7)) * 100
-    sat_rest = (v(PR, NOCAP, "on_time_delivery", "diff") - v(PR, CHRONIC, "on_time_delivery", "diff")) * 100
-    fewer = sorted(-v(PR, sc, "jobs_shipped", "diff") for sc in (S8, CHRONIC, NOCAP))
-    assert all(PY.loc[(sc, "jobs_shipped"), "diff_low"] <= 0 <= PY.loc[(sc, "jobs_shipped"), "diff_high"] for sc in (CHRONIC, NOCAP))
-    b.append(f"<p>Setup reduction with the weld cell's second shift raises on-time delivery by {by(PR.loc[(CHRONIC, 'on_time_delivery')])} in {REST} and "
-             f"{by(PY.loc[(CHRONIC, 'on_time_delivery')])} for the year. Adding planned Saturdays from November through February takes the year to "
-             f"{pct(v(PY, NOCAP, 'on_time_delivery'))} on time, up {by(PY.loc[(NOCAP, 'on_time_delivery')])}, with a 90th percentile of "
-             f"{d1(v(PY, NOCAP, 'lead_time_p90'))} days against {d1(v(PY, S0, 'lead_time_p90'))}; {REST} reaches {pct(v(PR, NOCAP, 'on_time_delivery'))} and "
-             f"{d1(v(PR, NOCAP, 'lead_time_p90'))} days. The three effects are close to additive: the levers alone sum to {alone:+.1f} points for the year against "
-             f"{v(PY, NOCAP, 'on_time_delivery', 'diff') * 100:+.1f} for the package. In {REST} the gain is the weld cell's second shift; planned Saturdays add "
-             f"{sat_rest:.1f} points there. Setup reduction and the packages ship {n0(fewer[0])} to {n0(fewer[-1])} fewer jobs in {REST} and the same number for the year; the "
-             f"first-quarter backlog ships earlier. At that quote table the same floor delivers "
-             f"{pct(v(PY, NOCAP, 'on_time_delivery_quote_table'))} on time for the year and {pct(v(PR, NOCAP, 'on_time_delivery_quote_table'))} in {REST} "
-             f"({pct(v(PY, NOCAP, 'on_time_delivery_load_aware'))} and {pct(v(PR, NOCAP, 'on_time_delivery_load_aware'))} at the trailing 13-week promise).</p>")
-    b.append(t_packages())
-    b.append(f"<div class='caption'>Table 2. The packages against current practice and against setup reduction alone, {YEAR} and {REST}.</div>")
-
-    b.append("<h2 id='rec'>Recommendation</h2>")
-    b.append(f"<p>Do not cap release, and keep the dispatch list. Take the setup program ([[R:capacity]]), a second shift on the robotic weld cell and planned Saturday brake "
-             f"shifts from November through February as the operating package: on-time delivery is expected to rise by {by(PY.loc[(NOCAP, 'on_time_delivery')])} for the "
-             f"year and {by(PR.loc[(NOCAP, 'on_time_delivery')])} in {REST}, with the 90th-percentile lead time {d1(-v(PY, NOCAP, 'lead_time_p90', 'diff'))} and "
-             f"{d1(-v(PR, NOCAP, 'lead_time_p90', 'diff'))} days shorter. Restate quoted lead times ([[R:quoting]]). [[S:second]] compare this package with the capital options on the same "
-             f"measures.</p>")
-
-    b.append("<h2 id='method'>Method and data</h2>")
-    b.append(f"<p>The model replays the jobs released from January 2024 with their routings, standards, promised dates, rush flags and planned operation dates, each "
-             f"machine's shift calendar and recorded downtime, and the powder color schedule. Setup and run times are drawn from {YEAR} actual-over-standard ratios of "
-             f"operations of similar standard hours at the same work center (brake setups by grouping and lot size, laser run time by machine); material wait, move and "
-             f"recorded hold, outside processing and complete-to-ship times from their {YEAR} distributions.<br>"
-             f"Practice modeled: traveler print the next working morning; dispatch by rush, hot list, planned operation start, arrival; the daily dispatch list at the "
-             f"five single-shift work centers; precision first on B1 and B2, the list on B3 and B4, light work on B5, rush and hot-list jobs on any capable brake; "
-             f"same-tooling grouping up to three in a row; a second operator on heavy setups; Saturday and extended brake shifts on B1 and B2 for enclosure and rush "
-             f"work.<br>"
-             f"Three parameters are estimated from the records: the share of crewed brake hours worked when the queue never empties (0.967), and the frequency of "
-             f"Saturday and of extended brake shifts by the number of jobs at the brakes. Nest-fill is approximated: a laser job issued one sheet waits for a second job "
-             f"on the sheet item or for two working days before its planned start; blank area is not in the records.<br>"
-             f"Scenarios: the WIP cap holds non-rush jobs in release order until the jobs on the floor are below the cap, and lead time still runs from the release "
-             f"date; constraint-paced release holds jobs with brake work while the work waiting at the brakes exceeds 3 days of crewed brake capacity; light work goes "
-             f"ahead of heavy on B1 and B2, after precision, when the B3 to B5 queue exceeds 2 days; the setup reduction runs the top 12 part-operations at standard and "
-             f"takes the assignment and handover hours off the other brake setups in proportion, the model having no individual operators. The promise rules do not change the floor: the model reads its own brake backlog at "
-             f"each job's release to select the band of the quote table, which is the table fitted on 2023 to {YEAR} ([[R:quoting]]). Each run draws from one generator seeded by its scenario and "
-             f"replication number. Differences are paired by replication; throughput is flagged where a scenario ships fewer jobs in the period with the interval excluding zero.</p>")
-
-    b.append("<h2 id='appendix'>Appendix</h2>")
-    b.append("<h3>Table 3. The model against measured, by quarter shipped</h3>" + t_quarters())
-    allsc = [S0] + SINGLE + [CHRONIC, NOCAP] + CAPCOMBO
-    b.append(f"<h3>Table 4. Scenario results, {YEAR}</h3>" + t_full(PY, allsc))
-    b.append(f"<h3>Table 5. Difference from current practice, {YEAR}</h3>" + t_diff(PY, allsc[1:]))
-    b.append(f"<h3>Table 6. Scenario results, {YEAR} {REST}</h3>" + t_full(PR, allsc))
-    b.append(f"<h3>Table 7. Difference from current practice, {YEAR} {REST}</h3>" + t_diff(PR, allsc[1:]))
-    b.append("<h3>Table 8. Release hold under the WIP cap and constraint-paced release</h3>" + t_hold())
-    b.append("<h3>Table 9. On-time delivery at the two promise rules</h3>" + t_promise())
-    b.append("<div class='glossary'>WIP cap: a limit on jobs released to the floor and not shipped. Promise rule: the later of the requested date and the order "
-             "date plus the rule's lead time; rush lines keep their promise.</div>")
-    toc = [("f1", "Validation"), ("f2", "Release control"), ("f3", "Dispatch"), ("f4", "Capacity at the constraint"), ("f5", "Weld cell"), ("f6", "The peak"),
-           ("f8", "Promise rules"), ("f9", "Packages"), ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
-    return {"body": "\n".join(b), "toc": toc[:-3], "meta": HEADER_META}
-
-
-COUNTERMEASURES = [
-    ("Setup program at the brakes: top 12 part-operations, operator assignment, shift handover ([[R:capacity]])", "Brake supervisor, manufacturing engineering", "May 2026"),
-    ("Second shift on the robotic weld cell", "Production manager", "April 2026"),
-    ("Planned Saturday brake shift every week, November through February", "Plant manager", "November 2026"),
-]
-
-
-def control():
-    """The target, the countermeasures and the follow-up, for the Recommendation section."""
-    target = (f"{pct(required, 0)} of jobs shipped by the promised date in every quarter.")
-    follow = ("Quarterly re-validation of the model against the actual lead time, WIP, utilization and on-time delivery. Saturday shifts and extended hours at the brakes reported "
-              "monthly against the model's expected values.")
-    return target, COUNTERMEASURES, follow
-
-
+    return table(pd.DataFrame(rows, columns=["Period", "Floor", "Rule", "On time at the promised dates as made", "On time at the rule", "Difference (points)",
+                                             "Non-rush promised lead times longer than the fixed quote"]))
