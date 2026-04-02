@@ -23,7 +23,7 @@ def page_links(text):
     return re.sub(r"\]\((docs/[^)]+\.html)\)", lambda m: f"]({PAGES}{m.group(1)})", text)
 
 
-LEAD, BRAKES, OPTIONS, QUOTING = "lead_time_and_late_jobs", "brakes_capacity_and_setups", "options_tested", "quoting_and_early_warning"
+LEAD, CAPACITY, OPTIONS, QUOTING = "lead_time_and_late_jobs", "capacity_constraints_and_setups", "options_tested", "quoting_and_early_warning"
 
 
 def _lead_time():
@@ -36,8 +36,11 @@ def _lead_time():
             f"ships in {median} working days against an average quoted lead time of {quote}, {rest} in Q2-Q4. " + causes)
 
 
-def _brakes():
-    return finding(BRAKES, "f1", 0) + " " + finding(BRAKES, "f8", 0)
+def _capacity():
+    load = re.search(r"The brakes run at .*? and the powder line at [\d.]+\.", section_text(CAPACITY, "f1")).group(0)
+    hours, standard, over, week, share = re.search(r"the brakes ran ([\d,]+) hours against ([\d,]+) standard, ([\d,]+) over, ([\d,]+) a week, (\d+%) of brake machine time",
+                                                   section_text(CAPACITY, "f4")).groups()
+    return f"{load} Brake setups ran {hours} hours against {standard} standard in 2025: {over} hours over, {week} a week, {share} of brake machine time."
 
 
 def _options():
@@ -64,11 +67,11 @@ def _quoting():
 REPORTS = [
     (LEAD, "Flow and On-time Delivery",
      "Where does the lead time go, and does the floor's WIP match the quoted lead times? What makes jobs late, and do the shop's late-reason codes say so?", _lead_time),
-    (BRAKES, "The brakes: capacity, utilization and setups",
-     "Which work center is the constraint, and how does its queue respond to load? What do setups cost at the brakes, and where is the overrun?", _brakes),
-    (OPTIONS, "Options tested: release rules, scheduling, shifts and equipment",
+    (CAPACITY, "Capacity, Constraints and Setups",
+     "Which work centers run hot, and how do their queues respond to load? What do setups cost at the brakes, and where is the overrun?", _capacity),
+    (OPTIONS, "Options Tested",
      "Do release control and dispatch rules help, and what does? Do the capital options pay back?", _options),
-    (QUOTING, "Quoting and early warning from load",
+    (QUOTING, "Quoting and Early Warning from Load",
      "What lead time should be quoted, and what wins quotes? Which weekly measures move before on-time delivery does?", _quoting),
 ]
 SYSTEMS = [
