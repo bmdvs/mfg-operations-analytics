@@ -341,11 +341,12 @@ def report():
              f"system, given it accounts for a significant portion of lost days.</p>")
     cq = cross_all["constraint queue"] / cross_all.sum(axis=1)
     rel = cross_all["released late"]
+    rest_codes = [k for k in CODES if k != "capacity"]
     b.append(f"<p>As shown below, the shop's entered reason-codes do not adequately capture the true drivers of lost days. The entered code agrees with the largest "
-             f"attributed cause on just {pct(AG['year']['agree'])} of coded late jobs against {pct(AG['year']['chance'])} expected by chance "
-             f"({pct(AG[REST]['agree'])} against {pct(AG[REST]['chance'])} in {REST}). Queue constraint is the largest attributed driver on "
-             f"{pct(cq['capacity'], 0)} of the jobs coded capacity, and on {pct(cq['blank'], 0)} of the jobs with no code and {pct(cq['material'], 0)} of those coded "
-             f"material. Material is the largest cause on just {n0(cross_all.loc['material', 'material'])} of the {n0(cross_all.loc['material'].sum())} "
+             f"attributed cause on just {pct(AG['year']['agree'])} of coded late jobs against the {pct(AG['year']['chance'])} expected had the codes been assigned at random "
+             f"({pct(AG[REST]['agree'])} against {pct(AG[REST]['chance'])} in {REST}). Queue constraint is the largest attributed driver on just "
+             f"{pct(cq['capacity'], 0)} of the jobs coded capacity, while being misattributed across the rest (making up {pct(cq['blank'], 0)} of the jobs with no "
+             f"code and {cq[rest_codes].min() * 100:.0f}-{pct(cq[rest_codes].max(), 0)} of the rest). Material is the largest cause on just {n0(cross_all.loc['material', 'material'])} of the {n0(cross_all.loc['material'].sum())} "
              f"({pct(cross_all.loc['material', 'material'] / cross_all.loc['material'].sum(), 0)}) jobs coded material, outside processing on just {n0(cross_all.loc['outside processing', 'outside processing'])} of the "
              f"{n0(cross_all.loc['outside processing'].sum())} coded outside processing ({pct(cross_all.loc['outside processing', 'outside processing'] / cross_all.loc['outside processing'].sum(), 0)}) and quality on just {n0(cross_all.loc['quality', 'quality'])} of the "
              f"{n0(cross_all.loc['quality'].sum())} ({pct(cross_all.loc['quality', 'quality'] / cross_all.loc['quality'].sum(), 0)}) coded quality. Of the {n0(rel.sum())} jobs where released late is the largest attributed driver, "
