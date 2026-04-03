@@ -210,7 +210,7 @@ def fig_mosaic():
     ax.set_ylabel("Share of the code's late jobs")
     ax.set_xticks(centers)
     ax.set_xticklabels([f"{k.capitalize()}, {pct(width[k], 0)}" for k in cross_all.index], rotation=40, ha="right", fontsize=9)
-    labels = [CAUSE_LABEL[k] if k != "not attributable" else "Not attributed by rule" for k in CAUSES]
+    labels = [CAUSE_LABEL[k] for k in CAUSES]
     bottom_legend(f, [Patch(color=CAUSE_COLOR[k]) for k in CAUSES], labels, ncol=4, space=0.1)
     return save(f, "late_jobs_code_against_cause", "What the shop coded against what the data shows")
 
@@ -313,7 +313,7 @@ def report():
              f"{pct(rs['released late'], 0)} of the {n0(r['total'])} lost days, with queue constraint ({pct(rs['constraint queue'], 0)}), material "
              f"({pct(rs['material'], 0)}) and outside processing ({pct(rs['outside processing'], 0)}) the other main drivers.</p>")
     b.append(f"<p>Jobs were released late when they went to the floor with fewer working days to the promised shipment date than the standard quoted lead time for "
-             f"their routing class; this was the largest driver on {n0(r['dominant']['released late'])} of the {n0(len(LR))} late jobs in {REST}. Each such release "
+             f"their routing class; this was the largest driver on {n0(r['dominant']['released late'])} of the {n0(len(LR))} ({pct(r['dominant']['released late'] / len(LR), 0)}) late jobs in {REST}. Each such release "
              f"should be a decision: flag the job as a rush, with a named approver, and count and monitor these releases weekly. {see(1, 5, 6)}</p>")
     queues = [k for k in NAYs.index if k.startswith("queue:") or k == "first-operation queue"]
     b.append(f"<p>{pct(ys['not attributable'], 0)} of lost days in {YEAR} and {pct(rs['not attributable'], 0)} in {REST} have no attribution. Of the "
@@ -350,8 +350,8 @@ def report():
              f"{n0(cross_all.loc['outside processing'].sum())} coded outside processing ({pct(cross_all.loc['outside processing', 'outside processing'] / cross_all.loc['outside processing'].sum(), 0)}) and quality on just {n0(cross_all.loc['quality', 'quality'])} of the "
              f"{n0(cross_all.loc['quality'].sum())} ({pct(cross_all.loc['quality', 'quality'] / cross_all.loc['quality'].sum(), 0)}) coded quality. Of the {n0(rel.sum())} jobs where released late is the largest attributed driver, "
              f"{n0(rel['capacity'])} are coded capacity, {n0(rel['blank'])} carry no code and {n0(rel['other'])} are coded other. {see(3, 4)}</p>")
-    b.append("<p>The shop should consider process changes to include additional options in the late-reason code dropdown menu, as well as to enable shop-floor data "
-             "capture on the reasons for late jobs once they become late.</p>")
+    b.append("<p>To increase the accuracy of its late-reason codes, the shop should consider process changes to include additional options in the code dropdown "
+             "menu, as well as to enable shop-floor data capture on the reasons for late jobs once they're known, instead of relying on retroactive reviews.</p>")
     b.append(chart("What the shop coded against what the data shows", fig_mosaic()))
 
     b.append("<h2 id='rec'>Recommendation and control</h2>")
