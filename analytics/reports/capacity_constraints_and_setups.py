@@ -129,20 +129,6 @@ def fig_queue_days():
     return save(f, "capacity_share_of_queue_days", f"Share of queue days by work center, {YEAR}")
 
 
-def fig_hot():
-    """Queue time and jobs at the work center in hot weeks against the other weeks of the ordinary quarters."""
-    d = HR.loc[HOT_SIX]
-    f, axes = fig(h=3.9, ncols=2)
-    names = ("Weeks at or above 95%", "Other weeks")
-    paired_columns(axes[0], [WC[w] for w in d.index], list(d["queue_hot"]), list(d["queue_other"]), names, decimals=2)
-    axes[0].set_ylabel(QUEUE_AXIS)
-    paired_columns(axes[1], [WC[w] for w in d.index], list(d["wip_hot"]), list(d["wip_other"]), names, decimals=0)
-    axes[1].set_ylabel("Jobs at the work center, daily mean")
-    f.legend(*axes[0].get_legend_handles_labels(), frameon=False, fontsize=9, ncol=2, loc="lower center")
-    f.tight_layout(rect=(0, 0.06, 1, 1))
-    return save(f, "capacity_queue_in_hot_weeks", "Queue Time and Jobs at the Work Center in Hot Weeks and Other Weeks, Q2-Q4 2025")
-
-
 def stepped(ax, wc, xmin):
     """The mean queue time of each utilization band as a horizontal segment across the band."""
     g = SC.band_means(X, wc)
@@ -517,7 +503,7 @@ def build():
     b.append(f"<p>Not only do the press brakes and robotic weld cell have the highest average utilization, they also spend more time than any other work station at "
              f"or near maximum utilization. Shown below is the share of weeks in {YEAR} that each work station spent at or above 95% average utilization. The press "
              f"brakes and the robotic weld cell were at this level in {P(hot_share['press_brake'])} and {P(hot_share['robotic_weld'])} of weeks throughout the "
-             f"year.</p>")
+             f"year. {T.see('hot')}</p>")
     b.append(chart(f"Share of weeks at or above 95% utilization, {YEAR}", fig_hot_share()))
     others = [w for w in HOT_ORDER if w != "press_brake"]
     assert all(HY.loc[w, "queue_hot"] > HY.loc[w, "queue_other"] for w in others) and HY.loc["press_brake", "queue_hot"] < HY.loc["press_brake", "queue_other"]
@@ -539,7 +525,6 @@ def build():
 
     # 2 ── load, queue time and WIP
     b.append("<h2 id='f2'>2. Load, Queue Time and WIP</h2>")
-    T.reserve("util", "bins", "fits", "laser_weeks", "pos", "hot", "machines", "basis", "var", "spread", "robot", "assembly", "lasers", "dispatch", "powder")
     fits = C.FITS.set_index("work_center")
     at90 = fits["queue_at_0.90"]
     bold = lambda t: f"<p><b>{t}</b></p>"
@@ -563,7 +548,7 @@ def build():
              f"in {REST}. Week by week, the brake queue time steps from about {d1(below)} days below 85% utilization to {d1(step)} above it and does not settle "
              f"back. The brake queue time's 90th percentile was {d1(BQ.loc[1, 'queue_p90'])} and {d1(BQ.loc[2, 'queue_p90'])} days in Q1 and Q2 {YEAR} and "
              f"{d1(BQ.loc[3, 'queue_p90'])} and {d1(BQ.loc[4, 'queue_p90'])} in Q3 and Q4; under 5 days in every quarter is the mark the levers in this report are "
-             f"measured against. {T.see('bins', 'fits')}</p>")
+             f"measured against. {T.see('bins', 'fits', 'pos')}</p>")
     b.append(chart(curve_title("press_brake"), fig_curve("press_brake")))
     tail = MY.loc[["B3", "B4", "B5"]]
     top_y = MY.loc[C.BRAKES, "utilization"].sort_values(ascending=False).index.tolist()
@@ -721,31 +706,6 @@ def build():
              f"on-time delivery. {T.see('powder')}</p>")
     b.append(chart(f"Powder Color-Day Wait by Color, {YEAR}", fig_powder()))
 
-    b.append("<h3 id='f2_5'>Hot weeks across the floor</h3>")
-    hot_y = HY[HY["hot_weeks"] > 0].sort_values("hot_weeks", ascending=False)
-    rank = UY["utilization"].rank(ascending=False)
-    assert list(hot_y.index) == HOT_ORDER and rank["laser"] == 3 and rank["punch"] == len(rank) - 2
-    assert set(HR[HR["hot_weeks"] > 0].index) == set(HOT_SIX)
-    assert all(HR.loc[w, "queue_hot"] > HR.loc[w, "queue_other"] and HR.loc[w, "wip_hot"] > HR.loc[w, "wip_other"] for w in HOT_SIX)
-    assert all(HR.loc[w, "wip_hot"] / HR.loc[w, "wip_other"] < HR.loc[w, "queue_hot"] / HR.loc[w, "queue_other"] for w in HOT_SIX)
-    assert HY.loc["press_brake", "queue_hot"] < HY.loc["press_brake", "queue_other"]
-    pair = lambda w: f"{d2(HR.loc[w, 'queue_hot'])} against {d2(HR.loc[w, 'queue_other'])}"
-    jobs = lambda w, f=n0: f"{f(HR.loc[w, 'wip_hot'])} jobs at {NAME[w]} against {f(HR.loc[w, 'wip_other'])} in other weeks"
-    b.append(f"<p>A hot week is one in which a work center ran at or above 95% utilization. As seen below, {NUMBER[len(hot_y)].lower()} work centers recorded at "
-             f"least one hot week in {YEAR}, with the brakes recording the most, followed by the robotic weld cell and assembly. The punch recorded the third lowest "
-             f"average utilization yet {int(HY.loc['punch', 'hot_weeks'])} hot weeks, because it is a single machine running about "
-             f"{n0(act.loc['punch', 'ops_per_week'])} operations a week, so a few large jobs fill a week. The lasers recorded the third highest utilization yet only "
-             f"{int(HY.loc['laser', 'hot_weeks'])} hot weeks, because they pool three machines over about {n0(act.loc['laser', 'ops_per_week'])} operations a week and "
-             f"go hot only when releases surge, as they did in the six weeks of the Q4 2024 build ({T.plain('laser_weeks')}) that formed the backlog detailed in "
-             f"{link('lead')}. In {REST} a hot week shows as a longer wait at each of the six that had one: {d2(HR.loc['press_brake', 'queue_hot'])} days per "
-             f"operation at the brakes against {d2(HR.loc['press_brake', 'queue_other'])} in the other weeks, {pair('robotic_weld')} at the robotic weld cell, "
-             f"{pair('assembly')} at assembly, {pair('punch')} at the punch, {pair('laser')} at the lasers and {pair('weld')} at the manual weld bays. For the full "
-             f"year the brakes read the other way ({d2(HY.loc['press_brake', 'queue_hot'])} against {d2(HY.loc['press_brake', 'queue_other'])}) because the "
-             f"first-quarter backlog kept the wait long whatever the week's utilization. The count of jobs at the work center rises too, though by less than the wait "
-             f"does: {jobs('press_brake')} and {d1(HR.loc['robotic_weld', 'wip_hot'])} against {d1(HR.loc['robotic_weld', 'wip_other'])} at the robotic weld cell. "
-             f"Hot weeks carry {P(HR.loc['press_brake', 'hours_share_hot'])} of brake hours and {P(HR.loc['robotic_weld', 'hours_share_hot'])} of the weld cell's in "
-             f"{REST}, {P(HR.loc['punch', 'hours_share_hot'])} of the punch's and {P(HR.loc['assembly', 'hours_share_hot'])} of assembly's. {T.see('pos', 'hot')}</p>")
-    b.append(chart("Queue Time and Jobs at the Work Center in Hot Weeks and Other Weeks, Q2-Q4 2025", fig_hot()))
     b.append(f"<p>The brake queue is set by arrival variability and by load above 85%, so capacity at the constraint is the lever: the setup program of "
              f"<a href='#f3'>Section 3</a> and planned Saturday brake shifts for the peak, both tested in {link('options')}. Release leveling and dispatch rules do "
              f"not help this shop, and reducing the spread of setup time is not a lever. At the three list-set work centers the lever is the list; at the powder "
