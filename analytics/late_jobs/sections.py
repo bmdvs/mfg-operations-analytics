@@ -350,8 +350,8 @@ def report():
              f"{n0(cross_all.loc['outside processing'].sum())} coded outside processing ({pct(cross_all.loc['outside processing', 'outside processing'] / cross_all.loc['outside processing'].sum(), 0)}) and quality on just {n0(cross_all.loc['quality', 'quality'])} of the "
              f"{n0(cross_all.loc['quality'].sum())} ({pct(cross_all.loc['quality', 'quality'] / cross_all.loc['quality'].sum(), 0)}) coded quality. Of the {n0(rel.sum())} jobs where released late is the largest attributed driver, "
              f"{n0(rel['capacity'])} are coded capacity, {n0(rel['blank'])} carry no code and {n0(rel['other'])} are coded other. {see(3, 4)}</p>")
-    b.append("<p>The shop should consider process changes to include additional options in the late-reason code dropdown menu, as well as to enable real-time "
-             "shop-floor data capture on the reasons for late jobs once they're known.</p>")
+    b.append("<p>To increase the accuracy and usefulness of its late-reason codes, the shop should consider process changes to (i) include additional options in "
+             "the late-reason code dropdown menu, and (ii) enable real-time shop-floor data capture on the reasons for late jobs once they're known.</p>")
     b.append(chart("What the shop coded against what the data shows", fig_mosaic()))
 
     b.append("<h2 id='rec'>Recommendation and control</h2>")
