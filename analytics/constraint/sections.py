@@ -64,13 +64,17 @@ def var(source):
 # ── figures ─────────────────────────────────────────────────────────────────
 def fig_util():
     d = UY.sort_values("utilization", ascending=False)
-    f, ax = fig(h=3.4)
+    f, ax = fig(h=3.6)
     x = np.arange(len(d))
-    ax.bar(x - 0.2, d["utilization"], width=0.38, color=BRAND_BLUE, label="Utilization")
-    ax.bar(x + 0.2, d["uptime"], width=0.38, color=LIGHT_BLUE, label="Machine uptime")
+    for dx, col, color, lab in ((-0.2, "utilization", BRAND_BLUE, "Utilization"), (0.2, "uptime", LIGHT_BLUE, "Machine uptime")):
+        v = sig(d[col].to_numpy(dtype=float) * 100)
+        ax.bar(x + dx, v, width=0.38, color=color, label=lab)
+        for xi, vi in zip(x, v):
+            ax.text(xi + dx, vi, f"{vi:.0f}%", ha="center", va="bottom", fontsize=7)
     ax.set_xticks(x)
     ax.set_xticklabels([WC[w] for w in d.index], rotation=20, ha="right")
-    ax.set_ylim(0, 1.08)
+    ax.set_ylim(0, 108)
+    ax.yaxis.set_major_formatter(lambda v, _: f"{v:.0f}%")
     ax.legend(frameon=False, ncol=2, loc="upper right")
     f.tight_layout()
     return save(f, "constraint_utilization_uptime", "Utilization and machine uptime by work center")

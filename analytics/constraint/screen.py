@@ -43,6 +43,9 @@ def load():
                  f"where setup_year = {YEAR} group by 1 order by 1"),
         runs=q(f"select work_center, sum(run_hours) as hours, sum(run_std_hours) as standard from marts.mart_run_standards where start_year = {YEAR} group by 1 order by 1"),
         colors=q("select color, days_per_week, weekdays from marts.mart_powder_color_days order by color"),
+        wip=q(f"select location as work_center, cast(date_trunc('week', calendar_date) as date) as week_start, avg(jobs) as wip from marts.mart_wip_daily "
+              f"group by 1, 2 order by 1, 2"),
+        downtime=q(f"select work_center, cause, sum(hours) as hours from marts.mart_downtime_events where year(start_ts) = {YEAR} group by 1, 2 order by 1, 2"),
     )
 
 
@@ -58,13 +61,16 @@ def pooled_utilization(w):
 def hot_weeks(D):
     """Weeks at or above 0.95 utilization by work center: how many, the queue in them against the other weeks, and their share of machine hours."""
     rows = []
+    wip = D["wip"].assign(week_start=pd.to_datetime(D["wip"]["week_start"]))
+    weeks = D["uw"].merge(wip, on=["work_center", "week_start"], how="left")
     for per, fq in PERIODS:
-        y = D["uw"][(D["uw"]["week_year"] == YEAR) & (D["uw"]["week_quarter"] >= fq)]
+        y = weeks[(weeks["week_year"] == YEAR) & (weeks["week_quarter"] >= fq)]
         for wc, w in y.groupby("work_center"):
             hot, other = w[w["utilization"] >= HOT], w[w["utilization"] < HOT]
             rows.append(dict(period=per, work_center=wc, utilization=pooled_utilization(w), weeks=len(w), hot_weeks=len(hot),
                              hot_full_weeks=int((hot["weekdays"] == 5).sum()), queue_hot=weighted_queue(hot), queue_other=weighted_queue(other),
                              utilization_hot=pooled_utilization(hot), utilization_other=pooled_utilization(other),
+                             wip_hot=float(hot["wip"].mean()) if len(hot) else np.nan, wip_other=float(other["wip"].mean()),
                              hours_share_hot=float(hot["machine_hours"].sum() / w["machine_hours"].sum())))
     return pd.DataFrame(rows).sort_values(["period", "utilization"], ascending=[False, False])
 

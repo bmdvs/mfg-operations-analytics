@@ -4,6 +4,7 @@ Usage: python -m analytics.reports.capacity_constraints_and_setups
 """
 import numpy as np
 import pandas as pd
+from matplotlib.ticker import MaxNLocator
 
 from analytics.constraint import analysis as CA
 from analytics.constraint import screen as SC
@@ -12,7 +13,7 @@ from analytics.db import q
 from analytics.reports.layout import Tables, block, chart, join_and, link, page, titled
 from analytics.setups import analysis as SA
 from analytics.setups import sections as S
-from analytics.style.style import AMBER, GREY, LIGHT_BLUE, fig, paired_columns, pct, save_conformed as save, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, GREY, LIGHT_BLUE, fig, pct, save_conformed as save, sig, table
 
 YEAR, REST, RT = SC.YEAR, "Q2 to Q4", "Q2-Q4"
 WC = C.WC
@@ -38,17 +39,111 @@ QSHARE = q("select work_center, share_of_queue from marts.mart_queue_by_work_cen
 
 
 # ── figures ─────────────────────────────────────────────────────────────────
-HOT_ORDER = ["press_brake", "robotic_weld", "assembly", "laser", "punch", "weld"]
+HOT_ORDER = ["press_brake", "robotic_weld", "assembly", "punch", "laser", "weld", "grind_deburr"]          # by hot weeks in the year
+ROUTING = ["laser", "punch", "press_brake", "hardware", "weld", "robotic_weld", "grind_deburr", "powder_coat", "assembly", "inspection_pack"]
+DOWN_ORDER = ["breakdown", "PM", "no operator", "waiting for program"]
+DOWN_LABEL = {"breakdown": "Unplanned Breakdowns", "PM": "Planned Maintenance", "no operator": "No Operator", "waiting for program": "Waiting for Program"}
+DOWN = X["downtime"].pivot(index="work_center", columns="cause", values="hours").fillna(0.0)[DOWN_ORDER]
+_ops = X["ops"].assign(hours=lambda d: d["setup_hours"] + d["run_hours"]).groupby("work_center").agg(operations=("job_id", "size"), hours=("hours", "sum"))
+ACTIVITY = _ops.join(X["shifts"].set_index("work_center")["machines"])
+ACTIVITY["ops_per_machine_week"] = ACTIVITY["operations"] / ACTIVITY["machines"] / SA.WEEKS
+ACTIVITY["hours_per_operation"] = ACTIVITY["hours"] / ACTIVITY["operations"]
+
+
+def fig_activity():
+    """Operations per machine a week and machine hours per operation, work centers in routing order."""
+    d = ACTIVITY.loc[ROUTING[::-1]]
+    y = np.arange(len(d))
+    f, axes = fig(h=4.0, ncols=2, grid="x", sharey=True)
+    for ax, col, title, fmt in ((axes[0], "ops_per_machine_week", "Operations per machine a week", "{:.0f}"),
+                                (axes[1], "hours_per_operation", "Machine hours per operation", "{:.1f}")):
+        v = sig(d[col].to_numpy(dtype=float))
+        ax.barh(y, v, height=0.62, color=BRAND_BLUE)
+        for yi, vi in zip(y, v):
+            ax.text(vi + float(v.max()) * 0.015, yi, fmt.format(vi), ha="left", va="center", fontsize=8.5)
+        ax.set_xlim(0, float(v.max()) * 1.12)
+        ax.set_xlabel(title)
+    axes[0].set_yticks(y)
+    axes[0].set_yticklabels([f"{WC[w]} ({int(d.loc[w, 'machines'])})" for w in d.index])
+    axes[0].set_ylabel("Work center (# of machines in parentheses)")
+    f.tight_layout()
+    return save(f, "capacity_floor_activity", f"Floor Activity by Work Center, {YEAR}")
+
+
+def fig_downtime():
+    """Downtime hours by work center, each column split by driver with the driver's share of the column inside it."""
+    d = DOWN.loc[DOWN.sum(axis=1).sort_values(ascending=False).index]
+    x = np.arange(len(d))
+    colors = dict(zip(DOWN_ORDER, (BRAND_BLUE, ACCENT, LIGHT_BLUE, AMBER)))
+    f, ax = fig(h=4.2)
+    bottom = np.zeros(len(d))
+    total = d.sum(axis=1).to_numpy(dtype=float)
+    for k in DOWN_ORDER:
+        v = sig(d[k].to_numpy(dtype=float))
+        ax.bar(x, v, width=0.66, bottom=bottom, color=colors[k], label=DOWN_LABEL[k])
+        for xi, vi, bi, ti in zip(x, v, bottom, total):
+            if vi >= total.max() * 0.045:
+                ax.text(xi, bi + vi / 2, f"{vi / ti * 100:.0f}%", ha="center", va="center", fontsize=7.5, color="white" if k in ("breakdown", "PM") else "#222222")
+        bottom += v
+    for xi, ti in zip(x, total):
+        ax.text(xi, ti, f"{ti:,.0f}", ha="center", va="bottom", fontsize=8.5)
+    ax.set_xticks(x)
+    ax.set_xticklabels([WC[w] for w in d.index], rotation=20, ha="right")
+    ax.set_ylabel("Downtime Hours")
+    ax.set_ylim(0, float(total.max()) * 1.08)
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    f.legend(*ax.get_legend_handles_labels(), frameon=False, fontsize=9, ncol=4, loc="lower center")
+    f.tight_layout(rect=(0, 0.06, 1, 1))
+    return save(f, "capacity_downtime_by_driver", f"Machine Downtime Hours and Drivers by Work Center, {YEAR}")
+
+
+def fig_hot_share():
+    d = (HY["hot_weeks"] / HY["weeks"]).sort_values(ascending=False)
+    x = np.arange(len(d))
+    v = sig(d.to_numpy(dtype=float) * 100)
+    f, ax = fig(h=3.5)
+    ax.bar(x, v, width=0.62, color=BRAND_BLUE)
+    for xi, vi in zip(x, v):
+        ax.text(xi, vi, f"{vi:.0f}%", ha="center", va="bottom", fontsize=8.5)
+    ax.set_xticks(x)
+    ax.set_xticklabels([WC[w] for w in d.index], rotation=20, ha="right")
+    ax.set_ylabel("Share of weeks at or above 95% utilization")
+    ax.set_ylim(0, float(v.max()) * 1.12)
+    ax.yaxis.set_major_formatter(lambda t, _: f"{t:.0f}%")
+    f.tight_layout()
+    return save(f, "capacity_hot_week_share", f"Share of hot weeks by work station, {YEAR}")
 
 
 def fig_hot():
-    f, ax = fig(h=3.7)
-    paired_columns(ax, [WC[w] for w in HOT_ORDER], list(HR.loc[HOT_ORDER, "queue_hot"]), list(HR.loc[HOT_ORDER, "queue_other"]),
-                   ("Weeks at or above 0.95", "Other weeks"), decimals=2)
-    ax.set_ylabel("Queue, working days per operation")
+    """Queue time (left axis) and jobs at the work center (right axis) in hot weeks against normal weeks, for the work centers with a hot week."""
+    d = HY.loc[HOT_ORDER]
+    x = np.arange(len(d)) * 1.0
+    f, ax = fig(h=4.3)
+    ax2 = ax.twinx()
+    w = 0.19
+    for axis, base, hot, other, fmt in ((ax, -0.22, "queue_hot", "queue_other", "{:.2f}"), (ax2, 0.22, "wip_hot", "wip_other", "{:.0f}")):
+        for dx, col, color, lab in ((-w / 2, hot, AMBER, "Hot weeks"), (w / 2, other, BRAND_BLUE, "Normal weeks")):
+            v = sig(d[col].to_numpy(dtype=float))
+            axis.bar(x + base + dx, v, width=w, color=color, label=lab if axis is ax else None)
+            for xi, vi in zip(x, v):
+                axis.text(xi + base + dx, vi, fmt.format(vi), ha="center", va="bottom", fontsize=6.3, rotation=90)
+    ax.set_xticks(np.concatenate([x - 0.22, x + 0.22]))
+    ax.set_xticklabels(["Queue\nTime"] * len(x) + ["WIP"] * len(x), fontsize=7)
+    ax.tick_params(axis="x", length=0)
+    for xi, name in zip(x, d.index):
+        ax.annotate(WC[name], (xi, 0), xycoords=("data", "axes fraction"), xytext=(0, -30), textcoords="offset points", ha="center", va="top", fontsize=8.5)
+    for xi in x[:-1]:
+        ax.axvline(xi + 0.5, color="#D5D5D5", linewidth=0.9)
+    ax.set_xlim(-0.5, len(x) - 0.5)
+    ax.set_ylabel("Queue Time in Days")
+    ax2.set_ylabel("Avg. WIP in Jobs")
+    ax.set_ylim(0, float(d[["queue_hot", "queue_other"]].max().max()) * 1.2)
+    ax2.set_ylim(0, float(d[["wip_hot", "wip_other"]].max().max()) * 1.2)
+    ax2.grid(False)
+    ax2.spines["top"].set_visible(False)
     f.legend(*ax.get_legend_handles_labels(), frameon=False, fontsize=9, ncol=2, loc="lower center")
     f.tight_layout(rect=(0, 0.06, 1, 1))
-    return save(f, "capacity_queue_in_hot_weeks", "Queue in Hot Weeks and Other Weeks by Work Center, Q2-Q4 2025")
+    return save(f, "capacity_queue_in_hot_weeks", f"Queue Time and WIP in Hot Weeks vs. Normal Weeks by Work Center, {YEAR}")
 
 
 def fig_assembly():
@@ -78,9 +173,10 @@ def t_hot():
     out = ""
     for per, H in ((f"{YEAR}", HY), (f"{YEAR} {REST}", HR)):
         rows = [[WC[w], d3(r["utilization"]), f"{int(r['hot_weeks'])} of {int(r['weeks'])}", n0(r["hot_full_weeks"]), blank(r["queue_hot"]), d2(r["queue_other"]),
-                 pct(r["hours_share_hot"], 0)] for w, r in H.sort_values("utilization", ascending=False).iterrows()]
+                 blank(r["wip_hot"], d1), d1(r["wip_other"]), pct(r["hours_share_hot"], 0)] for w, r in H.sort_values("utilization", ascending=False).iterrows()]
         out += block(per, table(pd.DataFrame(rows, columns=["Work center", "Utilization", "Weeks at 0.95 or above", "Of which full five-day weeks",
-                                                             "Queue in those weeks", "Queue in the other weeks", "Share of machine hours in those weeks"])))
+                                                             "Queue in those weeks", "Queue in the other weeks", "Jobs at the work center in those weeks",
+                                                             "Jobs at the work center in the other weeks", "Share of machine hours in those weeks"])))
     BQ = C.BQ
     return out + block(f"Brake queue 90th percentile by quarter, {YEAR}",
                        table(pd.DataFrame([[d1(BQ.loc[k, "queue_p90"]) for k in (1, 2, 3, 4)]], columns=["Q1", "Q2", "Q3", "Q4"])))
@@ -205,50 +301,71 @@ def build():
     newer = " and ".join(S.NEWER)
     b = []
 
-    # 1 ── the screen
-    b.append("<h2 id='f1'>1. The Screen</h2>")
+    # 1 ── capacity across the shop
+    b.append("<h2 id='f1'>1. Capacity Across the Shop</h2>")
+    act = ACTIVITY
+    busy, slow = act.sort_values("ops_per_machine_week", ascending=False).index[:3], act.sort_values("ops_per_machine_week").index[:3]
+    assert set(busy) == set(act.sort_values("hours_per_operation").index[:3]) == {"grind_deburr", "inspection_pack", "powder_coat"}
+    assert set(slow) == set(act.sort_values("hours_per_operation", ascending=False).index[:3]) == {"weld", "assembly", "robotic_weld"}
+    b.append(f"<p>The shop's floor consists of ten work centers and {n0(act['machines'].sum())} machines. The floor activity (operations per machine a week and "
+             f"hours per operation) in routing order is shown below. The grind and deburr, inspection and pack, and powder coat stations run the highest number of "
+             f"operations per machine a week while averaging the shortest amount of time per operation ({rng(act.loc[busy, 'hours_per_operation'].min(), act.loc[busy, 'hours_per_operation'].max())} "
+             f"hours), and the manual weld bays, assembly and the robotic weld cell run the fewest operations while averaging the longest time "
+             f"({rng(act.loc[slow, 'hours_per_operation'].min(), act.loc[slow, 'hours_per_operation'].max(), d1)} hours).</p>")
+    b.append(chart(f"Floor Activity by Work Center, {YEAR}", fig_activity()))
+
+    b.append("<h3 id='f1_1'>Machine Downtime and Utilization</h3>")
+    sched, down, mach = UY["scheduled"].sum(), UY["down"].sum(), UY["machine"].sum()
+    b.append(f"<p>In {YEAR}, there were {n0(len(ops))} machine operations across ten work centers. This translates to {n0(sched)} scheduled hours, "
+             f"{n0(sched - down)} available hours, and {n0(mach)} machine hours over the course of the year, as defined below:</p>"
+             f"<ul><li>Scheduled hours: the hours the machine was crewed</li><li>Available hours: scheduled hours less recorded downtime</li>"
+             f"<li>Machine hours: hours the machine was actually running jobs (both setup and run)</li><li>Uptime: available hours / scheduled hours</li>"
+             f"<li>Utilization: machine hours / available hours</li></ul>")
+    cause = DOWN.sum() / DOWN.values.sum()
+    assert list(cause.sort_values(ascending=False).index) == DOWN_ORDER
+    b.append(f"<p>In {YEAR}, machine uptime is {pct(UY['uptime'].min(), 0)} to {pct(UY['uptime'].max(), 0)} at every work center. Across all work stations, the "
+             f"drivers of machine downtime were unplanned breakdowns ({pct(cause['breakdown'], 0)}), planned maintenance ({pct(cause['PM'], 0)}), no operator present "
+             f"({pct(cause['no operator'], 0)}), and waiting for program ({pct(cause['waiting for program'], 0)}). The below chart details machine downtime by work "
+             f"center.</p>")
+    b.append(chart(f"Machine Downtime Hours and Drivers by Work Center, {YEAR}", fig_downtime()))
     mid = UY.drop(["press_brake", "robotic_weld", "laser", "powder_coat"])
-    b.append(f"<p>{n0(len(ops))} operations started in {YEAR} at ten work centers, {n0((ops['start_quarter'] >= 2).sum())} of them in {REST}. Utilization is machine "
-             f"hours over scheduled hours net of downtime, Saturday and extended shifts included; uptime is one less downtime over scheduled hours. Queue is the end "
-             f"of the previous operation to the first start of this one, less the powder color-day wait; for the lasers it is traveler print to first cut, less "
-             f"material wait. The brakes run at {d2(UY.loc['press_brake', 'utilization'])} of scheduled hours net of downtime, the robotic weld cell at "
-             f"{d2(UY.loc['robotic_weld', 'utilization'])}, the lasers at {d2(UY.loc['laser', 'utilization'])}, assembly through hardware at "
-             f"{rng(mid['utilization'].min(), mid['utilization'].max())} and the powder line at {d2(UY.loc['powder_coat', 'utilization'])}. "
-             f"Machine uptime is {rng(UY['uptime'].min(), UY['uptime'].max())} at every work center and does not distinguish the constraint. {T.see('util')}</p>")
+    gap = (UY["uptime"] - UY["utilization"]) * 100
+    assert gap.idxmin() == "press_brake"
+    b.append(f"<p>In {YEAR}, the brakes ran at {pct(UY.loc['press_brake', 'utilization'], 0)} utilization against {pct(UY.loc['press_brake', 'uptime'], 0)} uptime, "
+             f"this {gap['press_brake']:.0f}-point gap represents the smallest production capacity buffer of all work centers. The robotic weld cell ran at "
+             f"{pct(UY.loc['robotic_weld', 'utilization'], 0)} utilization, the laser cutting stations at {pct(UY.loc['laser', 'utilization'], 0)}, the assembly "
+             f"through hardware work centers ran at {pct(mid['utilization'].min(), 0)} to {pct(mid['utilization'].max(), 0)}, and the powder line ran at just "
+             f"{pct(UY.loc['powder_coat', 'utilization'], 0)} utilization. {T.see('util')}</p>")
     b.append(titled(C.fig_util(), "Utilization and Machine Uptime by Work Center"))
 
     hot_y = HY[HY["hot_weeks"] > 0].sort_values("hot_weeks", ascending=False)
-    never = [w for w in ("inspection_pack", "hardware", "powder_coat") if HY.loc[w, "hot_weeks"] == 0]
-    assert len(never) == 3 and len(hot_y) == 7 and set(HR[HR["hot_weeks"] > 0].index) == set(HOT_ORDER), (list(hot_y.index), never)
-    weeks = int(HY["weeks"].iloc[0])
-    counted = [f"{NAME[w]} in {int(r['hot_weeks'])}" + (f" weeks of {weeks}" if k == 0 else "") for k, (w, r) in enumerate(hot_y.iterrows())]
-    pair = lambda w: f"{d2(HR.loc[w, 'queue_hot'])} against {d2(HR.loc[w, 'queue_other'])}"
-    assert all(HR.loc[w, "queue_hot"] > HR.loc[w, "queue_other"] for w in HOT_ORDER) and HY.loc["press_brake", "queue_hot"] < HY.loc["press_brake", "queue_other"]
-    b.append(f"<p>{NUMBER[len(hot_y)]} work centers reached 0.95 utilization in at least one week of {YEAR}: {join_and(counted)}; {join_and(NAME[w] for w in never)} "
-             f"never did. In {REST} a hot week shows as a queue at each of the six that had one: {d2(HR.loc['press_brake', 'queue_hot'])} days per operation at the "
-             f"brakes against {d2(HR.loc['press_brake', 'queue_other'])} in the other weeks, {pair('robotic_weld')} at the robotic weld cell, {pair('assembly')} at "
-             f"assembly, {pair('punch')} at the punch, {pair('laser')} at the lasers and {pair('weld')} at the manual weld bays. For the full year the brakes read "
-             f"the other way ({d2(HY.loc['press_brake', 'queue_hot'])} against {d2(HY.loc['press_brake', 'queue_other'])}) because the first-quarter backlog kept "
-             f"the queue long whatever the week's utilization. Hot weeks carry {pct(HR.loc['press_brake', 'hours_share_hot'], 0)} of brake hours and "
-             f"{pct(HR.loc['robotic_weld', 'hours_share_hot'], 0)} of the weld cell's in {REST}, {pct(HR.loc['punch', 'hours_share_hot'], 0)} of the punch's and "
-             f"{pct(HR.loc['assembly', 'hours_share_hot'], 0)} of assembly's. {T.see('pos', 'hot')}</p>")
-    b.append(chart("Queue in Hot Weeks and Other Weeks by Work Center, Q2-Q4 2025", fig_hot()))
+    rank = UY["utilization"].rank(ascending=False)
+    assert list(hot_y.index) == HOT_ORDER and rank["laser"] == 3 and rank["punch"] == len(rank) - 2
+    b.append(f"<p>A \"hot week\" is defined as a one-week period in which a work center ran at or above 95% utilization. As seen below, {NUMBER[len(hot_y)].lower()} "
+             f"work centers recorded at least one hot week, with the brakes recording the most, followed by the robotic weld cell and assembly. While the punch "
+             f"station recorded the third lowest average utilization in {YEAR}, it recorded {int(HY.loc['punch', 'hot_weeks'])} hot weeks, because it is a single "
+             f"machine running about {n0(act.loc['punch', 'ops_per_machine_week'])} jobs a week, and so a few large jobs fill its available hours. The laser "
+             f"cutting stations, despite recording the third highest average utilization in {YEAR}, recorded only {int(HY.loc['laser', 'hot_weeks'])} hot weeks. "
+             f"This station spreads jobs across three machines, and being first in the routing order, goes hot only when releases surge. This is the dynamic that "
+             f"led to the Q4 2024 backlog build detailed in the {link('lead')} report.</p>")
+    b.append(chart(f"Share of hot weeks by work station, {YEAR}", fig_hot_share()))
 
+    x_ = lambda w, k: HY.loc[w, f"{k}_hot"] / HY.loc[w, f"{k}_other"]
+    up = [w for w in HOT_ORDER if x_(w, "queue") > 1 and x_(w, "wip") > 1]
+    assert [w for w in HOT_ORDER if w not in up] == ["press_brake"]
+    by_queue = sorted(up, key=lambda w: -x_(w, "queue"))
+    each = join_and(f"{NAME[w]} ({x_(w, 'queue'):.1f}x and {x_(w, 'wip'):.1f}x)" for w in by_queue[1:])
+    b.append(f"<p>When work stations experience hot weeks with elevated utilization, the result is elevated queue times and WIP builds. Compared to normal weeks, "
+             f"queue time in hot weeks is {x_(by_queue[0], 'queue'):.1f}x at {NAME[by_queue[0]]} with WIP at {x_(by_queue[0], 'wip'):.1f}x, followed by {each}. "
+             f"The brakes are the exception for the full year, at {x_('press_brake', 'queue'):.1f}x on queue time and {x_('press_brake', 'wip'):.1f}x on WIP: the "
+             f"first-quarter backlog kept both high in weeks that ran below 95%. In {REST} the brakes' queue time in hot weeks is "
+             f"{HR.loc['press_brake', 'queue_hot'] / HR.loc['press_brake', 'queue_other']:.1f}x. Hot weeks carry "
+             f"{pct(HY.loc['press_brake', 'hours_share_hot'], 0)} of machine hours at the brakes and {pct(HY.loc['robotic_weld', 'hours_share_hot'], 0)} at the weld "
+             f"cell in {YEAR}, vs. {pct(HY.loc['punch', 'hours_share_hot'], 0)} at the punch and {pct(HY.loc['assembly', 'hours_share_hot'], 0)} at assembly. "
+             f"{T.see('pos', 'hot')}</p>")
+    b.append(chart(f"Queue Time and WIP in Hot Weeks vs. Normal Weeks by Work Center, {YEAR}", fig_hot()))
     ah, ao = ASM["compare"]["hot"], ASM["compare"]["other"]
     assert PR["queue_measured"].idxmax() == "robotic_weld"
-    listed = UY.loc[SC.LIST_CENTERS, "utilization"]
-    b.append(f"<p>Three work centers are followed in <a href='#f3'>Section 3</a>. The brakes run at {d2(UY.loc['press_brake', 'utilization'])} and carry "
-             f"{pct(QSHARE['press_brake'], 0)} of all queue time ({link('lead')}). The robotic weld cell runs at {d2(UY.loc['robotic_weld', 'utilization'])} on one shift and has the "
-             f"longest queue in the shop in {REST}. Assembly runs at {d2(UY.loc['assembly', 'utilization'])} for the year but at {d2(ah['utilization'])} in its "
-             f"{int(ah['weeks'])} hot weeks, when its queue is {TIMES[round(ah['queue'] / ao['queue'])]} times the other weeks'. The lasers matter at the year-end peak and are "
-             f"followed there. The punch is one machine at {d2(UY.loc['punch', 'utilization'])} whose hot weeks raise a short queue "
-             f"{TIMES[round(HR.loc['punch', 'queue_hot'] / HR.loc['punch', 'queue_other'])]}fold; it is left at that. Grind and deburr, inspection and pack, hardware "
-             f"and the manual weld bays carry {join_and(pct(QSHARE[w], 0) for w in SC.LIST_CENTERS)} of queue time at {rng(listed.min(), listed.max())} utilization, "
-             f"and their queues are set by the daily dispatch list rather than by load (<a href='#f2'>Section 2</a>); the powder line runs at "
-             f"{d2(UY.loc['powder_coat', 'utilization'])} and holds jobs for the color day.</p>")
-    b.append(f"<p>Brake setups ran {n0(y['overrun_hours'])} hours over standard in {YEAR}; no other work center exceeds {n0(others_setup['overrun_hours'].max())}. "
-             f"Run standards are within {pct(other_run.min() - 1, 0)} to {pct(other_run.max() - 1, 0)} of actual at every work center except the lasers, where "
-             f"{newer} run at {d2(S.LF[S.NEWER].mean())} (<a href='#f4'>Sections 4</a> and <a href='#f5'>5</a>).</p>")
 
     # 2 ── queue against load
     b.append("<h2 id='f2'>2. Queue Against Load</h2>")
@@ -312,6 +429,13 @@ def build():
 
     # 3 ── the constraints
     b.append("<h2 id='f3'>3. The Constraints</h2>")
+    hot_x = lambda w: HY.loc[w, "queue_hot"] / HY.loc[w, "queue_other"]
+    b.append(f"<p>Three work centers carry the capacity story and are followed here. The brakes run at {pct(UY.loc['press_brake', 'utilization'], 0)} and carry "
+             f"{pct(QSHARE['press_brake'], 0)} of all queue time ({link('lead')}). The robotic weld cell runs at {pct(UY.loc['robotic_weld', 'utilization'], 0)} on one "
+             f"shift and has the longest queue time in the shop in {REST}. Assembly runs at {pct(UY.loc['assembly', 'utilization'], 0)} for the year but at "
+             f"{pct(ah['utilization'], 0)} in its {int(ah['weeks'])} hot weeks, when operations wait {TIMES[round(hot_x('assembly'))]} times as long as in other weeks. "
+             f"The lasers matter at the year-end peak and are followed for that. The punch is one machine at {pct(UY.loc['punch', 'utilization'], 0)} whose hot weeks "
+             f"lengthen a short wait {TIMES[round(hot_x('punch'))]}fold and is left at that.</p>")
     b.append("<h3 id='f3_1'>The five brakes</h3>")
     tail = MY.loc[["B3", "B4", "B5"]]
     top_y = MY.loc[C.BRAKES, "utilization"].sort_values(ascending=False).index.tolist()
@@ -469,7 +593,7 @@ def build():
 
     b.append("<h2 id='appendix'>Appendix</h2>")
     b.append(T.appendix())
-    toc = [("f1", "1. The Screen"), ("f2", "2. Queue Against Load"), ("f3", "3. The Constraints"), ("f4", "4. Setups Against Standard"), ("f5", "5. Run Standards")]
+    toc = [("f1", "1. Capacity Across the Shop"), ("f2", "2. Queue Against Load"), ("f3", "3. The Constraints"), ("f4", "4. Setups Against Standard"), ("f5", "5. Run Standards")]
     print(f"wrote {page('capacity', chr(10).join(b), toc)}: 5 sections, {len(T.order)} appendix tables")
     return T.order
 
