@@ -230,7 +230,7 @@ def fig_wip_quarters():
     h2, l2 = ax2.get_legend_handles_labels()
     f.legend(h1 + h2, l1 + l2, frameon=False, fontsize=9, ncol=2, loc="lower center")
     f.tight_layout(rect=(0, 0.06, 1, 1))
-    return save(f, "lead_time_wip_by_quarter", "Average WIP and Days on the Floor by Quarter, 2023 to 2025")
+    return save(f, "lead_time_wip_by_quarter", "Average WIP and Working Days on the Floor, 2023 to 2025")
 
 
 def fig_weekly_year():
@@ -452,9 +452,16 @@ def report():
     b.append("<h2 id='f4'>4. Work in Process</h2>")
     spare = wr["wip_at_quoted_lead_times"] - wr["wip_mean"]
     b.append(f"<p>In {YEAR}, the shop carried an average of {n0(wy['wip_mean'])} WIP jobs against a throughput of about {n0(wy['throughput_per_day'])} shipped a day, "
-             f"so a job spent about {n0(wy['wip_over_throughput_days'])} working days on the floor. WIP averaged {n0(wipd['wip'].mean())} jobs over the past three "
+             f"so a job spent about {n0(wy['wip_over_throughput_days'])} working days on the floor. {YEAR} WIP was skewed by the large Q1 backlog detailed below. WIP averaged {n0(wipd['wip'].mean())} jobs over the past three "
              f"years and peaks every December: {n0(peaks[2023]['peak'])} jobs in 2023, {n0(peaks[2024]['peak'])} in 2024 and {n0(peaks[2025]['peak'])} in 2025.</p>")
-    b.append(chart("Average WIP and Days on the Floor by Quarter, 2023 to 2025", fig_wip_quarters()))
+    b.append(chart("Average WIP and Working Days on the Floor, 2023 to 2025", fig_wip_quarters()))
+    b.append(f"<p>WIP peaked at {n0(peaks[2024]['peak'])} jobs at the end of 2024 against a Q3 2024 average of {n0(peaks[2024]['q3'])}. In Q4 2024, the shop "
+             f"released {pct(brake_up, 0)} more brake standard hours than in Q3. This surge pushed the lasers to "
+             f"{pct(laser_six['laser_utilization'].mean(), 0)} of scheduled hours on average, vs. {pct(q3_24['laser_utilization'].mean(), 0)} in Q3. During the "
+             f"three peak weeks, {n0(laser_three['wip_at_laser'].min())} to {n0(laser_three['wip_at_laser'].max())} jobs were waiting to be cut, "
+             f"vs. an average of {n0(q3_24['wip_at_laser'].mean())} jobs in Q3. The work then queued at the brakes, which already run at {pct(brake_rest, 0)} in a "
+             f"normal quarter, and it took through Q1 and into Q2 {YEAR} to clear this backlog. {see('7')}</p>")
+    b.append(chart("Weekly WIP and Net Inflow, Q3 2024 to Q2 2025", fig_weekly_year()))
     turn = lambda a, c: "falls" if c < a else "rises"
     b.append(f"<p>By location, the brakes (queue and run together) hold {pct(ws_year['press_brake'], 0)} of WIP in {YEAR}, while the laser cutting stations hold "
              f"{pct(ws_year['laser'], 0)} and outside processing {pct(ws_year['outside_processing'], 0)}. The other {NUMBER[len(other_centers)]} work centers and jobs "
@@ -474,15 +481,6 @@ def report():
     b.append(f"<p>WIP was within 10% of its expected value (measured as <i>throughput x working days</i>) in {llq_in} of the last {len(llq)} quarters, "
              f"meaning the floor was in balance. The {NUMBER[len(llq_miss)]} quarters that miss are the 2024 year-end build ({ahead[0]}), when WIP ran "
              f"ahead of shipments, and the quarters in which a build shipped ({join_and(behind)}), when shipments ran ahead of WIP. {see('6')}</p>")
-    b.append(f"<p>WIP peaked at {n0(peaks[2024]['peak'])} jobs at the end of 2024 against a Q3 2024 average of {n0(peaks[2024]['q3'])}. In Q4 2024, the shop "
-             f"released {pct(brake_up, 0)} more brake standard hours than in Q3. Over six weeks in Q4 2024, this surge pushed the lasers to "
-             f"{pct(laser_six['laser_utilization'].mean(), 0)} of scheduled hours on average, vs. {pct(q3_24['laser_utilization'].mean(), 0)} in Q3. During the "
-             f"three peak weeks, {n0(laser_three['wip_at_laser'].min())} to {n0(laser_three['wip_at_laser'].max())} jobs were waiting to be cut, "
-             f"vs. an average of {n0(q3_24['wip_at_laser'].mean())} jobs in Q3. The work then queued at the brakes, which already run at {pct(brake_rest, 0)} in a "
-             f"normal quarter, and it took through Q1 and into Q2 {YEAR} to clear this backlog. The fourth-quarter release is the "
-             f"lever: taking the peak on planned Saturday brake shifts from November through February is the option that raised on-time delivery, while a cap on "
-             f"release lowered it. <a href='options_tested.html'>Options tested</a> sizes both. {see('7')}</p>")
-    b.append(chart("Weekly WIP and Net Inflow, Q3 &rsquo;24 to Q2 &rsquo;25", fig_weekly_year()))
 
     b.append("<h2 id='rec'>Recommendation</h2>")
     b.append(f"<p>Restate the fixed quote as a percentile of the measured lead-time distribution by routing class ([[R:quoting]]): the 10-day repeat quote is met on "
