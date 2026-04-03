@@ -37,9 +37,9 @@ def _lead_time():
 
 
 def _capacity():
-    load = re.search(r"In 2025, the brakes ran at .*? the powder line ran at just \d+% utilization\.", section_text(CAPACITY, "f1_1")).group(0)
+    load = re.search(r"In 2025, the brakes ran at .*? The powder line ran at just \d+%\.", section_text(CAPACITY, "f1")).group(0)
     hours, standard, over, week, share = re.search(r"the brakes ran ([\d,]+) hours against ([\d,]+) standard, ([\d,]+) over, ([\d,]+) a week, (\d+%) of brake machine time",
-                                                   section_text(CAPACITY, "f4")).groups()
+                                                   section_text(CAPACITY, "f3")).groups()
     return f"{load} Brake setups ran {hours} hours against {standard} standard in 2025: {over} hours over, {week} a week, {share} of brake machine time."
 
 

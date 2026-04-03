@@ -151,7 +151,7 @@ def t_top():
 
 def t_top20():
     rows = [[WC[r.work_center], r.part_id, n0(r.op_seq), r.family.capitalize(), n0(r.setups), n0(r.mean_lot), d1(r.setup_hours), d1(r.standard_hours),
-             d2(r.median_ratio), d1(r.overrun_hours), d2(r.weight), d1(r.score), d2(r.hours_per_week_at_standard)] for r in TOP.itertuples()]
+             d2(r.median_ratio), d1(r.overrun_hours), f"{r.weight * 100:.0f}%", d1(r.score), d2(r.hours_per_week_at_standard)] for r in TOP.itertuples()]
     return table(pd.DataFrame(rows, columns=["Work center", "Part", "Operation", "Family", "Setups", "Mean lot", "Setup hours", "Standard hours", "Median ratio",
                                              "Overrun hours", "Utilization", "Score", "Hours a week at standard"]))
 
