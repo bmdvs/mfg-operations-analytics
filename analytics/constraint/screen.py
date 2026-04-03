@@ -12,7 +12,7 @@ SERIES_START = "2023-01-30"                     # weekly series leave out the fi
 LIST_CENTERS = ["grind_deburr", "inspection_pack", "hardware", "weld"]
 HOUR_BANDS = [0, 6, 8, 10, 12, 14, 16, 24]
 HOUR_LABELS = ["Before 06:00", "06:00 to 08:00", "08:00 to 10:00", "10:00 to 12:00", "12:00 to 14:00", "14:00 to 16:00", "After 16:00"]
-UTIL_BANDS = ["below 0.80", "0.80 to 0.85", "0.85 to 0.90", "0.90 to 0.95", "0.95 and above"]
+UTIL_BANDS = ["below 80%", "80% to 85%", "85% to 90%", "90% to 95%", "at or above 95%"]
 
 
 def load():
@@ -43,8 +43,8 @@ def load():
                  f"where setup_year = {YEAR} group by 1 order by 1"),
         runs=q(f"select work_center, sum(run_hours) as hours, sum(run_std_hours) as standard from marts.mart_run_standards where start_year = {YEAR} group by 1 order by 1"),
         colors=q("select color, days_per_week, weekdays from marts.mart_powder_color_days order by color"),
-        wip=q(f"select location as work_center, cast(date_trunc('week', calendar_date) as date) as week_start, avg(jobs) as wip from marts.mart_wip_daily "
-              f"group by 1, 2 order by 1, 2"),
+        wip=q(f"select location as work_center, cast(date_trunc('week', calendar_date) as date) as week_start, calendar_date, jobs from marts.mart_wip_daily "
+              f"order by 1, 3"),
         downtime=q(f"select work_center, cause, sum(hours) as hours from marts.mart_downtime_events where year(start_ts) = {YEAR} group by 1, 2 order by 1, 2"),
     )
 
@@ -61,16 +61,18 @@ def pooled_utilization(w):
 def hot_weeks(D):
     """Weeks at or above 0.95 utilization by work center: how many, the queue in them against the other weeks, and their share of machine hours."""
     rows = []
-    wip = D["wip"].assign(week_start=pd.to_datetime(D["wip"]["week_start"]))
-    weeks = D["uw"].merge(wip, on=["work_center", "week_start"], how="left")
+    # jobs at the work center, queue and run together, on each day of the week
+    days = D["wip"].assign(week_start=pd.to_datetime(D["wip"]["week_start"])).merge(D["uw"][["work_center", "week_start", "utilization"]], on=["work_center", "week_start"])
     for per, fq in PERIODS:
-        y = weeks[(weeks["week_year"] == YEAR) & (weeks["week_quarter"] >= fq)]
+        y = D["uw"][(D["uw"]["week_year"] == YEAR) & (D["uw"]["week_quarter"] >= fq)]
         for wc, w in y.groupby("work_center"):
             hot, other = w[w["utilization"] >= HOT], w[w["utilization"] < HOT]
+            dw = days[(days["work_center"] == wc) & days["week_start"].isin(w["week_start"])]
             rows.append(dict(period=per, work_center=wc, utilization=pooled_utilization(w), weeks=len(w), hot_weeks=len(hot),
                              hot_full_weeks=int((hot["weekdays"] == 5).sum()), queue_hot=weighted_queue(hot), queue_other=weighted_queue(other),
                              utilization_hot=pooled_utilization(hot), utilization_other=pooled_utilization(other),
-                             wip_hot=float(hot["wip"].mean()) if len(hot) else np.nan, wip_other=float(other["wip"].mean()),
+                             wip_hot=float(dw.loc[dw["utilization"] >= HOT, "jobs"].mean()) if len(hot) else np.nan,
+                             wip_other=float(dw.loc[dw["utilization"] < HOT, "jobs"].mean()),
                              hours_share_hot=float(hot["machine_hours"].sum() / w["machine_hours"].sum())))
     return pd.DataFrame(rows).sort_values(["period", "utilization"], ascending=[False, False])
 
