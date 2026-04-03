@@ -61,27 +61,39 @@ QUARTERLY = (X["uw"].assign(quarter=lambda d: d["week_year"].astype(int).astype(
 QDAYS = q("select work_center, operations, queue_days, share_of_queue from marts.mart_queue_by_work_center where period = 'year' order by queue_days desc").set_index("work_center")
 
 
+TREND_COLORS = ["#A8C0D1", "#E3B98A", "#A9CDB3", "#C9B3D6", "#E0A8A8", "#D8CFA0", "#9FD0CF", "#C4C4C4"]          # light, one for each of the other work centers
+
+
+def darker(color, by=0.62):
+    r, g, b_ = (int(color[k:k + 2], 16) for k in (1, 3, 5))
+    return "#{:02X}{:02X}{:02X}".format(int(r * by), int(g * by), int(b_ * by))
+
+
 def fig_utilization_trend():
-    """Average weekly utilization by month for each work center, each line named where it ends."""
+    """Monthly utilization for each work center as a three-month trailing average, each line named where it ends."""
     w = X["uw"].assign(month=lambda d: (d["week_start"] + pd.Timedelta(days=3)).dt.to_period("M"))
-    w = w[w["month"] >= pd.Period("2023-01")]
-    d = w.groupby(["month", "work_center"])["utilization"].mean().unstack() * 100
+    g = w.groupby(["month", "work_center"])[["machine_hours", "scheduled_hours", "downtime_hours"]].sum().unstack()
+    # hours pooled over the month and the two before it, so each point is the utilization of a quarter-long window ending in that month
+    r = g.rolling(3, min_periods=1).sum()                # the first two months of the record stand on the months there are
+    d = (r["machine_hours"] / (r["scheduled_hours"] - r["downtime_hours"]) * 100)
+    d = d[d.index >= pd.Period("2023-01")].dropna()
     x = np.arange(len(d))
     f, ax = fig(h=4.6)
-    order = [c for c in d.columns if c not in LEAD_TWO] + LEAD_TWO
-    for c in order:
-        ax.plot(x, sig(d[c].to_numpy(dtype=float)), color=shade(c), linewidth=2.2 if c in LEAD_TWO else 1.2, zorder=3 if c in LEAD_TWO else 2)
+    others = [c for c in C.UY.sort_values("utilization", ascending=False).index if c not in LEAD_TWO]
+    color = dict(zip(others, TREND_COLORS), **{c: BRAND_BLUE for c in LEAD_TWO})
+    for c in others + LEAD_TWO:
+        ax.plot(x, sig(d[c].to_numpy(dtype=float)), color=color[c], linewidth=2.4 if c in LEAD_TWO else 1.6, zorder=3 if c in LEAD_TWO else 2)
     # the names at the right, moved apart where two lines end close together
     ends = d.iloc[-1].sort_values()
-    placed, gap = [], 3.0
+    placed, gap = [], 2.3
     for c, v in ends.items():
-        y = max(float(v), 41.5) if not placed else max(float(v), placed[-1] + gap)
+        y = float(v) if not placed else max(float(v), placed[-1] + gap)
         placed.append(y)
-        ax.text(x[-1] + 0.5, y, f"{WC[c]}, {v:.0f}%", ha="left", va="center", fontsize=8.5, color=BRAND_BLUE if c in LEAD_TWO else "#555555",
+        ax.text(x[-1] + 0.5, y, f"{WC[c]}, {v:.0f}%", ha="left", va="center", fontsize=8.5, color=BRAND_BLUE if c in LEAD_TWO else darker(color[c]),
                 fontweight="bold" if c in LEAD_TWO else None)
-    ticks = x[::6]
-    ax.set_xticks(ticks)
-    ax.set_xticklabels([d.index[k].strftime("%b %Y") for k in ticks])
+    first = [k for k in x if d.index[k].month in (1, 7)]
+    ax.set_xticks(first)
+    ax.set_xticklabels([d.index[k].strftime("%b %Y") for k in first])
     ax.set_xlim(-0.6, x[-1] + 9.5)
     ax.set_ylim(40, 100)
     ax.yaxis.set_major_formatter(lambda t, _: f"{t:.0f}%")
