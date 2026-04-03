@@ -62,24 +62,27 @@ QDAYS = q("select work_center, operations, queue_days, share_of_queue from marts
 
 
 def fig_utilization_trend():
-    """Utilization by quarter for each work center, each line named where it ends."""
-    d = QUARTERLY * 100
+    """Average weekly utilization by month for each work center, each line named where it ends."""
+    w = X["uw"].assign(month=lambda d: (d["week_start"] + pd.Timedelta(days=3)).dt.to_period("M"))
+    w = w[w["month"] >= pd.Period("2023-01")]
+    d = w.groupby(["month", "work_center"])["utilization"].mean().unstack() * 100
     x = np.arange(len(d))
-    f, ax = fig(h=4.4)
-    order = [w for w in d.columns if w not in LEAD_TWO] + LEAD_TWO
-    for w in order:
-        ax.plot(x, sig(d[w].to_numpy(dtype=float)), color=shade(w), linewidth=2.4 if w in LEAD_TWO else 1.5, zorder=3 if w in LEAD_TWO else 2)
+    f, ax = fig(h=4.6)
+    order = [c for c in d.columns if c not in LEAD_TWO] + LEAD_TWO
+    for c in order:
+        ax.plot(x, sig(d[c].to_numpy(dtype=float)), color=shade(c), linewidth=2.2 if c in LEAD_TWO else 1.2, zorder=3 if c in LEAD_TWO else 2)
     # the names at the right, moved apart where two lines end close together
     ends = d.iloc[-1].sort_values()
-    placed, gap = [], 2.6
-    for w, v in ends.items():
-        y = float(v) if not placed else max(float(v), placed[-1] + gap)
+    placed, gap = [], 3.0
+    for c, v in ends.items():
+        y = max(float(v), 41.5) if not placed else max(float(v), placed[-1] + gap)
         placed.append(y)
-        ax.text(x[-1] + 0.18, y, f"{WC[w]}, {v:.0f}%", ha="left", va="center", fontsize=8.5, color=BRAND_BLUE if w in LEAD_TWO else "#555555",
-                fontweight="bold" if w in LEAD_TWO else None)
-    ax.set_xticks(x)
-    ax.set_xticklabels(list(d.index), rotation=30, ha="right")
-    ax.set_xlim(-0.3, x[-1] + 3.4)
+        ax.text(x[-1] + 0.5, y, f"{WC[c]}, {v:.0f}%", ha="left", va="center", fontsize=8.5, color=BRAND_BLUE if c in LEAD_TWO else "#555555",
+                fontweight="bold" if c in LEAD_TWO else None)
+    ticks = x[::6]
+    ax.set_xticks(ticks)
+    ax.set_xticklabels([d.index[k].strftime("%b %Y") for k in ticks])
+    ax.set_xlim(-0.6, x[-1] + 9.5)
     ax.set_ylim(40, 100)
     ax.yaxis.set_major_formatter(lambda t, _: f"{t:.0f}%")
     f.tight_layout()
