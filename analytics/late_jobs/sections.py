@@ -330,8 +330,8 @@ def report():
     b.append("<h2 id='f2'>2. The shop's own records</h2>")
     b.append(f"<p>Late-reason codes are inputted retroactively on late jobs by the customer service team during the weekly delivery review. These codes are pulled "
              f"from a dropdown list with six choices: capacity, material, outside processing, customer change, quality and other. As seen below, a significant "
-             f"portion of late jobs had no late-reason code entered, and this is attributed to the fact these codes are entered in weekly batches, as opposed to "
-             f"shop floor entries at the time the job runs late. {see(2)}</p>")
+             f"portion of late jobs had no late-reason code entered ({pct(CS['year']['blank'], 0)} in {YEAR} and {pct(CS[REST]['blank'], 0)} in {REST}). "
+             f"{see(2)}</p>")
     b.append(chart("Late-reason codes as entered on late jobs", fig_codes()))
     late = cross.loc[:, "released late"]
     b.append(f"<p>To validate the accuracy of these codes, we compared them against the lost days attribution drivers shown above. We first mapped the late-reason codes to the corresponding attribution drivers: queue constraint and setup "
@@ -350,8 +350,8 @@ def report():
              f"{n0(cross_all.loc['outside processing'].sum())} coded outside processing ({pct(cross_all.loc['outside processing', 'outside processing'] / cross_all.loc['outside processing'].sum(), 0)}) and quality on just {n0(cross_all.loc['quality', 'quality'])} of the "
              f"{n0(cross_all.loc['quality'].sum())} ({pct(cross_all.loc['quality', 'quality'] / cross_all.loc['quality'].sum(), 0)}) coded quality. Of the {n0(rel.sum())} jobs where released late is the largest attributed driver, "
              f"{n0(rel['capacity'])} are coded capacity, {n0(rel['blank'])} carry no code and {n0(rel['other'])} are coded other. {see(3, 4)}</p>")
-    b.append("<p>To increase the accuracy of its late-reason codes, the shop should consider process changes to include additional options in the code dropdown "
-             "menu, as well as to enable shop-floor data capture on the reasons for late jobs once they're known, instead of relying on retroactive reviews.</p>")
+    b.append("<p>The shop should consider process changes to include additional options in the late-reason code dropdown menu, as well as to enable real-time "
+             "shop-floor data capture on the reasons for late jobs once they're known.</p>")
     b.append(chart("What the shop coded against what the data shows", fig_mosaic()))
 
     b.append("<h2 id='rec'>Recommendation and control</h2>")
