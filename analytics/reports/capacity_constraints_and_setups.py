@@ -27,6 +27,7 @@ d1, d2, d3, n0, rng = C.d1, C.d2, C.d3, C.n0, C.rng
 X = SC.load()
 HOT = SC.hot_weeks(X).set_index(["period", "work_center"])
 HY, HR = HOT.loc["year"], HOT.loc[REST]
+HALL = SC.hot_weeks_all(X)
 BY_START, HOURS, BRAKE_HOURS = SC.dispatch(X)
 START_Y, START_R = BY_START[BY_START["period"] == "year"].set_index("work_center"), BY_START[BY_START["period"] == REST].set_index("work_center")
 NEXT_DAY = SC.next_day_wait(X)
@@ -121,14 +122,14 @@ def fig_hot_share():
 
 
 def fig_hot_year():
-    """Queue time in the year's weeks at or above 95% utilization against its other weeks, for the work centers that had one."""
-    d = HY.loc[HOT_ORDER]
+    """Queue time in the weeks at or above 95% utilization against the other weeks of 2023 to 2025, for the work centers that had one."""
+    d = HALL[HALL["hot_weeks"] > 0]
     f, ax = fig(h=3.8)
     paired_columns(ax, [WC[w] for w in d.index], list(d["queue_hot"]), list(d["queue_other"]), ("Weeks at or above 95%", "Other weeks"), decimals=2)
     ax.set_ylabel("Queue time in days")
     f.legend(*ax.get_legend_handles_labels(), frameon=False, fontsize=9, ncol=2, loc="lower center")
     f.tight_layout(rect=(0, 0.06, 1, 1))
-    return save(f, "capacity_queue_in_hot_weeks_year", f"Queue Time in Weeks at or Above 95% Utilization and Other Weeks, {YEAR}")
+    return save(f, "capacity_queue_in_hot_weeks_year", "Queue Time in Weeks at or Above 95% Utilization and Other Weeks, 2023 to 2025")
 
 
 def fig_queue_days():
@@ -369,6 +370,8 @@ def t_hot():
         out += block(per, table(pd.DataFrame(rows, columns=["Work center", "Utilization", "Weeks at or above 95%", "Of which full five-day weeks",
                                                              "Queue time in those weeks", "Queue time in the other weeks", "Jobs at the work center in those weeks, daily mean",
                                                              "Jobs at the work center in the other weeks, daily mean", "Share of machine hours in those weeks"])))
+    rows = [[WC[w], f"{int(r['hot_weeks'])} of {int(r['weeks'])}", blank(r["queue_hot"]), d2(r["queue_other"])] for w, r in HALL.iterrows()]
+    out += block("2023 to 2025", table(pd.DataFrame(rows, columns=["Work center", "Weeks at or above 95%", "Queue time in those weeks", "Queue time in the other weeks"])))
     BQ = C.BQ
     return out + block(f"Brake queue 90th percentile by quarter, {YEAR}",
                        table(pd.DataFrame([[d1(BQ.loc[k, "queue_p90"]) for k in (1, 2, 3, 4)]], columns=["Q1", "Q2", "Q3", "Q4"])))
@@ -523,15 +526,16 @@ def build():
              f"brakes and the robotic weld cell were at this level in {P(hot_share['press_brake'])} and {P(hot_share['robotic_weld'])} of weeks throughout the "
              f"year. {T.see('hot')}</p>")
     b.append(chart(f"Share of weeks at or above 95% utilization, {YEAR}", fig_hot_share()))
-    others = [w for w in HOT_ORDER if w != "press_brake"]
-    assert all(HY.loc[w, "queue_hot"] > HY.loc[w, "queue_other"] for w in others) and HY.loc["press_brake", "queue_hot"] < HY.loc["press_brake", "queue_other"]
+    hall = HALL[HALL["hot_weeks"] > 0]
+    rise = hall["queue_hot"] / hall["queue_other"]
+    assert (rise > 1).all() and rise.idxmin() == "press_brake"
     bw = X["uw"][(X["uw"]["work_center"] == "press_brake") & (X["uw"]["week_year"] == YEAR) & (X["uw"]["utilization"] < SC.HOT)]
     b.append(f"<p>Work stations experienced an increase in queue time when operating near maximum utilization, compared to weeks at lower utilization. Notably, the "
-             f"press brakes were the exception: their queue time in weeks at or above 95% utilization was lower than in their other weeks "
-             f"({d2(HY.loc['press_brake', 'queue_hot'])} days against {d2(HY.loc['press_brake', 'queue_other'])}). This is because the other weeks on this station are "
-             f"still running at 85% to 95% utilization in {int((bw['utilization'] >= 0.85).sum())} of {len(bw)} cases and carry the backlog of the weeks before "
+             f"increase in queue time in weeks spent at or above 95% utilization was lowest for the press brakes ({d2(hall.loc['press_brake', 'queue_hot'])} days "
+             f"against {d2(hall.loc['press_brake', 'queue_other'])}, {rise['press_brake']:.1f}x). This is because the other weeks on this station still run at high "
+             f"utilization, at 85% to 95% in {int((bw['utilization'] >= 0.85).sum())} of {len(bw)} such weeks in {YEAR}, and carry the backlog of the weeks before "
              f"them.</p>")
-    b.append(chart(f"Queue Time in Weeks at or Above 95% Utilization and Other Weeks, {YEAR}", fig_hot_year()))
+    b.append(chart("Queue Time in Weeks at or Above 95% Utilization and Other Weeks, 2023 to 2025", fig_hot_year()))
     assert QDAYS.index[0] == "press_brake" and QDAYS.loc["robotic_weld", "share_of_queue"] < 0.05
     b.append(f"<p>Throughout {YEAR}, jobs spent {n0(QDAYS['queue_days'].sum())} days waiting at a work center after their first operation. The press brake station "
              f"accounted for {P(QDAYS.loc['press_brake', 'share_of_queue'])} of those days, which is a function of its consistently high utilization, as well as its "
