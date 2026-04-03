@@ -58,25 +58,35 @@ def note(text):
 
 
 def fig_activity():
-    """Operations per machine a week and machine hours per operation, work centers in routing order."""
-    d = ACTIVITY.loc[ROUTING[::-1]]
-    y = np.arange(len(d))
-    f, axes = fig(h=4.0, ncols=2, grid="x", sharey=True)
-    for ax, col, title in ((axes[0], "ops_per_machine_week", "Operations per machine a week"), (axes[1], "hours_per_operation", "Machine hours per operation")):
-        v = sig(d[col].to_numpy(dtype=float))
-        ax.barh(y, v, height=0.62, color=BRAND_BLUE)
-        for yi, vi in zip(y, v):
-            ax.text(vi + float(v.max()) * 0.015, yi, f"{vi:.2f}" if col.startswith("hours") and vi < 1 else f"{vi:.1f}", ha="left", va="center", fontsize=8.5)
-        ax.set_xlim(0, float(v.max()) * 1.14)
-        ax.set_xlabel(title)
-    axes[0].set_yticks(y)
-    axes[0].set_yticklabels([f"{WC[w]} ({int(d.loc[w, 'machines'])})" for w in d.index])
-    f.tight_layout()
+    """Operations per machine a week (left axis) and machine hours per operation (right axis), work centers in routing order."""
+    d = ACTIVITY.loc[ROUTING]
+    x = np.arange(len(d))
+    f, ax = fig(h=4.0)
+    ax2 = ax.twinx()
+    ops, hrs = sig(d["ops_per_machine_week"].to_numpy(dtype=float)), sig(d["hours_per_operation"].to_numpy(dtype=float))
+    ax.bar(x - 0.2, ops, width=0.38, color=LIGHT_BLUE, label="Operations per machine a week (left)")
+    ax2.bar(x + 0.2, hrs, width=0.38, color=BRAND_BLUE, label="Machine hours per operation (right)")
+    for xi, vi in zip(x, ops):
+        ax.text(xi - 0.2, vi, f"{vi:.0f}", ha="center", va="bottom", fontsize=8)
+    for xi, vi in zip(x, hrs):
+        ax2.text(xi + 0.2, vi, f"{vi:.2f}" if vi < 1 else f"{vi:.1f}", ha="center", va="bottom", fontsize=8)
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"{WC[w]} ({int(d.loc[w, 'machines'])}{' machines' if w == 'laser' else ''})" for w in d.index], rotation=25, ha="right")
+    ax.set_ylabel("Operations per machine a week")
+    ax2.set_ylabel("Machine hours per operation")
+    ax.set_ylim(0, float(ops.max()) * 1.12)
+    ax2.set_ylim(0, float(hrs.max()) * 1.12)
+    ax2.grid(False)
+    ax2.spines["top"].set_visible(False)
+    h1, l1 = ax.get_legend_handles_labels()
+    h2, l2 = ax2.get_legend_handles_labels()
+    f.legend(h1 + h2, l1 + l2, frameon=False, fontsize=9, ncol=2, loc="lower center")
+    f.tight_layout(rect=(0, 0.06, 1, 1))
     return save(f, "capacity_floor_activity", f"Floor Activity by Work Center, {YEAR}")
 
 
 def fig_downtime():
-    """Downtime hours by work center, each column split by driver with the driver's share of the column inside it."""
+    """Downtime hours by work center, each column split by source with the source's share of the column inside it."""
     d = DOWN.loc[DOWN.sum(axis=1).sort_values(ascending=False).index]
     x = np.arange(len(d))
     colors = dict(zip(DOWN_ORDER, (BRAND_BLUE, ACCENT, LIGHT_BLUE, AMBER)))
@@ -99,7 +109,7 @@ def fig_downtime():
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     f.legend(*ax.get_legend_handles_labels(), frameon=False, fontsize=9, ncol=4, loc="lower center")
     f.tight_layout(rect=(0, 0.06, 1, 1))
-    return save(f, "capacity_downtime_by_driver", f"Machine Downtime Hours and Drivers by Work Center, {YEAR}")
+    return save(f, "capacity_downtime_by_driver", f"Machine Downtime Hours and Sources by Work Center, {YEAR}")
 
 
 def fig_hot_share():
@@ -406,21 +416,25 @@ def build():
 
     # 1 ── capacity across the shop
     b.append("<h2 id='f1'>1. Capacity Across the Shop</h2>")
-    b.append(f"<p>{n0(len(ops))} operations started in {YEAR} at ten work centers, {n0((ops['start_quarter'] >= 2).sum())} of them in {REST}. Scheduled hours are "
-             f"the hours a work center was crewed, Saturday and extended shifts included; available hours are scheduled hours less recorded downtime. Utilization is "
-             f"the hours spent running jobs over available hours; uptime is available hours over scheduled hours. Queue time is the working days an operation waits "
-             f"from arrival at a work center to its first start, less the powder color-day wait; for the lasers it is traveler print to first cut, less material "
-             f"wait. It is a wait per operation, not a count of jobs waiting.</p>")
     act = ACTIVITY
-    quick, slow = ["laser", "grind_deburr", "powder_coat", "inspection_pack"], ["weld", "robotic_weld", "assembly"]
-    opm = act["ops_per_machine_week"]
-    assert act.loc[quick, "hours_per_operation"].max() < 2 and 3.5 < act.loc[slow, "hours_per_operation"].min() and act.loc[slow, "hours_per_operation"].max() < 5
-    assert opm[slow].max() < opm["press_brake"] < opm[quick].min() and 2.5 < act.loc["press_brake", "hours_per_operation"] < 3
-    b.append(f"<p>The floor is ten work centers and {n0(act['machines'].sum())} machines. The lasers, grind and deburr, powder coat and inspection and pack each run "
-             f"{n0(opm[quick].min())} to {n0(opm[quick].max())} operations per machine a week averaging under two hours; the weld bays, robotic weld cell and assembly "
-             f"run {n0(opm[slow].min())} to {n0(opm[slow].max())} operations per machine a week averaging about four hours; the brakes sit between, at about "
-             f"{n0(opm['press_brake'])} operations per machine a week of just under three hours.</p>")
-    b.append(chart(f"Floor Activity by Work Center, {YEAR}", fig_activity()) + note("Machines in parentheses."))
+    busy, slow = act.sort_values("ops_per_machine_week", ascending=False).index[:3], act.sort_values("ops_per_machine_week").index[:3]
+    assert set(busy) == set(act.sort_values("hours_per_operation").index[:3]) == {"grind_deburr", "inspection_pack", "powder_coat"}
+    assert set(slow) == set(act.sort_values("hours_per_operation", ascending=False).index[:3]) == {"weld", "assembly", "robotic_weld"}
+    b.append(f"<p>The shop's floor consists of ten work centers and {n0(act['machines'].sum())} machines. The floor activity (operations per machine a week and "
+             f"hours per operation) in routing order is shown below. The grind and deburr, inspection and pack, and powder coat stations run the highest number of "
+             f"operations per machine a week while averaging the shortest amount of time per operation "
+             f"({rng(act.loc[busy, 'hours_per_operation'].min(), act.loc[busy, 'hours_per_operation'].max())} hours), and the manual weld bays, assembly and the "
+             f"robotic weld cell run the fewest operations while averaging the longest time "
+             f"({rng(act.loc[slow, 'hours_per_operation'].min(), act.loc[slow, 'hours_per_operation'].max(), d1)} hours).</p>")
+    b.append(chart(f"Floor Activity by Work Center, {YEAR}", fig_activity()))
+
+    b.append("<h3 id='f1_1'>Machine Utilization and Uptime</h3>")
+    sched, down, mach = UY["scheduled"].sum(), UY["down"].sum(), UY["machine"].sum()
+    b.append(f"<p>In {YEAR}, there were {n0(len(ops))} machine operations across ten work centers. This translates to {n0(sched)} scheduled hours, "
+             f"{n0(sched - down)} available hours, and {n0(mach)} machine hours over the course of the year, as defined below:</p>"
+             f"<ul><li>Scheduled hours: the hours the machine was crewed</li><li>Available hours: scheduled hours less recorded downtime</li>"
+             f"<li>Machine hours: hours the machine was actually running jobs (both setup and run)</li><li>Uptime: available hours / scheduled hours</li>"
+             f"<li>Utilization: machine hours / available hours</li></ul>")
     mid = UY.drop(["press_brake", "robotic_weld", "laser", "powder_coat"])
     gap = round(UY["uptime"] * 100) - round(UY["utilization"] * 100)
     assert gap.idxmin() == "press_brake"
@@ -428,15 +442,16 @@ def build():
              f"{gap['press_brake']:.0f}-point gap that is the smallest production capacity buffer of any work center. The robotic weld cell ran at "
              f"{P(UY.loc['robotic_weld', 'utilization'])} utilization, the laser cutting stations at {P(UY.loc['laser', 'utilization'])} and the assembly through "
              f"hardware work centers at {P(mid['utilization'].min())} to {P(mid['utilization'].max())}. The powder line ran at just "
-             f"{P(UY.loc['powder_coat', 'utilization'])}. Uptime is {P(UY['uptime'].min())} to {P(UY['uptime'].max())} at every work center, so the spread in "
-             f"utilization is idle time, not breakdowns. {T.see('util')}</p>")
+             f"{P(UY.loc['powder_coat', 'utilization'])} utilization. Uptime is {P(UY['uptime'].min())} to {P(UY['uptime'].max())} at every work center. "
+             f"{T.see('util')}</p>")
     b.append(titled(C.fig_util(), "Utilization and Machine Uptime by Work Center"))
     cause = DOWN.sum() / DOWN.values.sum()
     assert list(cause.sort_values(ascending=False).index) == DOWN_ORDER
-    b.append(f"<p>Across all work stations, the drivers of machine downtime were unplanned breakdowns ({P(cause['breakdown'])}), planned maintenance "
-             f"({P(cause['PM'])}), no operator present ({P(cause['no operator'])}), and waiting for program ({P(cause['waiting for program'])}). The below chart "
+    b.append(f"<p>Machine uptime figures above treat setup as part of running time, not downtime; setup is counted within utilization for the purposes of this "
+             f"report. Across all work centers, the sources of machine downtime were unplanned breakdowns ({P(cause['breakdown'])}), planned maintenance "
+             f"({P(cause['PM'])}), no operator present ({P(cause['no operator'])}) and waiting for a program ({P(cause['waiting for program'])}). The chart below "
              f"details machine downtime by work center.</p>")
-    b.append(chart(f"Machine Downtime Hours and Drivers by Work Center, {YEAR}", fig_downtime()))
+    b.append(chart(f"Machine Downtime Hours and Sources by Work Center, {YEAR}", fig_downtime()))
 
     # 2 ── load, queue time and WIP
     b.append("<h2 id='f2'>2. Load, Queue Time and WIP</h2>")
