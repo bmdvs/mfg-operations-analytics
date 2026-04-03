@@ -19,7 +19,7 @@ CAUSE_LABEL = {"released late": "Released late", "constraint queue": "Queue cons
 CAUSE_COLOR = {"released late": AMBER, "constraint queue": BRAND_BLUE, "material": ACCENT, "outside processing": LIGHT_BLUE, "setup overrun": "#8E6BA8",
                "quality": GREEN, "other hold": "#B9A36B", "not attributable": GREY}
 CODED_CAUSES = ["constraint queue", "setup overrun", "material", "outside processing", "quality"]
-WC = {"press_brake": "Press brake", "grind_deburr": "Grind and deburr", "inspection_pack": "Inspection and pack", "hardware": "Hardware", "weld": "Weld",
+WC = {"press_brake": "Press brake", "grind_deburr": "Grind and deburr", "inspection_pack": "Inspection and pack", "hardware": "Hardware", "weld": "Manual weld",
       "robotic_weld": "Robotic weld", "assembly": "Assembly", "powder_coat": "Powder coat", "laser": "Laser", "punch": "Punch",
       "outside_processing": "Outside processing", "shipping": "Shipping", "order entry": "Order entry (promise)", "none": "No stage above normal"}
 WC_SHORT = {"press_brake": "Press\nbrake", "grind_deburr": "Grind and\ndeburr", "inspection_pack": "Inspection\nand pack", "robotic_weld": "Robotic\nweld",
@@ -27,7 +27,7 @@ WC_SHORT = {"press_brake": "Press\nbrake", "grind_deburr": "Grind and\ndeburr", 
 STAGE = {"queue: press brake": "Queue: press brake", "setup and run": "Setup and run", "move": "Move", "complete to ship": "Complete to ship",
          "queue: assembly": "Queue: assembly", "first-operation queue": "First-operation queue", "queue: grind deburr": "Queue: grind and deburr",
          "material wait at first operation": "Material wait at first operation", "queue: robotic weld": "Queue: robotic weld",
-         "release to traveler print": "Release to traveler print", "queue: weld": "Queue: weld", "queue: hardware": "Queue: hardware",
+         "release to traveler print": "Release to traveler print", "queue: weld": "Queue: manual weld", "queue: hardware": "Queue: hardware",
          "outside processing": "Outside processing", "hold: other": "Hold: other", "queue: inspection pack": "Queue: inspection and pack",
          "queue: powder coat": "Queue: powder coat", "no stage above normal": "No stage above normal"}
 

@@ -14,11 +14,11 @@ REST = "Q2 to Q4"
 RT = "Q2-Q4"                                  # the same quarters as written in the report text and its figures
 CLASSES = ["repeat part", "new part", "outside processing"]
 WC = {"press_brake": "Press brake", "grind_deburr": "Grind and deburr", "inspection_pack": "Inspection and pack", "hardware": "Hardware",
-      "weld": "Weld", "robotic_weld": "Robotic weld", "assembly": "Assembly", "powder_coat": "Powder coat", "laser": "Laser", "punch": "Punch",
+      "weld": "Manual weld", "robotic_weld": "Robotic weld", "assembly": "Assembly", "powder_coat": "Powder coat", "laser": "Laser", "punch": "Punch",
       "outside_processing": "Outside processing", "complete, not shipped": "Complete, not shipped"}
 STAGE = {"release to traveler print": "Release to traveler print", "first-operation queue": "First-operation queue",
          "material wait at first operation": "Material wait at first operation", "queue: press brake": "Queue: press brake",
-         "queue: hardware": "Queue: hardware", "queue: weld": "Queue: weld", "queue: robotic weld": "Queue: robotic weld",
+         "queue: hardware": "Queue: hardware", "queue: weld": "Queue: manual weld", "queue: robotic weld": "Queue: robotic weld",
          "queue: grind deburr": "Queue: grind and deburr", "powder scheduling wait": "Powder scheduling wait", "queue: powder coat": "Queue: powder coat",
          "queue: assembly": "Queue: assembly", "queue: inspection pack": "Queue: inspection and pack", "setup and run": "Setup and run", "move": "Move",
          "hold: customer": "Hold: customer", "hold: engineering": "Hold: engineering", "hold: material": "Hold: material", "hold: other": "Hold: other",
