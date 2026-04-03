@@ -40,7 +40,7 @@ lost as (
     where not g.on_time
 ),
 
--- rule: queue at a work center above its 80th percentile for the quarter
+-- rule: queue at a work center above the rule's percentile for the quarter
 op_p80 as (
     select work_center, cast(date_trunc('quarter', first_start) as date) as q, quantile_cont(queue_net_wd, {{ pctl }}) as p80
     from {{ ref('int_operation_queue') }}

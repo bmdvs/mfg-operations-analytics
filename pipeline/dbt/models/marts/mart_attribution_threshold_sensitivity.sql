@@ -1,5 +1,5 @@
 -- Constraint-queue and not-attributable lost days with the constraint rule set at the 70th, 80th and 90th queue percentile.
--- The 80th percentile is the rule; the other two show how much of the not-attributable share is queue between the thresholds.
+-- The 70th percentile is the rule; the other two show how much of the not-attributable share is queue between the thresholds.
 with runs as (
     select 70 as queue_percentile, * from ({{ late_job_attribution(0.7) }})
     union all
