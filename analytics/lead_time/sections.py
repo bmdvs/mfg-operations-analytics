@@ -180,7 +180,7 @@ def fig_stages_diagram():
     f.legend([Patch(facecolor=WAITING, edgecolor=DARK, linewidth=0.6), Patch(facecolor=WORKING)], ["Waiting", "Working"], frameon=False, fontsize=9, ncol=2,
              loc="lower center")
     f.tight_layout(rect=(0, 0.07, 1, 1))
-    return save(f, "lead_time_stages_diagram", "Lead time stages from release to ship: waiting and working stages on the routing")
+    return save(f, "lead_time_stages_diagram", "Lead time stages, release to shipment")
 
 
 def fig_queue():
@@ -204,6 +204,33 @@ def fig_wip():
     f.legend(h, lab, frameon=False, fontsize=9, ncol=2, loc="lower center")
     f.tight_layout(rect=(0, 0.06, 1, 1))
     return save(f, "lead_time_wip_by_location", "WIP by location")
+
+
+def fig_wip_quarters():
+    """Mean floor WIP by calendar quarter, with the days on the floor it implies at the quarter's throughput."""
+    d = llq.sort_values("period_start")
+    x = np.arange(len(d))
+    wip = sig(d["wip_mean"].to_numpy(dtype=float))
+    days = sig((d["wip_mean"] / d["throughput_per_day"]).to_numpy(dtype=float))
+    f, ax = fig(h=3.9)
+    ax.bar(x, wip, width=0.7, color=LIGHT_BLUE, label="Average WIP (left)")
+    for xi, v in zip(x, wip):
+        ax.text(xi, float(wip.max()) * 0.02, f"{v:.0f}", ha="center", va="bottom", fontsize=8.5)          # at the foot of the column, clear of the line
+    ax.set_xticks(x)
+    ax.set_xticklabels([qlabel(t) for t in d["period_start"]], rotation=30, ha="right")
+    ax.set_ylabel("Jobs in WIP")
+    ax.set_ylim(0, float(wip.max()) * 1.12)
+    ax2 = ax.twinx()
+    ax2.plot(x, days, color=BRAND_BLUE, linewidth=2.0, marker="o", markersize=5, label="Days on the floor (right)")
+    ax2.set_ylabel("Working days on the floor")
+    ax2.set_ylim(0, float(days.max()) * 1.12)
+    ax2.grid(False)
+    ax2.spines["top"].set_visible(False)
+    h1, l1 = ax.get_legend_handles_labels()
+    h2, l2 = ax2.get_legend_handles_labels()
+    f.legend(h1 + h2, l1 + l2, frameon=False, fontsize=9, ncol=2, loc="lower center")
+    f.tight_layout(rect=(0, 0.06, 1, 1))
+    return save(f, "lead_time_wip_by_quarter", "Average WIP and Days on the Floor by Quarter, 2023 to 2025")
 
 
 def fig_weekly_year():
@@ -379,7 +406,16 @@ def report():
     ya, ra = Y.loc["all"], R.loc["all"]
     bq = "queue: press brake"
     b = []
-    b.append("<h2 id='f1'>1. Actual vs. quoted lead times</h2>")
+    b.append("<h2 id='f1'>1. Lead time stages</h2>")
+    b.append("<p>A job's lead time is the number of working days from its release onto the floor to its shipment to the customer. A job moves through the stages "
+             "outlined in the diagram below. First, the traveler is printed and the job waits in queue at its first operation, either the laser cutting station or "
+             "the punch, and for its material when it is not on hand. It is then cut, and repeats through move, queue, and setup and run at each later work center "
+             "on its routing. Where the routing calls for it, the job goes out for outside processing and returns. Holds are counted as their own stage at whatever "
+             "point on the routing they occur. Once the job is complete it waits to ship. Queue is defined as arrival at a work center to first start. Setup and run "
+             "is measured from first start to completion, and move is measured from the end of one operation to arrival at the next.</p>")
+    b.append(chart("Lead time stages, release to shipment", fig_stages_diagram()))
+
+    b.append("<h2 id='f2'>2. Actual vs. quoted lead times</h2>")
     b.append(f"<p>In {YEAR}, the median job shipped in {d1(ya['lead_time_median'])} working days vs. an average quoted lead time of {d1(ya['quoted_lead_days'])}; "
              f"in {RT}, it was {d1(ra['lead_time_median'])} vs. {d1(ra['quoted_lead_days'])}. The quoted lead time was met on {pct(ya['share_within_quoted'], 0)} of jobs in "
              f"{YEAR} and {pct(ra['share_within_quoted'], 0)} in {RT}. The standard quoted lead times are 10 days for repeat parts (met on {hit['repeat part'][0]} of jobs in "
@@ -391,7 +427,7 @@ def report():
              f"{d1(ya['lead_time_median_on_time'])} for on-time jobs.</p>")
     b.append(chart("Actual vs. Quoted Lead Times, by Routing Class", fig_distribution()))
 
-    b.append("<h2 id='f2'>2. Lead time decomposition</h2>")
+    b.append("<h2 id='f3'>3. Lead time decomposition</h2>")
     b.append(f"<p>In {YEAR}, the brake queue was {pct(st(SY, bq, 'share'), 0)} of all jobs' lead time and accounted for the largest share of the extra days on "
              f"late jobs: {d2(st(SY, bq, 'late'))} days against {d2(st(SY, bq, 'on time'))} for on-time jobs. This was due to the first quarter's backlog: the "
              f"2024 year-end build released more work than the brakes could absorb and put {n0(q1['late_jobs'])} of the year's {n0(ya['late_jobs'])} late jobs "
@@ -413,19 +449,12 @@ def report():
              f"{d1(qr.loc[pb, 'p90_queue_days'])} in {RT}. {see('3')}</p>")
     b.append(chart("Queue Time by Work Center", fig_queue()))
 
-    b.append("<h2 id='f3'>3. Work in Process</h2>")
+    b.append("<h2 id='f4'>4. Work in Process</h2>")
     spare = wr["wip_at_quoted_lead_times"] - wr["wip_mean"]
-    b.append("<p>A job's lead time runs from its release to the floor to its shipment, in working days with scheduled Saturdays counted. Work in process is every "
-             "job released and not yet shipped. Between release and shipment a job moves through the stages below. The traveler is printed; the job waits in queue "
-             "at its first operation, the laser or the punch, and for its material where the material is not on hand; it is cut; it then repeats move, queue, and "
-             "setup and run at each later work center on its routing, with outside processing for the routings that need it and holds wherever they are placed; "
-             "and once complete it waits to ship. Queue is arrival at a work center to first start, less the powder scheduling wait. Setup and run is first start "
-             "to last end. Move is the end of one operation to arrival at the next. Recorded holds are taken out of queue and move. Outside processing is purchase "
-             "order to receipt, plus any wait before the order is placed.</p>")
-    b.append(chart("Lead time stages, release to ship", fig_stages_diagram()))
     b.append(f"<p>In {YEAR}, the shop carried an average of {n0(wy['wip_mean'])} WIP jobs against a throughput of about {n0(wy['throughput_per_day'])} shipped a day, "
              f"so a job spent about {n0(wy['wip_over_throughput_days'])} working days on the floor. WIP averaged {n0(wipd['wip'].mean())} jobs over the past three "
              f"years and peaks every December: {n0(peaks[2023]['peak'])} jobs in 2023, {n0(peaks[2024]['peak'])} in 2024 and {n0(peaks[2025]['peak'])} in 2025.</p>")
+    b.append(chart("Average WIP and Days on the Floor by Quarter, 2023 to 2025", fig_wip_quarters()))
     turn = lambda a, c: "falls" if c < a else "rises"
     b.append(f"<p>By location, the brakes (queue and run together) hold {pct(ws_year['press_brake'], 0)} of WIP in {YEAR}, while the laser cutting stations hold "
              f"{pct(ws_year['laser'], 0)} and outside processing {pct(ws_year['outside_processing'], 0)}. The other {NUMBER[len(other_centers)]} work centers and jobs "
@@ -487,7 +516,7 @@ def report():
     b.append("<h3 id='t7'>Table 7. Year-end WIP build by year</h3>" + t7())
     b.append("<div class='glossary'>WIP: jobs released and not shipped. Quoted lead time: 10 working days for repeat parts, 15 for new parts, "
              "20 with outside processing. On time: shipped on or before the promised date as last revised.</div>")
-    toc = [("f1", "Actual vs. quoted lead times"), ("f2", "Lead time decomposition"), ("f3", "Work in Process"),
+    toc = [("f1", "Lead time stages"), ("f2", "Actual vs. quoted lead times"), ("f3", "Lead time decomposition"), ("f4", "Work in Process"),
            ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
     scope = (f"Jobs shipped in {YEAR}, whole year and {REST}; records from January 2023 to December 2025.<br>"
              f"Sources: ERP, shop-floor data collection, quality, maintenance and attendance exports (batch {batch}).")
