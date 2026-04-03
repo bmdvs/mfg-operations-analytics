@@ -10,9 +10,23 @@ from analytics.reports.combine import write
 
 
 ORDER = [("Work in Process", [4]), ("Lead Time", [1, 2, 3]), ("Late Jobs", [5, 6])]
-# appendix tables in the order the three sections use them: the number each carries as merged, and the number it takes
-TABLES = [("5", "1"), ("6", "2"), ("7", "3"), ("1", "4"), ("5a", "5"), ("2a", "6a"), ("2b", "6b"), ("3", "7"), ("8", "8"), ("12", "9a"), ("13", "9b"),
-          ("16", "10"), ("17", "11"), ("14", "12a"), ("15", "12b"), ("9", "13"), ("10", "14"), ("11", "15")]
+# tables that come in pairs for the year and the ordinary quarters, by the numbers they carry as merged
+PAIRS = {"2a": "2b", "12": "13", "14": "15"}
+
+
+def table_order(body, held):
+    """The appendix tables in the order the text first links them, numbered from 1, pairs as a and b; tables the text does not link follow in their own order."""
+    refs = []
+    for m in re.finditer(r"<a href='#t(\w+)'>\1</a>|Appendix Tables? (\d+[a-z]?(?:(?:, | and | to )\d+[a-z]?)*)", body):
+        refs += [m.group(1)] if m.group(1) else re.findall(r"\d+[a-z]?", m.group(2))
+    second = set(PAIRS.values())
+    order, n = [], 0
+    for t in list(dict.fromkeys(refs)) + [t for t in held if t not in refs]:
+        if t in second or any(t == frm for frm, _ in order):
+            continue
+        n += 1
+        order += [(t, f"{n}a"), (PAIRS[t], f"{n}b")] if t in PAIRS else [(t, str(n))]
+    return order
 
 
 def arrange(body, toc):
@@ -32,14 +46,16 @@ def arrange(body, toc):
             out.append(f"<h3 id='f{n}_{k}'>{old[m][0]}</h3>" + old[m][1])
     body = body[:start] + "\n".join(out) + body[end:]
 
+    i, j = body.index("<h2 id='appendix'>"), body.index("<div class='glossary'>")
+    blocks = re.split(r"(?=<h3 id='t)", body[i:j])
+    held = {re.match(r"<h3 id='t(\w+)'>", x).group(1): x for x in blocks[1:]}
+    TABLES = table_order(body[:i], held)
     new = dict(TABLES)
     link = lambda t: f"<a href='#t{new[t]}'>{new[t]}</a>"
     body = re.sub(r"<a href='#t(\w+)'>\1</a>", lambda m: link(m.group(1)), body)
     body = re.sub(r"(Appendix Tables? )(\d+[a-z]?(?:(?:, | and | to )\d+[a-z]?)*)",
                   lambda m: m.group(1) + re.sub(r"\d+[a-z]?", lambda d: link(d.group(0)), m.group(2)), body)
     i, j = body.index("<h2 id='appendix'>"), body.index("<div class='glossary'>")
-    blocks = re.split(r"(?=<h3 id='t)", body[i:j])
-    held = {re.match(r"<h3 id='t(\w+)'>", x).group(1): x for x in blocks[1:]}
     assert sorted(held) == sorted(new), sorted(set(held) ^ set(new))
     tables = [re.sub(r"^<h3 id='t\w+'>Table \w+\.", f"<h3 id='t{to}'>Table {to}.", held[frm]) for frm, to in TABLES]
     body = body[:i] + blocks[0] + "".join(tables)          # the appendix ends at its last table, with no glossary lines

@@ -266,7 +266,7 @@ def t_na():
 def t_sens():
     rows = []
     for p in (70, 80, 90):
-        rows.append([f"{p}th percentile" + (" (the rule)" if p == 80 else ""), pct(sv("year", p, "constraint queue")[0]), pct(sv("year", p, "not attributable")[0]),
+        rows.append([f"{p}th percentile" + (" (the rule)" if p == 70 else ""), pct(sv("year", p, "constraint queue")[0]), pct(sv("year", p, "not attributable")[0]),
                      pct(sv(REST, p, "constraint queue")[0]), pct(sv(REST, p, "not attributable")[0])])
     return table(pd.DataFrame(rows, columns=["Queue threshold of the constraint rule", f"Queue constraint, {YEAR}", f"Not attributed, {YEAR}",
                                              f"Queue constraint, {REST}", f"Not attributed, {REST}"]))
@@ -366,7 +366,7 @@ def report():
              f"working days late. Lost days at a stage are the stage days above the median of on-time jobs of the same routing class shipped in the same quarter; "
              f"the powder scheduling wait is not lost time.<br>"
              f"Rules. Released late: the standard lead time of 10, 15 or 20 working days less the promised lead time, capped at days late, allocated first. Queue constraint: an operation with queue above "
-             f"its work center's 80th percentile for the quarter, or first-operation queue above its 80th percentile. Material: material wait at the first operation "
+             f"its work center's 70th percentile for the quarter, or first-operation queue above its 70th percentile. Material: material wait at the first operation "
              f"with a kit shortage or material hold recorded; a material hold at a later operation; or first-operation queue where the sheet issue came after planned "
              f"start and followed a stock receipt of the same item, with the first work center's queue that week below its median. Outside processing: a line received "
              f"after its promised date. Setup overrun: setup above standard by more than 2 hours and by more than twice standard. Quality: a recorded quality hold, "
