@@ -64,6 +64,9 @@ QDAYS = q("select work_center, operations, queue_days, share_of_queue from marts
 TREND_COLORS = ["#A8C0D1", "#E3B98A", "#A9CDB3", "#C9B3D6", "#E0A8A8", "#D8CFA0", "#9FD0CF", "#C4C4C4"]          # light, one for each of the other work centers
 
 
+WELD_CELL = "#9A5B0E"                      # the robotic weld cell's line: dark, and apart from the brakes' blue
+
+
 def darker(color, by=0.62):
     r, g, b_ = (int(color[k:k + 2], 16) for k in (1, 3, 5))
     return "#{:02X}{:02X}{:02X}".format(int(r * by), int(g * by), int(b_ * by))
@@ -80,25 +83,25 @@ def fig_utilization_trend():
     x = np.arange(len(d))
     f, ax = fig(h=4.6)
     others = [c for c in C.UY.sort_values("utilization", ascending=False).index if c not in LEAD_TWO]
-    color = dict(zip(others, TREND_COLORS), **{c: BRAND_BLUE for c in LEAD_TWO})
+    color = dict(zip(others, TREND_COLORS), press_brake=BRAND_BLUE, robotic_weld=WELD_CELL)
     for c in others + LEAD_TWO:
         ax.plot(x, sig(d[c].to_numpy(dtype=float)), color=color[c], linewidth=2.4 if c in LEAD_TWO else 1.6, zorder=3 if c in LEAD_TWO else 2)
     # the names at the right, moved apart where two lines end close together
     ends = d.iloc[-1].sort_values()
-    placed, gap = [], 2.3
+    placed, gap = [], 3.0
     for c, v in ends.items():
         y = float(v) if not placed else max(float(v), placed[-1] + gap)
         placed.append(y)
-        ax.text(x[-1] + 0.5, y, f"{WC[c]}, {v:.0f}%", ha="left", va="center", fontsize=8.5, color=BRAND_BLUE if c in LEAD_TWO else darker(color[c]),
+        ax.text(x[-1] + 0.5, y, f"{WC[c]}, {v:.0f}%", ha="left", va="center", fontsize=8.5, color=color[c] if c in LEAD_TWO else darker(color[c]),
                 fontweight="bold" if c in LEAD_TWO else None)
     first = [k for k in x if d.index[k].month in (1, 7)]
     ax.set_xticks(first)
     ax.set_xticklabels([d.index[k].strftime("%b %Y") for k in first])
     ax.set_xlim(-0.6, x[-1] + 9.5)
-    ax.set_ylim(40, 100)
+    ax.set_ylim(20, 100)
     ax.yaxis.set_major_formatter(lambda t, _: f"{t:.0f}%")
     f.tight_layout()
-    return save(f, "capacity_utilization_trend", "Utilization by Work Center, 2023 to 2025")
+    return save(f, "capacity_utilization_trend", "Average monthly utilization by work center, 2023 to 2025")
 
 
 def fig_hot_share():
@@ -504,7 +507,7 @@ def build():
              f"work center, in every quarter since 2023 but one. The robotic weld cell has been second in every quarter from {since}, having run at "
              f"{P(early.min())} to {P(early.max())} before then, when the lasers and other work centers ran above it; it passed the brakes once, in {swapped[0]} "
              f"({P(qu.loc[swapped[0], 'robotic_weld'])} against {P(qu.loc[swapped[0], 'press_brake'])}).</p>")
-    b.append(chart("Utilization by Work Center, 2023 to 2025", fig_utilization_trend()))
+    b.append(chart("Average monthly utilization by work center, 2023 to 2025", fig_utilization_trend()))
     gap = round(UY["uptime"] * 100) - round(UY["utilization"] * 100)
     assert gap.idxmin() == "press_brake"
     b.append(f"<p>In {YEAR}, the press brakes ran at {P(UY.loc['press_brake', 'utilization'])} utilization against {P(UY.loc['press_brake', 'uptime'])} uptime, and "
