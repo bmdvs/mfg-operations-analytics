@@ -236,3 +236,40 @@ def lasers(D):
     m["run_ratio"] = m["run_hours"] / m["standard_hours"]
     m["share_of_standard"] = m["standard_hours"] / m["standard_hours"].sum()
     return dict(month=month, period=period, machines=m)
+
+
+BUILD_WEEKS = ("2024-11-11", "2024-12-16")          # the six weeks of the 2024 year-end build
+PEAK_WINDOW = ("2024-09-30", "2025-03-31")
+
+
+def peak(D):
+    """Brake standard hours released each week against crewed brake capacity, the fourth quarter of 2024 and the first of 2025.
+    Capacity is crewed weekday hours net of downtime, in standard hours at the brakes' actual-over-standard ratio for 2024."""
+    w = q(f"select f.week_start, f.weekdays, f.brake_std_hours_released as released, f.brake_saturday_shifts as saturday_shifts, "
+          f"f.brake_extended_hours as extended_hours, u.scheduled_hours, u.downtime_hours, m.weekday_scheduled "
+          f"from marts.mart_weekly_floor f join marts.mart_utilization_weekly u on u.week_start = f.week_start and u.work_center = 'press_brake' "
+          f"join (select week_start, sum(scheduled_hours) as weekday_scheduled from marts.mart_machine_weekly where work_center = 'press_brake' group by 1) m "
+          f"on m.week_start = f.week_start where f.week_start between DATE '{PEAK_WINDOW[0]}' and DATE '{PEAK_WINDOW[1]}' order by 1")
+    r = q("select sum(setup_hours + run_hours) / sum(setup_std + run_std_hours) as ratio from marts.mart_run_standards "
+          "where work_center = 'press_brake' and start_year = 2024").iloc[0, 0]
+    w["week_start"] = pd.to_datetime(w["week_start"])
+    w["capacity"] = (w["weekday_scheduled"] - w["downtime_hours"]) / r
+    w["extra_hours"] = w["scheduled_hours"] - w["weekday_scheduled"]              # Saturday and extended hours worked, in crewed machine hours
+    w["capacity_with_extra"] = w["capacity"] + w["extra_hours"] / r
+    w["build"] = w["week_start"].between(*BUILD_WEEKS)
+    one_shift = w[(w["saturday_shifts"] == 1) & (w["extended_hours"] == 0)]["extra_hours"]
+    assert one_shift.nunique() == 1
+    return w, float(r), float(one_shift.iloc[0])
+
+
+def midday_wait(D):
+    """Working days of next-day queue per shipped job that fall on arrivals between 10:00 and 12:00 at the dispatch-list work centers."""
+    days = q(f"select sum(queue_net_wd) from marts.mart_operation_arrivals where year(ship_date) = {YEAR} and working_days_to_start = 1 "
+             f"and work_center in ('grind_deburr', 'inspection_pack', 'hardware') and arrival_hour >= 10 and arrival_hour < 12").iloc[0, 0]
+    return float(days / D["shipped"]["jobs"].sum())
+
+
+def first_operation_queue_days(D):
+    """Queue days of first operations at the lasers and the punch in the year, which the count of queue days after the first operation leaves out."""
+    w = D["uw"][(D["uw"]["week_year"] == YEAR) & D["uw"]["work_center"].isin(["laser", "punch"]) & D["uw"]["queue_mean"].notna()]
+    return (w["queue_mean"] * w["operations"]).groupby(w["work_center"]).sum()
