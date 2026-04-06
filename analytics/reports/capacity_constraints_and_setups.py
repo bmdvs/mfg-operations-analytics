@@ -73,6 +73,34 @@ def darker(color, by=0.62):
     return "#{:02X}{:02X}{:02X}".format(int(r * by), int(g * by), int(b_ * by))
 
 
+def fig_activity():
+    """Operations per machine a week (left axis) and machine hours per operation (right axis), work centers in routing order."""
+    d = ACTIVITY.loc[ROUTING]
+    x = np.arange(len(d))
+    f, ax = fig(h=4.0)
+    ax2 = ax.twinx()
+    ops, hrs = sig(d["ops_per_machine_week"].to_numpy(dtype=float)), sig(d["hours_per_operation"].to_numpy(dtype=float))
+    ax.bar(x - 0.2, ops, width=0.38, color=LIGHT_BLUE, label="Operations per machine a week (left)")
+    ax2.bar(x + 0.2, hrs, width=0.38, color=BRAND_BLUE, label="Machine hours per operation (right)")
+    for xi, vi in zip(x, ops):
+        ax.text(xi - 0.2, vi, f"{vi:.0f}", ha="center", va="bottom", fontsize=8)
+    for xi, vi in zip(x, hrs):
+        ax2.text(xi + 0.2, vi, f"{vi:.2f}" if vi < 1 else f"{vi:.1f}", ha="center", va="bottom", fontsize=8)
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"{WC[w]} ({int(d.loc[w, 'machines'])}{' machines' if w == 'laser' else ''})" for w in d.index], rotation=25, ha="right")
+    ax.set_ylabel("Operations per machine a week")
+    ax2.set_ylabel("Machine hours per operation")
+    ax.set_ylim(0, float(ops.max()) * 1.12)
+    ax2.set_ylim(0, float(hrs.max()) * 1.12)
+    ax2.grid(False)
+    ax2.spines["top"].set_visible(False)
+    h1, l1 = ax.get_legend_handles_labels()
+    h2, l2 = ax2.get_legend_handles_labels()
+    f.legend(h1 + h2, l1 + l2, frameon=False, fontsize=9, ncol=2, loc="lower center")
+    f.tight_layout(rect=(0, 0.06, 1, 1))
+    return save(f, "capacity_floor_activity", f"Floor Activity by Work Center, {YEAR}")
+
+
 def fig_utilization_trend():
     """Monthly utilization for each work center as a three-month trailing average, each line named where it ends."""
     w = X["uw"].assign(month=lambda d: (d["week_start"] + pd.Timedelta(days=3)).dt.to_period("M"))
@@ -425,8 +453,17 @@ def build():
     b.append("<h2 id='f1'>1. Capacity Across the Shop</h2>")
     act = ACTIVITY
     assert list(UY["utilization"].sort_values(ascending=False).index[:2]) == LEAD_TWO
-    b.append(f"<p>The shop's floor consists of {n0(act['machines'].sum())} machines across ten work centers. The press brakes consistently run at the highest "
-             f"utilization of any work center, followed by the robotic weld cell.</p>")
+    busy, slow = act.sort_values("ops_per_machine_week", ascending=False).index[:3], act.sort_values("ops_per_machine_week").index[:3]
+    assert set(busy) == set(act.sort_values("hours_per_operation").index[:3]) == {"grind_deburr", "inspection_pack", "powder_coat"}
+    assert set(slow) == set(act.sort_values("hours_per_operation", ascending=False).index[:3]) == {"weld", "assembly", "robotic_weld"}
+    b.append(f"<p>The shop's floor consists of ten work centers and {n0(act['machines'].sum())} machines. The floor activity (operations per machine a week and "
+             f"hours per operation) in routing order is shown below. The grind and deburr, inspection and pack, and powder coat stations run the highest number of "
+             f"operations per machine a week while averaging the shortest amount of time per operation "
+             f"({rng(act.loc[busy, 'hours_per_operation'].min(), act.loc[busy, 'hours_per_operation'].max())} hours), and the manual weld bays, assembly and the "
+             f"robotic weld cell run the fewest operations while averaging the longest time "
+             f"({rng(act.loc[slow, 'hours_per_operation'].min(), act.loc[slow, 'hours_per_operation'].max(), d1)} hours).</p>")
+    b.append(chart(f"Floor Activity by Work Center, {YEAR}", fig_activity()))
+    b.append("<p>The press brakes consistently run at the highest utilization of any work center, followed by the robotic weld cell.</p>")
     b.append(chart("Average monthly utilization by work center, 2023 to 2025", fig_utilization_trend()))
     gap = round(UY["uptime"] * 100) - round(UY["utilization"] * 100)
     assert gap.idxmin() == "press_brake"
