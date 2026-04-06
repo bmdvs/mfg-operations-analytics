@@ -273,3 +273,12 @@ def first_operation_queue_days(D):
     """Queue days of first operations at the lasers and the punch in the year, which the count of queue days after the first operation leaves out."""
     w = D["uw"][(D["uw"]["week_year"] == YEAR) & D["uw"]["work_center"].isin(["laser", "punch"]) & D["uw"]["queue_mean"].notna()]
     return (w["queue_mean"] * w["operations"]).groupby(w["work_center"]).sum()
+
+
+def queue_per_operation(D):
+    """Mean and 90th-percentile queue time per operation by work center for the year; the lasers and the punch on their first-operation queue."""
+    later = q("select work_center, mean_queue_days as mean, p90_queue_days as p90 from marts.mart_queue_by_work_center where period = 'year'")
+    first = q(f"select o.work_center, avg(s.days) as mean, quantile_cont(s.days, 0.9) as p90 from intermediate.int_operation_queue o "
+              f"join intermediate.int_job_stage_days s using (job_id, op_seq) where o.is_first_op and s.stage = 'first-operation queue' "
+              f"and year(o.first_start) = {YEAR} group by 1")
+    return pd.concat([later, first]).set_index("work_center").sort_values("mean")

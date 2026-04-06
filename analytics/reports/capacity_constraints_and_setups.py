@@ -161,11 +161,11 @@ def fig_hot_year():
     ax.set_ylabel("Queue time in days")
     f.legend(*ax.get_legend_handles_labels(), frameon=False, fontsize=9, ncol=2, loc="lower center")
     f.tight_layout(rect=(0, 0.06, 1, 1))
-    return save(f, "capacity_queue_in_hot_weeks_year", "Queue Time in Weeks at or Above 95% Utilization vs. Other Weeks, 2023 to 2025")
+    return save(f, "capacity_queue_in_hot_weeks_year", "Queue Time in Weeks at or Above 95% Utilization vs. Other Weeks")
 
 
 def fig_queue_days():
-    d = QDAYS["share_of_queue"]
+    d = (ALL_QDAYS / ALL_QDAYS.sum()).sort_values(ascending=False)
     x = np.arange(len(d))
     v = sig(d.to_numpy(dtype=float) * 100)
     f, ax = fig(h=3.5)
@@ -244,6 +244,33 @@ SETS = {"press_brake": "Load, sustained", "robotic_weld": "Load, sustained", "as
 SET_COLOR = {"Load, sustained": BRAND_BLUE, "Load, at full capacity only": ACCENT, "Dispatch list": AMBER, "Color schedule": GREY}
 FIRST_OPS = SC.first_operation_queue_days(X)
 ALL_QDAYS = pd.concat([QDAYS["queue_days"], FIRST_OPS]).sort_values()
+ALL_SHARE = ALL_QDAYS / ALL_QDAYS.sum()               # the lasers and the punch on their first-operation queue
+
+
+QSHAPE = SC.queue_per_operation(X)
+FIRST_OP_LABEL = {w: f"{WC[w]} (first operation)" for w in ("laser", "punch")}
+
+
+def fig_queue_shape():
+    """Mean queue time per operation as a bar and its 90th percentile as a marker, each row in the colour of what sets its wait."""
+    d = QSHAPE
+    y = np.arange(len(d))
+    f, ax = fig(h=4.4, grid="x")
+    mean, p90 = sig(d["mean"].to_numpy(dtype=float)), sig(d["p90"].to_numpy(dtype=float))
+    ax.barh(y, mean, height=0.6, color=[SET_COLOR[SETS[w]] for w in d.index])
+    ax.plot(p90, y, linestyle="none", marker="D", markersize=6, color="#222222", label="90th percentile")
+    for yi, m_, p_ in zip(y, mean, p90):
+        ax.text(m_ / 2, yi, f"{m_:.2f}", ha="center", va="center", fontsize=7.5, color="white")          # inside the bar, clear of the marker
+        ax.text(p_ + float(p90.max()) * 0.015, yi, f"{p_:.1f}", ha="left", va="center", fontsize=8.5)
+    ax.set_yticks(y)
+    ax.set_yticklabels([FIRST_OP_LABEL.get(w, WC[w]) for w in d.index])
+    ax.set_xlim(0, float(p90.max()) * 1.1)
+    ax.set_xlabel("Working days per operation")
+    kinds = list(SET_COLOR)
+    marker = ax.get_legend_handles_labels()
+    f.legend([Patch(color=SET_COLOR[k]) for k in kinds] + marker[0], kinds + marker[1], frameon=False, fontsize=8.5, ncol=5, loc="lower center")
+    f.tight_layout(rect=(0, 0.06, 1, 1))
+    return save(f, "capacity_queue_time_shape", f"Queue Time per Operation by Work Center and What Sets the Wait, {YEAR}")
 
 
 def fig_queue_days_by_kind():
@@ -252,12 +279,12 @@ def fig_queue_days_by_kind():
     y = np.arange(len(d))
     f, ax = fig(h=4.2, grid="x")
     ax.barh(y, sig(d.to_numpy(dtype=float)), height=0.62, color=[SET_COLOR[SETS[w]] for w in d.index])
-    total = float(QDAYS["queue_days"].sum())
+    total = float(d.sum())
     for yi, (w, v) in zip(y, d.items()):
-        label = f"{v:,.0f} ({v / total * 100:.0f}%)" if w in QDAYS.index else f"{v:,.0f} (first operation)"
+        label = f"{v:,.0f} ({v / total * 100:.0f}%)"
         ax.text(v + float(d.max()) * 0.012, yi, label, ha="left", va="center", fontsize=8.5)
     ax.set_yticks(y)
-    ax.set_yticklabels([WC[w] for w in d.index])
+    ax.set_yticklabels([FIRST_OP_LABEL.get(w, WC[w]) for w in d.index])
     ax.set_xlim(0, float(d.max()) * 1.2)
     ax.set_xlabel(f"Queue days, {YEAR}")
     kinds = list(SET_COLOR)
@@ -307,12 +334,11 @@ def fig_peak():
 
 
 def t_qdays():
-    total = float(QDAYS["queue_days"].sum())
-    rows = [[WC[w], SETS[w], n0(r["operations"]), n0(r["queue_days"]), pct(r["queue_days"] / total, 0)] for w, r in QDAYS.iterrows()]
-    rows.append(["All", "", n0(QDAYS["operations"].sum()), n0(total), "100%"])
-    a = table(pd.DataFrame(rows, columns=["Work center", "What sets the wait", "Operations after the first", "Queue days", "Share"]))
-    rows = [[WC[w], SETS[w], n0(v)] for w, v in FIRST_OPS.sort_values(ascending=False).items()]
-    return a + block("First operations, outside the count above", table(pd.DataFrame(rows, columns=["Work center", "What sets the wait", "First-operation queue days"])))
+    d = ALL_QDAYS.sort_values(ascending=False)
+    started = X["ops"].groupby("work_center").size()
+    rows = [[FIRST_OP_LABEL.get(w, WC[w]), SETS[w], n0(QDAYS.loc[w, "operations"] if w in QDAYS.index else started[w]), n0(v), pct(v / d.sum(), 0)] for w, v in d.items()]
+    rows.append(["All", "", "", n0(d.sum()), "100%"])
+    return table(pd.DataFrame(rows, columns=["Work center", "What sets the wait", "Operations", "Queue days", "Share"]))
 
 
 def t_peak():
@@ -543,7 +569,7 @@ def build():
     b = []
 
     # 1 ── capacity across the shop
-    b.append("<h2 id='f1'>1. Capacity Across the Shop</h2>")
+    b.append("<h2 id='f1'>1. Capacity and Constraints</h2>")
     act = ACTIVITY
     assert UY["machine"].idxmax() == "press_brake"
     b.append(f"<p>The shop's floor consists of {n0(act['machines'].sum())} machines across ten work centers. The press brakes are the busiest, with "
@@ -577,24 +603,31 @@ def build():
              f"{P(hot_share['press_brake'])} and {P(hot_share['robotic_weld'])} of weeks in {YEAR}, far more often than any other work center. Average queue time rises sharply when a work center is operating near maximum utilization. "
              f"This is explored in more detail in Section 2. {T.see('hot')}</p>")
     b.append(chart(f"Share of weeks at or above 95% utilization, {YEAR}", fig_hot_share()))
-    b.append(chart("Queue Time in Weeks at or Above 95% Utilization vs. Other Weeks, 2023 to 2025", fig_hot_year()))
-    assert QDAYS.index[0] == "press_brake" and QDAYS.loc["robotic_weld", "share_of_queue"] < 0.05 and QDAYS.loc["press_brake", "share_of_queue"] > 0.5
+    b.append(chart("Queue Time in Weeks at or Above 95% Utilization vs. Other Weeks", fig_hot_year()))
+    all_share = ALL_QDAYS / ALL_QDAYS.sum()
+    assert all_share.idxmax() == "press_brake" and all_share["robotic_weld"] < 0.05
     total_ops = len(ops)
-    b.append(f"<p>Throughout {YEAR}, jobs spent {n0(QDAYS['queue_days'].sum())} days waiting in queue at a work center (excluding first operations at the lasers "
-             f"and the punch). The press brake station accounted for {P(QDAYS.loc['press_brake', 'share_of_queue'])} of those days, which is a function of its "
-             f"consistently high utilization, as well as its volume of operations. There were {n0(QDAYS.loc['press_brake', 'operations'])} press brake operations in "
-             f"{YEAR} ({P(QDAYS.loc['press_brake', 'operations'] / total_ops)} of total). The robotic weld cell, which also ran at high utilization, accounted for "
+    b.append(f"<p>Throughout {YEAR}, jobs spent {n0(ALL_QDAYS.sum())} days waiting in queue at a work center. The press brake station accounted for "
+             f"{P(all_share['press_brake'])} of those days, which is a function of its consistently high utilization, as well as its volume of operations. There "
+             f"were {n0(QDAYS.loc['press_brake', 'operations'])} press brake operations in {YEAR} "
+             f"({P(QDAYS.loc['press_brake', 'operations'] / total_ops)} of total). The robotic weld cell, which also ran at high utilization, accounted for "
              f"less than 5% of queue days, because only {n0(QDAYS.loc['robotic_weld', 'operations'])} operations "
              f"({pct(QDAYS.loc['robotic_weld', 'operations'] / total_ops)} of total) passed through it.</p>")
     b.append(chart(f"Share of queue days by work center, {YEAR}", fig_queue_days()))
     b.append("<p>The press brakes are therefore the shop's primary constraint on three counts: the highest utilization with the least buffer, the most weeks spent at "
-             "maximum utilization, and more than half of all queue days. The robotic weld cell shares the first two and constrains the enclosure work that crosses "
+             "maximum utilization, and nearly half of all queue days. The robotic weld cell shares the first two and constrains the enclosure work that crosses "
              "it. These stations are examined in more detail throughout this report.</p>")
 
     # 2 ── load and queue time
     b.append("<h2 id='f2'>2. Load and Queue Time</h2>")
     fits = C.FITS.set_index("work_center")
     at90 = fits["queue_at_0.90"]
+    lists = QSHAPE.loc[SC.LIST_CENTERS]
+    assert set(QSHAPE["p90"].sort_values(ascending=False).index[:2]) == set(LEAD_TWO) and lists["p90"].max() < 2.5
+    b.append("<p>A job's wait at a work center is set in one of three ways, and the shape of the wait shows which: load-set waits at the brakes and the robotic "
+             "weld cell have long tails, list-set waits at grind and deburr, inspection and pack and hardware are tight around the next morning, and the rest fall "
+             "between.</p>")
+    b.append(chart(f"Queue Time per Operation by Work Center and What Sets the Wait, {YEAR}", fig_queue_shape()))
     hall = HALL[HALL["hot_weeks"] > 0]
     rise = hall["queue_hot"] / hall["queue_other"]
     assert (rise > 1.3).all() and rise.idxmin() == "press_brake"
@@ -629,7 +662,7 @@ def build():
     tail = MY.loc[["B3", "B4", "B5"]]
     top_y = MY.loc[C.BRAKES, "utilization"].sort_values(ascending=False).index.tolist()
     u1 = lambda x: f"{x * 100:.1f}%"
-    b.append(f"<p>The brakes run at {P(UY.loc['press_brake', 'utilization'])} and carry {P(QSHARE['press_brake'])} of all queue time ({link('lead')}). "
+    b.append(f"<p>The brakes run at {P(UY.loc['press_brake', 'utilization'])} and carry {P(ALL_SHARE['press_brake'])} of all queue days. "
              f"B1 and B2 run at {u1(MY.loc['B1', 'utilization'])} and {u1(MY.loc['B2', 'utilization'])} for the year and "
              f"{u1(MR.loc['B1', 'utilization'])} and {u1(MR.loc['B2', 'utilization'])} in {REST}, with the shortest queue times of the five "
              f"(mean {d1(MY.loc['B1', 'queue_mean'])} and {d1(MY.loc['B2', 'queue_mean'])} days): precision work goes to them first and the hot list sends "
@@ -664,20 +697,18 @@ def build():
              f"cell's queue is load, not standards. {T.see('robot')}</p>")
 
     b.append("<h3 id='f2_3'>The other work centers</h3>")
-    held = QDAYS["share_of_queue"]
+    held = ALL_SHARE
     stepc = ["assembly", "weld", "punch"]
-    assert "punch" not in held.index                 # the punch is a first operation, outside the count of queue days
     rest_share = 1 - held["press_brake"] - held["robotic_weld"]
     b.append(f"<p>The other work centers hold {P(rest_share)} of queue days between them, and the wait at each is set in one of three ways. At grind and deburr, "
              f"inspection and pack and hardware ({P(held[SC.LIST_CENTERS].sum())} of queue days) the wait does not change with load; it is set by the daily dispatch "
-             f"list. At assembly, the manual weld bays and the punch ({P(held['assembly'] + held['weld'])} of queue days at the first two; the punch is a first "
-             f"operation and outside that count) the wait is flat until the machines are full and steps up only then ({T.plain('bins')}), which they reach in "
+             f"list. At assembly, the manual weld bays and the punch ({P(held[stepc].sum())} of queue days) the wait is flat until the machines are full and steps up "
+             f"only then ({T.plain('bins')}), which they reach in "
              f"{int(HY.loc['assembly', 'hot_weeks'])}, {int(HY.loc['weld', 'hot_weeks'])} and {int(HY.loc['punch', 'hot_weeks'])} weeks of {int(HY['weeks'].iloc[0])}; "
-             f"the lasers behave the same way and reach full load only at the year-end build (Flow and On-time Delivery). At the powder line "
+             f"the lasers ({P(held['laser'])} of queue days) behave the same way and reach full load only at the year-end build ({link('lead')}). At the powder line "
              f"({P(held['powder_coat'])} of queue days) the wait is the color schedule. {T.see('qdays', 'assembly', 'laser_weeks', 'lasers')}</p>")
     b.append(chart(f"Queue Days by Work Center and What Sets the Wait, {YEAR}", fig_queue_days_by_kind())
-             + note(f"Shares are of the {n0(QDAYS['queue_days'].sum())} queue days after the first operation; the lasers' and the punch's first-operation queue days "
-                    f"are shown beside them and are not in that total."))
+             + note("The lasers' and the punch's queue days are those of their first operations."))
     early, mid_day, late = HOURS.iloc[:3], HOURS.iloc[3:5], HOURS.iloc[5:]
     same = lambda g: float((g["same_day"] * g["arrivals"]).sum() / g["arrivals"].sum())
     assert 0.85 <= same(early) < 0.95 and 0.25 <= same(mid_day) < 0.35 and 0.45 <= mid_day["share"].sum() <= 0.55
@@ -810,7 +841,7 @@ def build():
 
     b.append("<h2 id='appendix'>Appendix</h2>")
     b.append(T.appendix())
-    toc = [("f1", "1. Capacity Across the Shop"), ("f2", "2. Load and Queue Time"), ("f3", "3. Brake Hours: Setups, Standards and the Peak")]
+    toc = [("f1", "1. Capacity and Constraints"), ("f2", "2. Load and Queue Time"), ("f3", "3. Brake Hours: Setups, Standards and the Peak")]
     print(f"wrote {page('capacity', chr(10).join(b), toc)}: 3 sections, {len(T.order)} appendix tables")
     return T.order
 
