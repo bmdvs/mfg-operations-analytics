@@ -278,3 +278,11 @@ def queue_distribution(D):
     d = pd.DataFrame({"operations": g.size(), "median": g.median(), "mean": g.mean(), "p5": g.quantile(0.05), "p25": g.quantile(0.25), "p75": g.quantile(0.75),
                       "p95": g.quantile(0.95)})
     return d.sort_values("median", ascending=False)
+
+
+def brake_distribution(D):
+    """Queue time per operation at each brake for operations started in the year: median, mean and the 5th, 25th, 75th and 95th percentiles."""
+    g = q(f"select machine_id, queue_net_wd as days from marts.mart_operations where start_year = {YEAR} and work_center = 'press_brake' and not is_first_op "
+          f"order by job_id, op_seq").groupby("machine_id")["days"]
+    return pd.DataFrame({"operations": g.size(), "median": g.median(), "mean": g.mean(), "p5": g.quantile(0.05), "p25": g.quantile(0.25), "p75": g.quantile(0.75),
+                         "p95": g.quantile(0.95)}).sort_index()

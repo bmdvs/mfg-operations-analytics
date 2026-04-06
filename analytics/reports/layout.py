@@ -48,6 +48,14 @@ class Tables:
         links = [f"<a href='#t{n}'>{n}</a>" if new else str(n) for n, new in cited]
         return f"See Appendix Table{'s' if len(links) > 1 else ''} {join_and(links)} for additional detail."
 
+    def cite(self, *keys):
+        """The tables in `keys` linked inside a sentence, where `see` would be a sentence of its own."""
+        self.reserve(*keys)
+        assert not self.linked & set(keys), keys
+        self.linked |= set(keys)
+        links = [f"<a href='#t{self.number(k)}'>{self.number(k)}</a>" for k in keys]
+        return f"Appendix Table{'s' if len(links) > 1 else ''} {join_and(links)}"
+
     def appendix(self):
         assert set(self.order) == set(self.held) == self.linked, (set(self.held) - set(self.order), set(self.held) - self.linked)
         return "\n".join(f"<h3 id='t{n}'>Table {n}. {self.held[k][0]}</h3>{self.held[k][1]}" for n, k in enumerate(self.order, 1))
