@@ -305,6 +305,57 @@ def fig_pair(centers, name, first_operation=False):
     return save(f, name, pair_title(centers, first_operation))
 
 
+def fig_setup_overrun():
+    """Setup hours over standard for the year at each work center, with the median setup ratio under its name."""
+    d = S.BYWC.sort_values("overrun_hours", ascending=False)
+    x = np.arange(len(d))
+    v = sig(d["overrun_hours"].to_numpy(dtype=float))
+    f, ax = fig(h=4.1)
+    ax.bar(x, v, width=0.62, color=[BRAND_BLUE if w == "press_brake" else LIGHT_BLUE for w in d.index])
+    for xi, vi in zip(x, v):
+        ax.text(xi, vi, f"{vi:,.0f}", ha="center", va="bottom", fontsize=8.5)
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"{WC[w]}, {r['median_ratio']:.2f}" for w, r in d.iterrows()], rotation=25, ha="right")
+    ax.set_ylabel("Setup hours over standard")
+    ax.set_ylim(0, float(v.max()) * 1.1)
+    ax.yaxis.set_major_formatter(lambda t, _: f"{t:,.0f}")
+    f.tight_layout()
+    return save(f, "capacity_setup_overrun_by_work_center", f"Setup Hours Over Standard by Work Center, {YEAR}")
+
+
+def condition_shares():
+    """The four conditions the brake overrun sits in: share of brake setups, share of overrun hours, and the median setup ratio against the rest."""
+    y, ho, nho, LOT, FML, FAM = S.OV.loc["year"], S.HO.loc["Handed over at a shift boundary"], S.HO.loc["Not handed over"], S.LOT, S.FML, S.FAM
+    part = lambda g: (float(g["setups"].sum() / y["setups"]), float(g["overrun_hours"].sum() / y["overrun_hours"]))
+    larger, two = LOT.drop("under 25")["median_ratio"], FAM.loc[["panel", "bracket"], "median_ratio"]
+    return [("Handed over at a shift boundary", float(ho["share_of_setups"]), float(ho["share_of_overrun"]), f"{d2(ho['median_ratio'])} against {d2(nho['median_ratio'])}"),
+            ("Lot under 25 pieces", *part(LOT.loc[["under 25"]]), f"{d2(LOT.loc['under 25', 'median_ratio'])} against {rng(larger.min(), larger.max())}"),
+            ("First setup of the part by the operator", *part(FML.loc[["none"]]), f"{d2(FML.loc['none', 'median_ratio'])} against {d2(FML.loc['1 or 2', 'median_ratio'])}"),
+            ("Enclosure or chassis family", *part(FAM.loc[["enclosure", "chassis"]]),
+             f"{d2(FAM.loc['enclosure', 'median_ratio'])} and {d2(FAM.loc['chassis', 'median_ratio'])} against {rng(two.min(), two.max())}")]
+
+
+def fig_condition_shares():
+    c = condition_shares()[::-1]
+    y = np.arange(len(c))
+    setups, over = sig(np.array([r[1] for r in c]) * 100), sig(np.array([r[2] for r in c]) * 100)
+    f, ax = fig(h=4.0, grid="x")
+    ax.barh(y + 0.19, setups, height=0.36, color=LIGHT_BLUE, label="Share of setups")
+    ax.barh(y - 0.19, over, height=0.36, color=BRAND_BLUE, label="Share of overrun hours")
+    for yi, a, o, r in zip(y, setups, over, c):
+        ax.text(a + 1, yi + 0.19, f"{a:.0f}%", ha="left", va="center", fontsize=8.5)
+        ax.text(o + 1, yi - 0.19, f"{o:.0f}%", ha="left", va="center", fontsize=8.5)
+        ax.text(78, yi, "Median setup ratio" + "\n" + r[3], ha="left", va="center", fontsize=8.5, color="#444444", linespacing=1.4)
+    ax.set_yticks(y)
+    ax.set_yticklabels([r[0] for r in c])
+    ax.set_xlim(0, 118)
+    ax.set_xticks([0, 20, 40, 60])
+    ax.xaxis.set_major_formatter(lambda t, _: f"{t:.0f}%")
+    f.legend(*ax.get_legend_handles_labels(), frameon=False, fontsize=9, ncol=2, loc="lower center")
+    f.tight_layout(rect=(0, 0.07, 1, 1))
+    return save(f, "capacity_setup_conditions", f"Share of Brake Setups Against Share of Overrun Hours by Condition, {YEAR}")
+
+
 def fig_levers():
     """Brake hours a week: the setup overrun, and what each measured lever releases of it."""
     cf = S.HCF.iloc[1]
@@ -564,7 +615,7 @@ def build():
     hall = HALL.loc[LOAD]
     assert (hall["queue_hot"] > 1.25 * hall["queue_other"]).all()
     b.append(f"<p>Across the six work centers with load-driven queue times, we see that their queue times rise sharply when operating near maximum utilization. As "
-             f"<a href='#f1'>Section 1</a> established, the press brake operates at these levels {P(hot_share['press_brake'])} of weeks in a year, and robotic weld "
+             f"shown in Section 1, the press brake operates at these levels {P(hot_share['press_brake'])} of weeks in a year, and robotic weld "
              f"{P(hot_share['robotic_weld'])}.</p>")
     b.append(chart("Queue Time in Weeks at or Above 95% Utilization vs. Other Weeks", fig_hot_year()))
     brake_weeks = C.D["uw"][C.D["uw"]["work_center"] == "press_brake"]
@@ -619,38 +670,43 @@ def build():
 
     # 3 ── brake hours
     b.append("<h2 id='f3'>3. Brake Hours: Setups, Standards and the Peak</h2>")
-    b.append(f"<p>The brake queue is set by uneven arrivals and by load above 85%, so what matters at the brakes is hours: how many are lost to setups over standard "
-             f"and how many of those can be recovered, whether the standards the schedule is planned on are right, how far released work exceeds brake capacity at "
-             f"the year-end peak, and where a crewed shift is open. This section measures each from the record. {link('options')} takes these measured hours as inputs "
-             f"and tests, on the shop model, what changing them does to on-time delivery, alongside release and dispatch rules. The variability at the brakes is in arrivals and "
+    ST, MH_WEEK = S.ST, S.MH_WEEK
+    brake_run = S.RWC.set_index("work_center").loc["press_brake"]
+    down_week, run_week = UY.loc["press_brake", "down"] / SA.WEEKS, (brake_run["run_hours"] - brake_run["standard_hours"]) / SA.WEEKS
+    assert max(down_week, run_week) < ST["brake_overrun_per_week"] / 3
+    b.append(f"<p>Sections 1 and 2 established the press brakes as the shop's primary constraint and mapped how their queue time rises with load. This section is aimed "
+             f"at the brake hours themselves: where hours are lost to setups running over standard and how many can be recovered, whether the standard hours the "
+             f"schedule is planned in are right, and where crewed hours fall short, at the year-end peak and on the robotic weld cell's second shift. The next "
+             f"report, {link('options')}, takes these measured hours as its inputs.</p>")
+    b.append(f"<p>Utilization is running machine hours over hours available, and the shop controls both sides: how many hours each job takes beyond its standard, and "
+             f"how many hours are crewed. Of the hours a job could take beyond standard, downtime ({n0(down_week)} hours a week at "
+             f"{P(UY.loc['press_brake', 'uptime'])} uptime) and run time over standard (about {n0(run_week)} a week at {d2(brake_run['run_ratio'])} of standard) are "
+             f"small; setups over standard are not, at {n0(ST['brake_overrun_per_week'])} hours a week, and they come first.</p>")
+    b.append(f"<p>The variability at the brakes is in arrivals and "
              f"run times, not setups (coefficients of variation {d2(C.var('Arrivals: jobs released per working day'))} for daily arrivals and "
              f"{d2(C.var('Brake run time'))} for run time against {d2(C.var('Brake setup time'))} for setup time; {T.cite('var', 'spread')}), so halving the spread "
              f"of setup time (each setup moved halfway to the mean, the curve rescaled) releases only {d1(C.SV.loc['year', 'hours_per_week_released'])} brake hours "
              f"a week; the mean setup time is where the hours are.</p>")
-    b.append("<h3 id='f3_1'>Brake setups</h3>")
-    ST, MH_WEEK = S.ST, S.MH_WEEK
-    b.append(f"<p>{n0(len(S.D['s']))} setups at all work centers in {YEAR}, {n0(y['setups'])} of them at the brakes. A setup's ratio is its setup machine hours over "
-             f"the setup standard on the job operation; hours over standard is total setup hours over total standard hours. Every work center except the brakes runs "
-             f"its setups at a median of {rng(others_setup['median_ratio'].min(), others_setup['median_ratio'].max())} of standard and within "
-             f"{n0(others_setup['overrun_hours'].max())} overrun hours for the year; the brakes ran {n0(y['setup_hours'])} hours against {n0(y['standard_hours'])} "
-             f"standard, {n0(y['overrun_hours'])} over, {n0(ST['brake_overrun_per_week'])} a week, {pct(ST['brake_overrun_per_week'] / MH_WEEK, 0)} of brake machine "
-             f"time. The median brake setup runs at {d2(y['median_ratio'])} of standard and the 90th percentile at {d2(y['p90_ratio'])}. Setup ratios do not move "
-             f"with the 2024 year-end build: the median is {d2(S.OV.loc['Q1', 'median_ratio'])} in the first quarter and {d2(S.OV.loc[REST, 'median_ratio'])} in "
-             f"{REST}. {T.see('bywc', 'period')}</p>")
+    b.append("<h3 id='f3_1'>Brake setups over standard</h3>")
+    b.append(f"<p>Brake setups ran {n0(y['setup_hours'])} hours against {n0(y['standard_hours'])} standard in {YEAR}: {n0(y['overrun_hours'])} hours over, "
+             f"{n0(ST['brake_overrun_per_week'])} a week, {pct(ST['brake_overrun_per_week'] / MH_WEEK, 0)} of brake machine time, with the median setup at "
+             f"{d2(y['median_ratio'])} of standard and the 90th percentile at {d2(y['p90_ratio'])}. No other work center exceeds "
+             f"{n0(others_setup['overrun_hours'].max())} overrun hours or a median of {d2(others_setup['median_ratio'].max())}, and the ratio does not move with the "
+             f"year-end build ({d2(S.OV.loc['Q1', 'median_ratio'])} in Q1, {d2(S.OV.loc[REST, 'median_ratio'])} in {REST}).</p>")
+    b.append(chart(f"Setup Hours Over Standard by Work Center, {YEAR}", fig_setup_overrun()))
 
-    b.append("<p id='f3_1_1'><b>Where the overrun sits</b></p>")
     ho, nho, small, LOT, FML, FAM = S.HO.loc["Handed over at a shift boundary"], S.HO.loc["Not handed over"], S.LOT.loc["under 25"], S.LOT, S.FML, S.FAM
     bump = small["median_ratio"] / LOT.drop("under 25")["median_ratio"].mean() - 1
-    b.append(f"<p>Setups handed over at a shift boundary (setup transactions by different operators one after the other across the 14:00 or 22:30 shift boundary; two operators at the same time is a two-person "
-             f"setup, not a handover) are {pct(ho['share_of_setups'], 0)} of setups "
-             f"and {pct(ho['share_of_overrun'], 0)} of the overrun hours, median {d2(ho['median_ratio'])} against {d2(nho['median_ratio'])}; most of those hours are "
-             f"long setups that reached the boundary rather than the handover itself (<a href='#f3_1_4'>The setup reduction list and the handover</a>). Lots under 25 "
-             f"are {pct(small['setups'] / y['setups'], 0)} of setups and {pct(ST['small_lot_overrun_share'], 0)} of the overrun, median {d2(small['median_ratio'])} "
-             f"against {d2(LOT.loc['100 and over', 'median_ratio'])} to {d2(LOT.loc['25 to 99', 'median_ratio'])} on larger lots: the setup standards under-plan "
-             f"small lots. First setups of a part by the operator run at {d2(FML.loc['none', 'median_ratio'])} against {d2(FML.loc['1 or 2', 'median_ratio'])}. "
-             f"Enclosures and chassis run at {d2(FAM.loc['enclosure', 'median_ratio'])} and {d2(FAM.loc['chassis', 'median_ratio'])}; panels and brackets at "
-             f"{d2(FAM.loc['panel', 'median_ratio'])} and {d2(FAM.loc['bracket', 'median_ratio'])}. {T.see('handover', 'lot', 'familiarity', 'family')}</p>")
-    b.append(titled(S.fig_conditions(), "Brake Setup Overrun Hours by Condition"))
+    larger, plain = LOT.drop("under 25")["median_ratio"], FAM.loc[["panel", "bracket"], "median_ratio"]
+    b.append(f"<p>The overrun sits in four conditions, which overlap: setups handed over at a shift boundary are {pct(ho['share_of_setups'], 0)} of setups and "
+             f"{pct(ho['share_of_overrun'], 0)} of the overrun (median {d2(ho['median_ratio'])}), mostly long setups that reached the boundary rather than the "
+             f"handover itself; lots under 25 pieces are {pct(small['setups'] / y['setups'], 0)} of setups and {pct(ST['small_lot_overrun_share'], 0)} of the overrun "
+             f"({d2(small['median_ratio'])} against {rng(larger.min(), larger.max())} on larger lots), so the standards under-plan small lots; first setups of a part "
+             f"by an operator run at {d2(FML.loc['none', 'median_ratio'])} against {d2(FML.loc['1 or 2', 'median_ratio'])}; and enclosures and chassis run at "
+             f"{d2(FAM.loc['enclosure', 'median_ratio'])} and {d2(FAM.loc['chassis', 'median_ratio'])} against {rng(plain.min(), plain.max())} for panels and "
+             f"brackets. {T.span('bywc', 'period', 'handover', 'lot', 'familiarity', 'family')}</p>")
+    b.append(chart(f"Share of Brake Setups Against Share of Overrun Hours by Condition, {YEAR}", fig_condition_shares())
+             + note("Conditions overlap; a setup can fall under more than one."))
     b.append(f"<p>The setup standard on lots under 25 pieces should be raised by {pct(bump, 0)}, so the schedule and the quote stop under-planning them.</p>")
 
     b.append("<p id='f3_1_2'><b>Operator tenure and familiarity</b></p>")
