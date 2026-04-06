@@ -73,21 +73,6 @@ def fig_tenure(name="setups_tenure_decomposition", h=3.0):
     return save(f, name, "Tenure effect on brake setup ratio as controls are added")
 
 
-def fig_run():
-    w = RWC.set_index("work_center")["run_ratio"].drop("laser")
-    rows = [(f"Laser {m}", float(r)) for m, r in zip(RLAS["machine_id"], RLAS["run_ratio"])] + [(WC[k], float(v)) for k, v in w.sort_values().items()]
-    f, ax = fig(h=3.2)
-    ax.bar([r[0] for r in rows], [r[1] for r in rows], color=[AMBER if r[0] in [f"Laser {m}" for m in NEWER] else ACCENT if r[0].startswith("Laser") else LIGHT_BLUE for r in rows])
-    ax.axhline(1.0, color=GREY, linewidth=1, linestyle="--")
-    ax.set_ylim(0.6, 1.15)
-    ax.set_ylabel("Run actual over standard")
-    for lab in ax.get_xticklabels():
-        lab.set_rotation(25)
-        lab.set_ha("right")
-    f.tight_layout()
-    return save(f, "setups_run_ratio", "Run actual over standard by work center")
-
-
 # ── tables ──────────────────────────────────────────────────────────────────
 COLS = ["Setups", "Median ratio", "Hours over standard ratio", "90th percentile", "Setup hours", "Standard hours", "Overrun hours"]
 
