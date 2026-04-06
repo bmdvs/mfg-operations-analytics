@@ -213,38 +213,56 @@ FIRST_OPS = SC.first_operation_queue_days(X)
 ALL_QDAYS = pd.concat([QDAYS["queue_days"], FIRST_OPS]).sort_values()
 ALL_SHARE = ALL_QDAYS / ALL_QDAYS.sum()               # the lasers and the punch on their first-operation queue
 DIST = SC.queue_distribution(X)
+BRAKE_DIST = SC.brake_distribution(X)
 FIRST_OP_LABEL = {w: f"{WC[w]} (first operation)" for w in ("laser", "punch")}
 
 
-def fig_queue_distribution():
-    """Queue time per operation as a box for each work center: 25th to 75th percentile, the median inside it, whiskers to the 5th and 95th, the mean marked."""
-    d = DIST.iloc[::-1]                                   # the longest median at the top
+def boxes(ax, d, colors):
+    """A box for each row of d, the first row at the top: 25th to 75th percentile, the median inside it, whiskers to the 5th and 95th, the mean marked."""
+    d = d.iloc[::-1]
     y = np.arange(len(d))
     v = {c: sig(d[c].to_numpy(dtype=float)) for c in ("median", "mean", "p5", "p25", "p75", "p95")}
-    colors = [DRIVER_COLOR[DRIVER[w]] for w in d.index]
     span = float(v["p95"].max())
-    f, ax = fig(h=5.2, grid="x")
     ax.hlines(y, v["p5"], v["p95"], color="#555555", linewidth=1.1, zorder=2)
     for xs in (v["p5"], v["p95"]):
         ax.vlines(xs, y - 0.14, y + 0.14, color="#555555", linewidth=1.1, zorder=2)
-    ax.barh(y, v["p75"] - v["p25"], left=v["p25"], height=0.52, color=colors, zorder=3)
+    ax.barh(y, v["p75"] - v["p25"], left=v["p25"], height=0.52, color=colors[::-1], zorder=3)
     ax.vlines(v["median"], y - 0.26, y + 0.26, color="white", linewidth=2.0, zorder=4)
     ax.plot(v["mean"], y, linestyle="none", marker="D", markersize=5.5, color="white", markeredgecolor="#222222", markeredgewidth=0.9, zorder=5)
     for yi, m_, p_ in zip(y, v["median"], v["p95"]):
         ax.text(m_, yi + 0.3, f"{m_:.2f}", ha="center", va="bottom", fontsize=8)
         ax.text(p_ + span * 0.012, yi, f"{p_:.1f}", ha="left", va="center", fontsize=8)
     ax.set_yticks(y)
-    ax.set_yticklabels([FIRST_OP_LABEL.get(w, WC[w]) for w in d.index])
     ax.set_xlim(0, span * 1.07)
     ax.set_ylim(-0.6, len(d) - 0.25)
     ax.set_xlabel("Working days per operation")
-    handles = [Patch(color=c) for c in DRIVER_COLOR.values()] + [
-        Line2D([], [], color="#999999", linewidth=5, marker="|", markersize=11, markeredgecolor="white", markeredgewidth=2.0),
-        Line2D([], [], linestyle="none", marker="D", markersize=5.5, color="white", markeredgecolor="#222222", markeredgewidth=0.9),
-        Line2D([], [], color="#555555", linewidth=1.1, marker="|", markersize=7)]
-    f.legend(handles, list(DRIVER_COLOR) + ["Median", "Mean", "5th to 95th percentile"], frameon=False, fontsize=8.5, ncol=5, loc="lower center")
+    return d
+
+
+BOX_KEYS = [Line2D([], [], color="#999999", linewidth=5, marker="|", markersize=11, markeredgecolor="white", markeredgewidth=2.0),
+            Line2D([], [], linestyle="none", marker="D", markersize=5.5, color="white", markeredgecolor="#222222", markeredgewidth=0.9),
+            Line2D([], [], color="#555555", linewidth=1.1, marker="|", markersize=7)]
+BOX_NAMES = ["Median", "Mean", "5th to 95th percentile"]
+
+
+def fig_queue_distribution():
+    """Queue time per operation by work center, each box in the colour of the work center's driver."""
+    f, ax = fig(h=5.2, grid="x")
+    d = boxes(ax, DIST, [DRIVER_COLOR[DRIVER[w]] for w in DIST.index])
+    ax.set_yticklabels([FIRST_OP_LABEL.get(w, WC[w]) for w in d.index])
+    f.legend([Patch(color=c) for c in DRIVER_COLOR.values()] + BOX_KEYS, list(DRIVER_COLOR) + BOX_NAMES, frameon=False, fontsize=8.5, ncol=5, loc="lower center")
     f.tight_layout(rect=(0, 0.06, 1, 1))
     return save(f, "capacity_queue_time_distribution", f"Queue Time per Operation by Work Center, {YEAR}")
+
+
+def fig_brake_distribution():
+    """Queue time per operation at each of the five brakes, with the brake's utilization for the year beside its name."""
+    f, ax = fig(h=3.6, grid="x")
+    d = boxes(ax, BRAKE_DIST, [BRAND_BLUE] * len(BRAKE_DIST))
+    ax.set_yticklabels([f"{m}, {P(C.MY.loc[m, 'utilization'])}" for m in d.index])
+    f.legend([Patch(color=BRAND_BLUE)] + BOX_KEYS, ["25th to 75th percentile"] + BOX_NAMES, frameon=False, fontsize=8.5, ncol=4, loc="lower center")
+    f.tight_layout(rect=(0, 0.08, 1, 1))
+    return save(f, "capacity_queue_time_by_brake", f"Queue Time per Operation by Brake, {YEAR}")
 
 
 def pair_title(centers, first_operation=False):
@@ -409,37 +427,6 @@ def fig_same_day():
     f.legend(h1 + h2, l1 + l2, frameon=False, fontsize=8.5, ncol=3, loc="lower center")
     f.tight_layout(rect=(0, 0.06, 1, 1))
     return save(f, "capacity_same_day_start", f"Same-Day Start by Hour of Arrival, Dispatch-List Work Centers Against the Brakes, {YEAR}")
-
-
-def fig_brakes():
-    """Utilization and mean queue time for each brake and the robotic weld cell."""
-    ids = C.BRAKES + ["R1"]
-    d = C.MY.loc[ids]
-    x = np.arange(len(d))
-    f, ax = fig(h=3.7)
-    u = sig(d["utilization"].to_numpy(dtype=float) * 100)
-    ax.bar(x, u, width=0.56, color=LIGHT_BLUE, label="Utilization (left)")
-    for xi, vi in zip(x, u):
-        ax.text(xi, vi / 2, f"{vi:.0f}%", ha="center", va="center", fontsize=8.5)
-    ax.set_xticks(x)
-    ax.set_xticklabels([C.MACHINE.get(i, i) for i in ids])
-    ax.set_ylabel("Utilization")
-    ax.set_ylim(0, 105)
-    ax.yaxis.set_major_formatter(lambda t, _: f"{t:.0f}%")
-    ax2 = ax.twinx()
-    qm = sig(d["queue_mean"].to_numpy(dtype=float))
-    ax2.plot(x, qm, color=BRAND_BLUE, linestyle="none", marker="D", markersize=7, label="Queue time, mean (right)")
-    for xi, vi in zip(x, qm):
-        ax2.text(xi + 0.12, vi, f"{vi:.1f}", ha="left", va="center", fontsize=8.5, color=BRAND_BLUE)
-    ax2.set_ylabel(QUEUE_AXIS)
-    ax2.set_ylim(0, float(qm.max()) * 1.25)
-    ax2.grid(False)
-    ax2.spines["top"].set_visible(False)
-    h1, l1 = ax.get_legend_handles_labels()
-    h2, l2 = ax2.get_legend_handles_labels()
-    f.legend(h1 + h2, l1 + l2, frameon=False, fontsize=9, ncol=2, loc="lower center")
-    f.tight_layout(rect=(0, 0.06, 1, 1))
-    return save(f, "capacity_utilization_and_queue_by_brake", f"Utilization and Queue Time by Brake, {YEAR}")
 
 
 # ── the new appendix tables ─────────────────────────────────────────────────
@@ -693,26 +680,17 @@ def build():
              f"and ran above its curve in {YEAR} ({d2(PY.loc['robotic_weld', 'queue_measured'])} days measured against "
              f"{d2(PY.loc['robotic_weld', 'queue_on_curve'])}). {T.see('bins', 'fits', 'pos')}</p>")
     b.append(chart(pair_title(LEAD_TWO), fig_pair(LEAD_TWO, "capacity_queue_curve_brake_robotic_weld")))
-    tail = MY.loc[["B3", "B4", "B5"]]
-    b12y, b12r = MY.loc[["B1", "B2"], "utilization"], MR.loc[["B1", "B2"], "utilization"]
-    assert P(b12y.min()) == P(b12y.max()) and P(b12r.min()) == P(b12r.max())
-    assert set(MR.loc[C.BRAKES, "utilization"].sort_values(ascending=False).index[:2]) == {"B1", "B2"}
-    assert MY.loc[C.BRAKES, "queue_mean"].sort_values().index[:2].tolist() in (["B1", "B2"], ["B2", "B1"])
-    var = C.var
-    b.append(f"<p>Within the brakes, B1 and B2 run at {P(b12y.max())} for the year and {P(b12r.max())} in {REST}, the hottest of the five in {REST}, yet have the "
-             f"shortest queue times of the five ({d1(MY.loc['B1', 'queue_mean'])} and {d1(MY.loc['B2', 'queue_mean'])} days), because precision work and the hot "
-             f"list go to them first; B3 to B5 carry the tail ({rng(tail['queue_mean'].min(), tail['queue_mean'].max(), d1)} days, 90th percentile "
-             f"{rng(tail['queue_p90'].min(), tail['queue_p90'].max(), d1)}). On crewed weekday shifts alone B1 and B2 run at "
-             f"{P(MY.loc['B1', 'utilization_weekday_basis'])} and {P(MY.loc['B2', 'utilization_weekday_basis'])}. {T.see('machines', 'basis')}</p>")
-    b.append(f"<p>The brake queue carries over from week to week because arrivals and run times are uneven: daily arrivals have a coefficient of variation of "
-             f"{d2(var('Arrivals: jobs released per working day'))}, Mondays bring {d2(var('Arrivals: Monday'))} times the daily mean and the top customer's "
-             f"month-end {d2(var('Arrivals: top customer'))} times, and run time per operation varies far more than setup time (coefficient of variation "
-             f"{d2(var('Brake run time'))} against {d2(var('Brake setup time'))}). {T.see('var', 'spread')}</p>")
-    b.append(chart(f"Utilization and Queue Time by Brake, {YEAR}", fig_brakes()))
-    rf = ROBOT_FAMILIES
-    assert rf.index[0] == "enclosure"
-    b.append(f"<p>The robotic weld cell's queue is load alone: its setups and run times are at standard ({d2(ROBOT_STD['setup_ratio'])} and "
-             f"{d2(ROBOT_STD['run_ratio'])}), and enclosures are {P(rf.loc['enclosure', 'share'])} of its hours. {T.see('robot')}</p>")
+    BD = BRAKE_DIST
+    lead, rest = BD.loc[["B1", "B2"]], BD.loc[["B3", "B4", "B5"]]
+    b12 = MY.loc[["B1", "B2"], "utilization"]
+    assert P(b12.min()) == P(b12.max()) and lead["median"].max() < rest["median"].min() and lead["p95"].max() < rest["p95"].min()
+    b.append(f"<p>The brake queue is not one queue. Precision work is routed to B1 and B2 and the hot list, the shop's daily list of expedited jobs, is run on them "
+             f"first, so these two machines, at {P(b12.max())} utilization, have the shortest and tightest waits (median {d2(BD.loc['B1', 'median'])} and "
+             f"{d2(BD.loc['B2', 'median'])} days, 95th percentile {d1(BD.loc['B1', 'p95'])} and {d1(BD.loc['B2', 'p95'])}), while jobs without a priority queue on B3 to "
+             f"B5, where the median is {rng(rest['median'].min(), rest['median'].max())} days and the 95th percentile "
+             f"{rng(rest['p95'].min(), rest['p95'].max(), d1)}. The long brake waits that make jobs late are concentrated on the three machines the hot list does "
+             f"not protect. {T.see('machines', 'basis')}</p>")
+    b.append(chart(f"Queue Time per Operation by Brake, {YEAR}", fig_brake_distribution()))
 
     pair = ["assembly", "weld"]
     mid = {}
@@ -784,11 +762,11 @@ def build():
     b.append(f"<p>The brake queue is set by uneven arrivals and by load above 85%, so what matters at the brakes is hours: how many are lost to setups over standard "
              f"and how many of those can be recovered, whether the standards the schedule is planned on are right, how far released work exceeds brake capacity at "
              f"the year-end peak, and where a crewed shift is open. This section measures each from the record. {link('options')} takes these measured hours as inputs "
-             f"and tests, on the shop model, what changing them does to on-time delivery, alongside release and dispatch rules. One measured quantity is set aside "
-             f"here: halving the spread of setup time (each setup time moved halfway to the mean, the curve rescaled for the lower variability of setup and run) "
-             f"releases {d1(C.SV.loc['year', 'hours_per_week_released'])} brake hours a week and cuts the queue time on the curve from "
-             f"{d2(C.SV.loc['year', 'queue_on_curve'])} to {d2(C.SV.loc['year', 'queue_with_half_setup_spread'])} days. The mean setup time is a different matter, and "
-             f"is where the hours are.</p>")
+             f"and tests, on the shop model, what changing them does to on-time delivery, alongside release and dispatch rules. The variability at the brakes is in arrivals and "
+             f"run times, not setups (coefficients of variation {d2(C.var('Arrivals: jobs released per working day'))} for daily arrivals and "
+             f"{d2(C.var('Brake run time'))} for run time against {d2(C.var('Brake setup time'))} for setup time; {T.cite('var', 'spread')}), so halving the spread "
+             f"of setup time (each setup moved halfway to the mean, the curve rescaled) releases only {d1(C.SV.loc['year', 'hours_per_week_released'])} brake hours "
+             f"a week; the mean setup time is where the hours are.</p>")
     b.append("<h3 id='f3_1'>Brake setups</h3>")
     ST, MH_WEEK = S.ST, S.MH_WEEK
     b.append(f"<p>{n0(len(S.D['s']))} setups at all work centers in {YEAR}, {n0(y['setups'])} of them at the brakes. A setup's ratio is its setup machine hours over "
@@ -883,8 +861,9 @@ def build():
              f"{T.see('peak')}</p>")
     b.append(chart("Brake Hours Released Against Capacity by Week, Q4 2024 to Q1 2025", fig_peak()))
     b.append(f"<p>The robotic weld cell runs one shift at {P(UY.loc['robotic_weld', 'utilization'])} utilization and is at or above 95% in "
-             f"{int(HY.loc['robotic_weld', 'hot_weeks'])} weeks of {int(HY.loc['robotic_weld', 'weeks'])}; its second shift is uncrewed. The options report tests "
-             f"and prices crewing it.</p>")
+             f"{int(HY.loc['robotic_weld', 'hot_weeks'])} weeks of {int(HY.loc['robotic_weld', 'weeks'])}; its second shift is uncrewed. Enclosures are "
+             f"{P(ROBOT_FAMILIES.loc['enclosure', 'share'])} of its hours, so a second shift would serve the enclosure customers first. The options report tests "
+             f"and prices crewing it. {T.see('robot')}</p>")
 
     b.append("<h2 id='appendix'>Appendix</h2>")
     b.append(T.appendix())
