@@ -38,9 +38,9 @@ def _lead_time():
 
 def _capacity():
     load = re.search(r"In 2025, the press brakes ran at .*? the smallest of all work centers\.", section_text(CAPACITY, "f1_1")).group(0)
-    hours, standard, over, week, share = re.search(r"Brake setups ran ([\d,]+) hours against ([\d,]+) standard in 2025: ([\d,]+) hours over, ([\d,]+) a week, (\d+%) of brake machine time",
-                                                   section_text(CAPACITY, "f3_1")).groups()
-    return f"{load} Brake setups ran {hours} hours against {standard} standard in 2025: {over} hours over, {week} a week, {share} of brake machine time."
+    over, week, points = re.search(r"Setups over standard are not: ([\d,]+) hours in 2025, ([\d,]+) a week, which is ([\d.]+) points of brake utilization",
+                                   section_text(CAPACITY, "f3")).groups()
+    return f"{load} Brake setups ran {over} hours over standard in 2025, {week} a week, {points} points of brake utilization."
 
 
 def _options():
