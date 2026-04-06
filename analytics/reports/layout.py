@@ -48,6 +48,15 @@ class Tables:
         links = [f"<a href='#t{n}'>{n}</a>" if new else str(n) for n, new in cited]
         return f"See Appendix Table{'s' if len(links) > 1 else ''} {join_and(links)} for additional detail."
 
+    def span(self, *keys):
+        """The sentence for a run of tables, named by its first and last numbers."""
+        self.reserve(*keys)
+        assert not self.linked & set(keys), keys
+        self.linked |= set(keys)
+        n = [self.number(k) for k in keys]
+        assert len(n) > 2 and n == list(range(n[0], n[0] + len(n))), n
+        return f"See Appendix Tables <a href='#t{n[0]}'>{n[0]}</a> to <a href='#t{n[-1]}'>{n[-1]}</a> for additional detail."
+
     def cite(self, *keys):
         """The tables in `keys` linked inside a sentence, where `see` would be a sentence of its own."""
         self.reserve(*keys)
