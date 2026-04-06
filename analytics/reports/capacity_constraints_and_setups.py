@@ -47,6 +47,7 @@ ACTIVITY["ops_per_week"] = ACTIVITY["operations"] / SA.WEEKS
 ACTIVITY["ops_per_machine_week"] = ACTIVITY["ops_per_week"] / ACTIVITY["machines"]
 ACTIVITY["weekdays"] = X["uw"][X["uw"]["week_year"] == YEAR].groupby("work_center")["weekdays"].sum()
 ACTIVITY["ops_per_machine_day"] = ACTIVITY["operations"] / ACTIVITY["machines"] / ACTIVITY["weekdays"]
+ACTIVITY["ops_per_day"] = ACTIVITY["operations"] / ACTIVITY["weekdays"]
 ACTIVITY["hours_per_operation"] = ACTIVITY["hours"] / ACTIVITY["operations"]
 QUEUE_AXIS = "Queue time, working days per operation"
 P = lambda x: pct(x, 0)
@@ -76,13 +77,13 @@ def darker(color, by=0.62):
 
 
 def fig_activity():
-    """Operations per machine a working day (left axis) and machine hours per operation (right axis), work centers in routing order."""
+    """Operations a working day at the work center (left axis) and machine hours per operation (right axis), work centers in routing order."""
     d = ACTIVITY.loc[ROUTING]
     x = np.arange(len(d))
     f, ax = fig(h=4.0)
     ax2 = ax.twinx()
-    ops, hrs = sig(d["ops_per_machine_day"].to_numpy(dtype=float)), sig(d["hours_per_operation"].to_numpy(dtype=float))
-    ax.bar(x - 0.2, ops, width=0.38, color=LIGHT_BLUE, label="Daily operations per machine (left)")
+    ops, hrs = sig(d["ops_per_day"].to_numpy(dtype=float)), sig(d["hours_per_operation"].to_numpy(dtype=float))
+    ax.bar(x - 0.2, ops, width=0.38, color=LIGHT_BLUE, label="Operations per day (left)")
     ax2.bar(x + 0.2, hrs, width=0.38, color=BRAND_BLUE, label="Machine hours per operation (right)")
     for xi, vi in zip(x, ops):
         ax.text(xi - 0.2, vi, f"{vi:.1f}", ha="center", va="bottom", fontsize=8)
@@ -90,7 +91,7 @@ def fig_activity():
         ax2.text(xi + 0.2, vi, f"{vi:.2f}" if vi < 1 else f"{vi:.1f}", ha="center", va="bottom", fontsize=8)
     ax.set_xticks(x)
     ax.set_xticklabels([f"{WC[w]} ({int(d.loc[w, 'machines'])}{' machines' if w == 'laser' else ''})" for w in d.index], rotation=25, ha="right")
-    ax.set_ylabel("Daily operations per machine")
+    ax.set_ylabel("Operations per day")
     ax2.set_ylabel("Machine hours per operation")
     ax.set_ylim(0, float(ops.max()) * 1.12)
     ax2.set_ylim(0, float(hrs.max()) * 1.12)
@@ -454,7 +455,7 @@ def build():
     # 1 ── capacity across the shop
     b.append("<h2 id='f1'>1. Capacity Across the Shop</h2>")
     act = ACTIVITY
-    b.append(f"<p>The shop's floor consists of {n0(act['machines'].sum())} machines across ten work centers. The daily floor activity (operations per machine and hours "
+    b.append(f"<p>The shop's floor consists of {n0(act['machines'].sum())} machines across ten work centers. The daily floor activity (operations per day and hours "
              f"per operation) in routing order is shown below.</p>")
     b.append(chart(f"Daily Floor Activity by Work Center, {YEAR}", fig_activity()))
     all_years = X["uw"][X["uw"]["week_year"].between(YEAR - 2, YEAR)]
