@@ -155,7 +155,7 @@ def fig_hot_share():
 
 def fig_hot_year():
     """Queue time in the weeks at or above 95% utilization against the other weeks of 2023 to 2025, for the work centers that had one."""
-    d = HALL[HALL["hot_weeks"] > 0]
+    d = HALL[(HALL["hot_weeks"] > 0) & (HALL.index != "hardware")]
     f, ax = fig(h=3.8)
     paired_columns(ax, [WC[w] for w in d.index], list(d["queue_hot"]), list(d["queue_other"]), ("Weeks at or above 95%", "Other weeks"), decimals=2)
     ax.set_ylabel("Queue time in days")
@@ -545,8 +545,10 @@ def build():
     # 1 ── capacity across the shop
     b.append("<h2 id='f1'>1. Capacity Across the Shop</h2>")
     act = ACTIVITY
-    b.append(f"<p>The shop's floor consists of {n0(act['machines'].sum())} machines across ten work centers. The daily floor activity (operations per day and hours "
-             f"per operation) in routing order is shown below.</p>")
+    assert UY["machine"].idxmax() == "press_brake"
+    b.append(f"<p>The shop's floor consists of {n0(act['machines'].sum())} machines across ten work centers. The press brakes are the busiest, with "
+             f"{n0(UY.loc['press_brake', 'machine'])} machine hours in {YEAR} ({P(UY.loc['press_brake', 'machine'] / UY['machine'].sum())} of total). Machine hours "
+             f"break into operations per day and hours per operation, shown in routing order below.</p>")
     b.append(chart(f"Daily Floor Activity by Work Center, {YEAR}", fig_activity()))
     all_years = X["uw"][X["uw"]["week_year"].between(YEAR - 2, YEAR)]
     avg = {w: SC.pooled_utilization(all_years[all_years["work_center"] == w]) for w in UY.index}
@@ -555,11 +557,10 @@ def build():
     rel = q("select year(quarter_start) as y, sum(releases) as releases, sum(brake_std_hours) as brake_hours "
                                            "from marts.mart_releases_by_quarter group by 1 order by 1").set_index("y")
     b.append(f"<p>The press brakes consistently run at the highest utilization of any work center (average of {P(avg['press_brake'])} 2023-2025), followed by the "
-             f"robotic weld cell ({P(avg['robotic_weld'])}). Released work grew {P(rel.loc[YEAR, 'releases'] / rel.loc[YEAR - 2, 'releases'] - 1)} from {YEAR - 2} to "
-             f"{YEAR} ({n0(rel.loc[YEAR - 2, 'releases'])} to {n0(rel.loc[YEAR, 'releases'])} jobs a year; brake standard hours up "
-             f"{P(rel.loc[YEAR, 'brake_hours'] / rel.loc[YEAR - 2, 'brake_hours'] - 1)}) across the same set of machines and shifts, resulting in average machine "
-             f"utilization increasing {(shop[YEAR] - shop[YEAR - 2]) * 100:.0f} points over the past three years, from {P(shop[YEAR - 2])} in {YEAR - 2} to "
-             f"{P(shop[YEAR])} in {YEAR}.</p>")
+             f"robotic weld cell ({P(avg['robotic_weld'])}). Across all work centers, average utilization increased from {P(shop[YEAR - 2])} in {YEAR - 2} to "
+             f"{P(shop[YEAR])} in {YEAR} as released work grew {P(rel.loc[YEAR, 'releases'] / rel.loc[YEAR - 2, 'releases'] - 1)} "
+             f"({n0(rel.loc[YEAR - 2, 'releases'])} to {n0(rel.loc[YEAR, 'releases'])} jobs a year; brake standard hours up "
+             f"{P(rel.loc[YEAR, 'brake_hours'] / rel.loc[YEAR - 2, 'brake_hours'] - 1)}) across the same set of machines and shifts.</p>")
     b.append(chart("Average monthly utilization by work center, 2023 to 2025", fig_utilization_trend()))
 
     b.append("<h3 id='f1_1'>Capacity Constraints</h3>")
@@ -573,21 +574,22 @@ def build():
     hot_share = (HY["hot_weeks"] / HY["weeks"]).sort_values(ascending=False)
     assert list(hot_share.index[:2]) == LEAD_TWO and hot_share.iloc[1] > 1.5 * hot_share.iloc[2]
     b.append(f"<p>With so little buffer, an ordinary heavy week can take the brakes and the weld cell to maximum utilization: they ran at or above 95% utilization in "
-             f"{P(hot_share['press_brake'])} and {P(hot_share['robotic_weld'])} of weeks in {YEAR}, far more often than any other work center. {T.see('hot')}</p>")
+             f"{P(hot_share['press_brake'])} and {P(hot_share['robotic_weld'])} of weeks in {YEAR}, far more often than any other work center. Average queue time rises sharply when a work center is operating near maximum utilization. "
+             f"This is explored in more detail in Section 2. {T.see('hot')}</p>")
     b.append(chart(f"Share of weeks at or above 95% utilization, {YEAR}", fig_hot_share()))
+    b.append(chart("Queue Time in Weeks at or Above 95% Utilization vs. Other Weeks, 2023 to 2025", fig_hot_year()))
     assert QDAYS.index[0] == "press_brake" and QDAYS.loc["robotic_weld", "share_of_queue"] < 0.05 and QDAYS.loc["press_brake", "share_of_queue"] > 0.5
     total_ops = len(ops)
-    b.append(f"<p>Throughout {YEAR}, jobs spent {n0(QDAYS['queue_days'].sum())} days waiting in queue at a work center (first operations at the lasers and the "
-             f"punch aside). The press brake station accounted for {P(QDAYS.loc['press_brake', 'share_of_queue'])} of those days, which is a function of its "
+    b.append(f"<p>Throughout {YEAR}, jobs spent {n0(QDAYS['queue_days'].sum())} days waiting in queue at a work center (excluding first operations at the lasers "
+             f"and the punch). The press brake station accounted for {P(QDAYS.loc['press_brake', 'share_of_queue'])} of those days, which is a function of its "
              f"consistently high utilization, as well as its volume of operations. There were {n0(QDAYS.loc['press_brake', 'operations'])} press brake operations in "
-             f"{YEAR}, {P(QDAYS.loc['press_brake', 'operations'] / total_ops)} of total across all work centers. The robotic weld cell, which saw similar high "
-             f"utilization and queue times as the press brakes, accounted for less than 5% of queue days, because only "
-             f"{n0(QDAYS.loc['robotic_weld', 'operations'])} operations, {pct(QDAYS.loc['robotic_weld', 'operations'] / total_ops)} of the total, passed through "
-             f"it.</p>")
+             f"{YEAR} ({P(QDAYS.loc['press_brake', 'operations'] / total_ops)} of total). The robotic weld cell, which also ran at high utilization, accounted for "
+             f"less than 5% of queue days, because only {n0(QDAYS.loc['robotic_weld', 'operations'])} operations "
+             f"({pct(QDAYS.loc['robotic_weld', 'operations'] / total_ops)} of total) passed through it.</p>")
     b.append(chart(f"Share of queue days by work center, {YEAR}", fig_queue_days()))
     b.append("<p>The press brakes are therefore the shop's primary constraint on three counts: the highest utilization with the least buffer, the most weeks spent at "
              "maximum utilization, and more than half of all queue days. The robotic weld cell shares the first two and constrains the enclosure work that crosses "
-             "it. The next section examines these stations in more detail.</p>")
+             "it. These stations are examined in more detail throughout this report.</p>")
 
     # 2 ── load and queue time
     b.append("<h2 id='f2'>2. Load and Queue Time</h2>")
@@ -604,7 +606,6 @@ def build():
              f"{rise['press_brake']:.1f}x) not because their wait is least sensitive to load but because their other weeks are also heavily loaded, so the comparison "
              f"is narrower than other work centers. This section lays out the sensitivity of queue time against load at the press brakes and robotic "
              f"weld stations.</p>")
-    b.append(chart("Queue Time in Weeks at or Above 95% Utilization vs. Other Weeks, 2023 to 2025", fig_hot_year()))
     b.append(f"<p><a href='#f1'>Section 1</a> showed that queue time rises when a work center is full and that the press brakes and the robotic weld cell are the two "
              f"that are full most often and carry the waiting that costs the shop days. This section shows how queue time builds at each as load rises, and what that "
              f"makes the lever. The curve is the queue time expected at each level of utilization for the number of machines at the work center, fitted on rolling "
