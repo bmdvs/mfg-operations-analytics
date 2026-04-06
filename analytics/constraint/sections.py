@@ -63,14 +63,16 @@ def var(source):
 
 # ── figures ─────────────────────────────────────────────────────────────────
 def fig_util():
+    """Utilization within machine uptime for each work center: one column to the height of uptime, its lower part the utilization."""
     d = UY.sort_values("utilization", ascending=False)
     f, ax = fig(h=3.6)
     x = np.arange(len(d))
-    for dx, col, color, lab in ((-0.2, "utilization", BRAND_BLUE, "Utilization"), (0.2, "uptime", LIGHT_BLUE, "Machine uptime")):
-        v = sig(d[col].to_numpy(dtype=float) * 100)
-        ax.bar(x + dx, v, width=0.38, color=color, label=lab)
-        for xi, vi in zip(x, v):
-            ax.text(xi + dx, vi, f"{vi:.0f}%", ha="center", va="bottom", fontsize=7)
+    u, up = sig(d["utilization"].to_numpy(dtype=float) * 100), sig(d["uptime"].to_numpy(dtype=float) * 100)
+    ax.bar(x, u, width=0.6, color=BRAND_BLUE, label="Utilization")
+    ax.bar(x, up - u, width=0.6, bottom=u, color=LIGHT_BLUE, label="Machine uptime")
+    for xi, ui, pi in zip(x, u, up):
+        ax.text(xi, ui / 2, f"{ui:.0f}%", ha="center", va="center", fontsize=8, color="white")
+        ax.text(xi, pi, f"{pi:.0f}%", ha="center", va="bottom", fontsize=8)
     ax.set_xticks(x)
     ax.set_xticklabels([WC[w] for w in d.index], rotation=20, ha="right")
     ax.set_ylim(0, 108)
