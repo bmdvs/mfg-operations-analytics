@@ -169,7 +169,7 @@ def fig_queue_days():
     x = np.arange(len(d))
     v = sig(d.to_numpy(dtype=float) * 100)
     f, ax = fig(h=3.5)
-    ax.bar(x, v, width=0.62, color=[shade(w) for w in d.index])
+    ax.bar(x, v, width=0.62, color=[BRAND_BLUE if w == "press_brake" else LIGHT_BLUE for w in d.index])
     for xi, vi in zip(x, v):
         ax.text(xi, vi, f"{vi:.0f}%", ha="center", va="bottom", fontsize=8.5)
     ax.set_xticks(x)
