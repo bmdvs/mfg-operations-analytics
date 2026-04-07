@@ -60,19 +60,6 @@ def conditions():
     return [(n, len(g), float((g["setup_hours"] - g["setup_std"]).sum()), float(g["setup_ratio"].median())) for n, g in rows]
 
 
-def fig_tenure(name="setups_tenure_decomposition", h=3.0):
-    f, ax = fig(h=h)
-    lab = ["Tenure only", "+ familiarity", "+ grouping", "+ machine", "+ lot size, bends,\nshift handover"]
-    v = TM["tenure_effect_pct"].to_numpy() * 100
-    ax.bar(lab, v, color=[BRAND_BLUE] + [ACCENT] * 3 + [LIGHT_BLUE])
-    for i, x in enumerate(v):
-        ax.text(i, x + 0.3, f"+{x:.1f}%", ha="center", fontsize=9.5)
-    ax.set_ylabel("New operators over tenured (%)")
-    ax.set_ylim(0, v.max() * 1.2)
-    f.tight_layout()
-    return save(f, name, "Tenure effect on brake setup ratio as controls are added")
-
-
 # ── tables ──────────────────────────────────────────────────────────────────
 COLS = ["Setups", "Median ratio", "Hours over standard ratio", "90th percentile", "Setup hours", "Standard hours", "Overrun hours"]
 
