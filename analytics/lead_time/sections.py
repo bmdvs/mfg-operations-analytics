@@ -7,7 +7,7 @@ import pandas as pd
 from matplotlib.patches import FancyBboxPatch, Patch, Rectangle
 
 from analytics.db import q
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DARK_GREY as DARK, DOCS, GREEN, GREY, LIGHT_BLUE, RED, TEXT, fig, paired_columns, pct, save, sig, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, CHART_W, DARK_GREY as DARK, DOCS, GREEN, GREY, LIGHT_BLUE, RED, TEXT, fig, paired_columns, pct, save, sig, table
 
 YEAR = 2025
 REST = "Q2 to Q4"
@@ -231,104 +231,102 @@ WAITING, WORKING = "#DCE6EE", BRAND_BLUE
 
 
 def fig_job_flow():
-    """The job flow from release to shipment: the stages in sequence, the work centers of each stacked where a stage has more than one, the share of jobs through
-    each, the routing framed with the cycle inside every work center, and where holds fall."""
+    """The job flow from release to shipment in two rows, the work centers of a stage stacked where it has more than one, each with the share of jobs through it.
+    Drawn at the width of the report's text column so its lettering is the size of the body text."""
     P = lambda x: f"{x * 100:.0f}% of jobs"
     NL = chr(10)
-    TOP, MID, LOW = 3.0, 2.35, 1.7
-    # stage, width, boxes of (name, detail, share, every job, centre height, box height)
-    columns = [
-        ("", 0.62, [("Release", None, None, True, MID, 0.9)]),
-        ("", 0.9, [("Release to" + NL + "traveler print", None, None, True, MID, 0.9)]),
-        ("Cut", 1.0, [("Laser", None, FLOW["laser"], False, 2.7, 0.52), ("Punch", None, FLOW["punch"], False, 2.0, 0.52)]),
-        ("", 1.12, [("Deburr edges", "grind and deburr", FLOW["deburr"], False, MID, 0.9)]),
-        ("", 1.0, [("Form", "press brake", FLOW["form"], True, MID, 0.9)]),
-        ("Insert and join", 1.14, [("Hardware", None, FLOW["hardware"], False, TOP, 0.52), ("Manual weld", None, FLOW["manual_weld"], False, MID, 0.52),
-                                   ("Robotic weld", None, FLOW["robotic_weld"], False, LOW, 0.52)]),
-        ("", 1.12, [("Grind welds", "grind and deburr", FLOW["grind_welds"], False, 2.02, 1.0)]),
-        ("Finish", 1.14, [("Powder coat", None, FLOW["powder"], False, 2.9, 0.52), ("Outside" + NL + "processing", None, FLOW["outside"], False, 2.1, 0.62)]),
-        ("", 1.0, [("Assemble", "assembly", FLOW["assembly"], False, MID, 0.9)]),
-        ("", 1.0, [("Inspect" + NL + "and pack", None, FLOW["inspect"], True, MID, 0.9)]),
-        ("", 0.9, [("Packed," + NL + "waiting" + NL + "to ship", None, None, True, MID, 0.9)]),
-        ("", 0.54, [("Ship", None, None, True, MID, 0.9)])]
-    gap = 0.36
-    f, ax = fig(h=5.4, w=12.0)
+    WIDE, TALL = 832.0, 592.0                              # the text column in pixels; one unit is one pixel as the page shows it
+    NAME, SHARE = 10.6, 9.4                                # points: 15 and 13 pixels on the page
+    f, ax = fig(h=CHART_W * TALL / WIDE, w=CHART_W)
+    ax.set_position([0, 0, 1, 1])
     ax.axis("off")
-    arrow = dict(arrowstyle="-|>", color=DARK, linewidth=0.9, shrinkA=0, shrinkB=0, mutation_scale=8)
-    box = lambda x0, y0, w, hh, **kw: ax.add_patch(FancyBboxPatch((x0, y0), w, hh, boxstyle="round,pad=0.02,rounding_size=0.06", **kw))
+    arrow = dict(arrowstyle="-|>", color=DARK, linewidth=1.0, shrinkA=0, shrinkB=0, mutation_scale=10)
     go = lambda a, b, **kw: ax.annotate("", b, a, arrowprops=dict(arrow, **kw))
-    x, at = 0.1, {}
-    for k, (stage_, w, boxes) in enumerate(columns):
-        for name, detail, share, every, yc, hh in boxes:
-            waits, point = k in (1, 10), k in (0, 11)
-            box(x, yc - hh / 2, w, hh, facecolor=WAITING if waits else "white", edgecolor=DARK, linewidth=1.6 if point else 0.9, linestyle="-" if every else "--")
-            lines = [name] + ([detail] if detail else []) + ([P(share)] if share is not None else [])
-            if share is None:
-                ax.text(x + w / 2, yc, name, ha="center", va="center", fontsize=7.8, color=TEXT, fontweight="bold" if point else None)
-            else:
-                top = yc + 0.11 * (len(lines) - 1) + (0.06 if NL in name else 0)
-                ax.text(x + w / 2, top, name, ha="center", va="center", fontsize=7.8, color=TEXT, fontweight="bold")
-                for i, t in enumerate(lines[1:], 1):
-                    ax.text(x + w / 2, top - 0.2 * i - (0.1 if NL in name else 0), t, ha="center", va="center", fontsize=6.8, color=TEXT)
-            at[name.replace(NL, " ")] = (x, x + w, yc, hh)
-        if stage_:
-            ax.text(x + w / 2, max(b[4] + b[5] / 2 for b in boxes) + 0.1, stage_, ha="center", va="bottom", fontsize=7.8, color=TEXT, fontweight="bold")
-        x += w + gap
-    total = x - gap + 0.1
-    L, R, Y = (lambda n: at[n][0] - 0.03), (lambda n: at[n][1] + 0.03), (lambda n: at[n][2])
+    at = {}
+
+    def box(key, name, x0, w, yc, hh, share=None, edge=0.9, bold=True):
+        ax.add_patch(FancyBboxPatch((x0, yc - hh / 2), w, hh, boxstyle="round,pad=0,rounding_size=6", facecolor="white", edgecolor=DARK, linewidth=edge))
+        n = name.count(NL) + 1
+        if share is None:
+            ax.text(x0 + w / 2, yc, name, ha="center", va="center", fontsize=NAME, color=TEXT, fontweight="bold" if bold else None, linespacing=1.15)
+        else:
+            ax.text(x0 + w / 2, yc + 10, name, ha="center", va="center", fontsize=NAME, color=TEXT, fontweight="bold", linespacing=1.15)
+            ax.text(x0 + w / 2, yc - 9 * n - 8, P(share), ha="center", va="center", fontsize=SHARE, color=TEXT)
+        at[key] = (x0, x0 + w, yc, hh)
+
+    def stage(label, x0, w, top):
+        ax.text(x0 + w / 2, top + 9, label, ha="center", va="bottom", fontsize=NAME, color=TEXT, fontweight="bold")
+
+    # the first row: release to the press brakes
+    y1, x, gap = 484.0, 4.0, 72.0
+    box("release", "Release", x, 84, y1, 96, edge=1.7)
+    x += 84 + gap
+    box("print", "Release to" + NL + "traveler" + NL + "print", x, 108, y1, 96, bold=False)
+    x += 108 + gap
+    box("laser", "Laser", x, 104, y1 + 37, 62, FLOW["laser"])
+    box("punch", "Punch", x, 104, y1 - 37, 62, FLOW["punch"])
+    stage("Cut", x, 104, y1 + 68)
+    x += 104 + gap
+    box("deburr", "Grind and" + NL + "deburr", x, 112, y1, 96, FLOW["deburr"])
+    x += 112 + gap
+    box("brake", "Press brake", x, 112, y1, 96, FLOW["form"])
+    # the second row: inserting and joining to shipment
+    x, gap = 38.0, 19.0
+    box("hardware", "Hardware", x, 118, 290, 60, FLOW["hardware"])
+    box("weld", "Manual weld", x, 118, 219, 60, FLOW["manual_weld"])
+    box("robot", "Robotic weld", x, 118, 148, 60, FLOW["robotic_weld"])
+    stage("Insert and join", x, 118, 320)
+    x += 118 + gap
+    box("grind", "Grind and" + NL + "deburr", x, 100, 184, 118, FLOW["grind_welds"])
+    x += 100 + gap
+    box("powder", "Powder coat", x, 112, 284, 60, FLOW["powder"])
+    box("outside", "Outside" + NL + "processing", x, 112, 190, 84, FLOW["outside"])
+    stage("Finish", x, 112, 314)
+    x += 112 + gap
+    box("assembly", "Assemble", x, 96, 236, 96, FLOW["assembly"])
+    x += 96 + gap
+    box("inspect", "Inspect" + NL + "and pack", x, 96, 236, 96, FLOW["inspect"])
+    x += 96 + gap
+    box("packed", "Packed," + NL + "waiting" + NL + "to ship", x, 92, 236, 96, bold=False)
+    x += 92 + gap
+    box("ship", "Ship", x, 62, 236, 96, edge=1.7)
+    L, R, Y = (lambda n: at[n][0] - 3), (lambda n: at[n][1] + 3), (lambda n: at[n][2])
     link = lambda a, b, dy=0.0, dz=0.0: go((R(a), Y(a) + dy), (L(b), Y(b) + dz))
-    link("Release", "Release to traveler print")
-    link("Release to traveler print", "Laser", 0.12)
-    link("Release to traveler print", "Punch", -0.12)
-    link("Laser", "Deburr edges", 0, 0.15)
-    link("Punch", "Deburr edges", 0, -0.15)
-    link("Deburr edges", "Form")
-    link("Form", "Hardware", 0.2)
-    link("Form", "Manual weld")
-    link("Form", "Robotic weld", -0.2)
-    link("Manual weld", "Grind welds", 0, 0.25)
-    link("Robotic weld", "Grind welds", 0, -0.25)
-    link("Hardware", "Powder coat")
-    link("Grind welds", "Powder coat", 0.3, -0.12)
-    link("Grind welds", "Outside processing", -0.1)
-    link("Powder coat", "Assemble", 0, 0.2)
-    link("Outside processing", "Assemble", 0, -0.2)
-    link("Assemble", "Inspect and pack")
-    link("Inspect and pack", "Packed, waiting to ship")
-    link("Packed, waiting to ship", "Ship")
+    link("release", "print")
+    link("print", "laser", 14)
+    link("print", "punch", -14)
+    link("laser", "deburr", 0, 16)
+    link("punch", "deburr", 0, -16)
+    link("deburr", "brake")
+    # from the press brakes round to the second row
+    tx, ty, lx = 822.0, 376.0, 14.0
+    ax.plot([R("brake"), tx, tx, lx, lx], [y1, y1, ty, ty, Y("robot")], color=DARK, linewidth=1.0, solid_capstyle="round")
+    for n in ("hardware", "weld", "robot"):
+        go((lx, Y(n)), (L(n), Y(n)))
+    link("weld", "grind", 0, 26)
+    link("robot", "grind", 0, -26)
+    link("hardware", "powder")
+    link("grind", "powder", 34, -14)
+    link("grind", "outside", -8)
+    link("powder", "assembly", 0, 22)
+    link("outside", "assembly", 0, -22)
+    link("assembly", "inspect")
+    link("inspect", "packed")
+    link("packed", "ship")
     # inside a stage: hardware on to a weld, powder coat on to outside processing
-    hx = at["Hardware"][0] + 0.2
-    go((hx, at["Hardware"][2] - at["Hardware"][3] / 2 - 0.03), (hx, at["Manual weld"][2] + at["Manual weld"][3] / 2 + 0.03))
-    ax.annotate("", (at["Robotic weld"][1] + 0.03, LOW + 0.12), (at["Hardware"][1] + 0.03, TOP - 0.12),
-                arrowprops=dict(arrow, connectionstyle="arc3,rad=-0.3"))
-    px = at["Powder coat"][0] + 0.25
-    go((px, at["Powder coat"][2] - at["Powder coat"][3] / 2 - 0.03), (px, at["Outside processing"][2] + at["Outside processing"][3] / 2 + 0.03))
-    # the routing: every work center from cutting to inspection, with the cycle inside each
-    ra, rb, r0, r1 = at["Laser"][0] - 0.16, at["Inspect and pack"][1] + 0.16, 0.72, 4.22
-    ax.add_patch(FancyBboxPatch((ra, r0), rb - ra, r1 - r0, boxstyle="round,pad=0.0,rounding_size=0.1", facecolor="none", edgecolor=ACCENT, linewidth=1.1))
-    ix, iy, ih = ra + 0.14, 3.9, 0.34
-    ax.text(ix, iy, "The routing. At each work center:", ha="left", va="center", fontsize=8.0, color=TEXT, fontweight="bold")
-    ix += 3.35
-    for name, w, fill in (("Move", 0.62, WAITING), ("Queue", 0.66, WAITING), ("Setup and run", 1.08, WORKING)):
-        box(ix, iy - ih / 2, w, ih, facecolor=fill, edgecolor=DARK, linewidth=0.7)
-        ax.text(ix + w / 2, iy, name, ha="center", va="center", fontsize=7.6, color="white" if fill == WORKING else TEXT)
-        if name != "Setup and run":
-            go((ix + w + 0.03, iy), (ix + w + 0.15, iy))
-        ix += w + 0.18
-    ax.text(rb - 0.14, iy, "Dashed border: not on every job's routing", ha="right", va="center", fontsize=7.4, color=TEXT)
-    # holds, at any work center on the routing
-    ha_, hb_, yo, ho = ra + 0.14, rb - 0.14, 1.04, 0.34
-    box(ha_, yo - ho / 2, hb_ - ha_, ho, facecolor=WAITING, edgecolor=DARK, linewidth=0.8, linestyle=":")
-    ax.text((ha_ + hb_) / 2, yo, f"Holds: at any operation on the routing ({HOLDS_AT_FIRST * 100:.0f}% at the first operation, most of them for material)", ha="center", va="center",
-            fontsize=7.8, color=TEXT)
-    # the span that is lead time
-    ax.annotate("", (at["Ship"][1], 0.34), (at["Release"][0], 0.34), arrowprops=dict(arrowstyle="<|-|>", color=DARK, linewidth=0.8, mutation_scale=9, shrinkA=0, shrinkB=0))
-    ax.text(total / 2, 0.41, "In WIP from release to shipment: lead time, working days", ha="center", va="bottom", fontsize=8.0, color=TEXT)
-    ax.set_xlim(0, total)
-    ax.set_ylim(0.15, 4.35)
-    f.legend([Patch(facecolor=WAITING, edgecolor=DARK, linewidth=0.6), Patch(facecolor=WORKING)], ["Waiting", "Working"], frameon=False, fontsize=9, ncol=2,
-             loc="lower center")
-    f.tight_layout(rect=(0, 0.05, 1, 1))
+    hx = at["hardware"][0] + 22
+    go((hx, at["hardware"][2] - at["hardware"][3] / 2 - 3), (hx, at["weld"][2] + at["weld"][3] / 2 + 3))
+    ax.annotate("", (R("robot"), Y("robot") + 14), (R("hardware"), Y("hardware") - 14), arrowprops=dict(arrow, connectionstyle="arc3,rad=-0.28"))
+    px = at["powder"][0] + 26
+    go((px, at["powder"][2] - at["powder"][3] / 2 - 3), (px, at["outside"][2] + at["outside"][3] / 2 + 3))
+    # holds: anywhere on the routing, from cutting to inspection
+    span = dict(arrowstyle="<|-|>", color=DARK, linewidth=0.9, mutation_scale=10, shrinkA=0, shrinkB=0)
+    ax.annotate("", (at["brake"][1], 402), (at["laser"][0], 402), arrowprops=span)
+    ax.annotate("", (at["inspect"][1], 62), (at["hardware"][0], 62), arrowprops=span)
+    ax.text((at["hardware"][0] + at["inspect"][1]) / 2, 72, f"Holds occur at any operation on the routing ({HOLDS_AT_FIRST * 100:.0f}% at the first Cut operations," + NL
+            + "most of them for material)", ha="center", va="bottom", fontsize=NAME, color=TEXT, linespacing=1.25)
+    ax.set_xlim(0, WIDE)
+    ax.set_ylim(40, 40 + TALL)
     return save(f, "job_flow_diagram", "Job Flow, Release to Shipment")
 
 
@@ -603,7 +601,7 @@ def report():
     bq = "queue: press brake"
     b = []
     P0 = lambda x: pct(x, 0)
-    b.append("<h2 id='f1'>1. Job Flow</h2>")
+    b.append("<h2 id='f1'>1. </h2>")
     b.append("<p>Every job follows the same general flow through the shop between its release onto the floor and its shipment to the customer. At any moment every job in "
              "WIP sits somewhere in this flow, and its lead time, the working days from release to shipment, is the time it takes to pass through it.</p>")
     b.append(chart("Job Flow, Release to Shipment", fig_job_flow()))
@@ -615,7 +613,7 @@ def report():
              f"{hit['new part'][0]} of new-part jobs ({hit['new part'][1]}) and {hit['outside processing'][0]} of outside-processing jobs "
              f"({hit['outside processing'][1]}). {see('1')}</p>")
     b.append("<p>The shop quotes lead times by starting with a routing class standard (10 working days for repeat parts, 15 for new parts and 20 with outside processing) "
-             "which is then adjusted slightly based on current shop capacity and WIP levels. <a href='#f5'>Section 5</a> analyzes the quote against the brake backlog.</p>")
+             "which is then adjusted slightly based on current shop capacity and WIP levels. <a href='#f4'>Section 4</a> analyzes the quote against the brake backlog.</p>")
     b.append(chart("Actual vs. Quoted Lead Times, by Routing Class", fig_distribution()))
 
     b.append("<h2 id='f3'>3. Lead time decomposition</h2>")
@@ -629,7 +627,7 @@ def report():
              f"We've presented {RT} data alongside {YEAR}, as this largely removes the impact of the Q4 build and presents a more normalized view. {see('3')}</p>")
     b.append(chart(f"Lead Time Decomposition by Stage, {YEAR} and {RT}", fig_flow_days()))
 
-    b.append("<h2 id='f4'>4. Work in Process</h2>")
+    b.append("<h2 id='f4'>4. </h2>")
     spare = wr["wip_at_quoted_lead_times"] - wr["wip_mean"]
     b.append(f"<p>In {YEAR}, the shop carried an average of {n0(wy['wip_mean'])} WIP jobs against a throughput of about {n0(wy['throughput_per_day'])} shipped a day, "
              f"so a job spent about {n0(wy['wip_over_throughput_days'])} working days on the floor. {YEAR} WIP was skewed by the large Q1 backlog detailed below. WIP averaged {n0(wipd['wip'].mean())} jobs over the past three "
@@ -713,7 +711,7 @@ def report():
     b.append(f"<h3 id='t8'>Table 8. Jobs shipped by working days from the due date to the ship date, {YEAR} and {REST}</h3>" + t8())
     b.append("<div class='glossary'>WIP: jobs released and not shipped. Quoted lead time: 10 working days for repeat parts, 15 for new parts, "
              "20 with outside processing. On time: shipped on or before the promised date as last revised.</div>")
-    toc = [("f1", "Job Flow"), ("f2", "Actual vs. quoted lead times"), ("f3", "Lead time decomposition"), ("f4", "Work in Process"), ("f5", ""),
+    toc = [("f1", ""), ("f2", "Actual vs. quoted lead times"), ("f3", "Lead time decomposition"), ("f4", ""), ("f5", ""),
            ("f6", "Where late jobs spend their time"),
            ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
     scope = (f"Jobs shipped in {YEAR}, whole year and {REST}; records from January 2023 to December 2025.<br>"

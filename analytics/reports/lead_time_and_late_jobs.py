@@ -10,7 +10,7 @@ from analytics.reports import quoting_section
 from analytics.reports.combine import write
 
 
-ORDER = [("Job Flow", [1]), ("Work in Process", [4]), ("Lead Time", [3, 2]), ("Late Jobs", [5, 6, 7, 8])]
+ORDER = [("Flow and WIP", [1, 4]), ("Lead Time", [3, 2]), ("Late Jobs", [5, 6, 7, 8])]
 # tables that come in pairs for the year and the ordinary quarters, by the numbers they carry as merged
 PAIRS = {"2a": "2b", "13": "14"}
 
@@ -31,7 +31,7 @@ def table_order(body, held):
 
 
 def arrange(body, toc):
-    """Six sections: the job flow, work in process, lead time and late jobs, the last two with their parts under unnumbered headings, then quoting and early warning;
+    """Five sections: flow and work in process, lead time and late jobs, the last two with their parts under unnumbered headings, then quoting and early warning;
     the appendix tables follow that order."""
     start = body.index("<h2 id='f1'>")
     end = body.index("<h2 id='appendix'>")

@@ -818,7 +818,7 @@ def build():
              f"will still not see. {T.span('run', 'stale', 'planned', 'quoted')}</p>")
     b.append(chart(f"Brake Hours: Planned Against Actual, {YEAR}", fig_brake_plan()))
     b.append(f"<p>Away from the constraint, the {newer} lasers run at {d2(S.LF[S.NEWER].mean())} of their run standard, so planned laser hours are overstated by "
-             f"{pct(-S.LWC['change'].iloc[1])}; setting those standards to measured is an estimating correction ({link('lead', anchor='f5')}, Section 5) rather than a capacity one.</p>")
+             f"{pct(-S.LWC['change'].iloc[1])}; setting those standards to measured is an estimating correction ({link('lead', anchor='f4')}, Section 4) rather than a capacity one.</p>")
 
     b.append("<h3 id='f3_4'>Where crewed hours fall short</h3>")
     pk = PEAK[PEAK["build"]]
