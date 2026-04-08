@@ -844,7 +844,7 @@ def build():
     b.append(chart("Brake Hours Released Against Capacity by Week, Q4 2024 to Q1 2025", fig_peak()))
     b.append(f"<p>The robotic weld cell runs one shift at {P(UY.loc['robotic_weld', 'utilization'])} utilization and is at or above 95% in "
              f"{int(HY.loc['robotic_weld', 'hot_weeks'])} weeks of {int(HY.loc['robotic_weld', 'weeks'])}; its second shift is uncrewed. Enclosures are "
-             f"{P(ROBOT_FAMILIES.loc['enclosure', 'share'])} of its hours, so a second shift would serve the enclosure customers first. The options report tests "
+             f"{P(ROBOT_FAMILIES.loc['enclosure', 'share'])} of its hours, so a second shift would serve the enclosure customers first. The simulation report tests "
              f"and prices crewing it. {T.see('robot')}</p>")
 
     b.append(f"<p>Measured from the record: the brakes lose {n0(ST['brake_overrun_per_week'])} hours a week to setups over standard, enough to put them above the "

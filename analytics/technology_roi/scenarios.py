@@ -1,4 +1,5 @@
-"""The capital options on the shop model: each alone and on top of the no-capital package, 30 replications, beside current practice and the package.
+"""The capital options on the shop model: each alone and on top of the operating package, 30 replications. Current practice and the package are
+in the runs of analytics.release_control.scenarios.
 
 Usage: python -m analytics.technology_roi.scenarios [replications] [workers]
 """
@@ -7,25 +8,24 @@ from pathlib import Path
 
 import yaml
 
-from analytics.release_control.scenarios import PACKAGES, run
+from analytics.release_control.scenarios import PACKAGE, PACKAGES, run
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = Path(__file__).resolve().parent / "results" / "scenario_runs.csv"
 ASSUME = yaml.safe_load((ROOT / "technology_roi_assumptions.yaml").read_text(encoding="utf8"))
-S0, PACKAGE = "S0 Current practice", "Package 2 Setup reduction + weld second shift + planned Saturdays"
+S0 = "S0 Current practice"
 O = ASSUME["options"]
 _factor = 1 - O["press_brake_atc"]["tool_change_share_of_setup"] * O["press_brake_atc"]["tool_change_reduction"]
 OPTIONS = {
     "Tool changer on B3": {"tool_changer": {"machines": (O["press_brake_atc"]["replaces"],), "setup_factor": _factor}},
     "Laser tower on L2": {"laser_tower": O["laser_tower"]["laser_fitted"]},
     "Robotic bending cell": {"bending_cell": {"availability": O["robotic_bending_cell"]["added_crewed_hours_per_week"] / 80.0}},
-    "Tool changing at every brake setup (upper bound)": {"tool_changer": {"machines": "all", "setup_factor": _factor}},
 }
-SCENARIOS = {S0: {}, PACKAGE: PACKAGES[PACKAGE]}
-SCENARIOS.update({f"T {k}": v for k, v in OPTIONS.items()})
-SCENARIOS.update({f"N No-capital package + {k[0].lower() + k[1:]}": {**PACKAGES[PACKAGE], **v} for k, v in OPTIONS.items()})
+SCENARIOS = {f"T {k}": v for k, v in OPTIONS.items()}
+SCENARIOS.update({f"N Package + {k[0].lower() + k[1:]}": {**PACKAGES[PACKAGE], **v} for k, v in OPTIONS.items()})
 
 QUEUE = Path(__file__).resolve().parent / "results" / "laser_queue_november_2024.csv"
+CUSTOMERS = Path(__file__).resolve().parent / "results" / "customer_delivery.csv"
 _INP = None
 
 
@@ -50,7 +50,7 @@ def laser_queue(reps=30, workers=7):
     from concurrent.futures import ProcessPoolExecutor
     import pandas as pd
     names = [S0, "T Laser tower on L2"]
-    tasks = [(n, SCENARIOS[n], k + 1) for n in names for k in range(reps)]
+    tasks = [(n, SCENARIOS.get(n, {}), k + 1) for n in names for k in range(reps)]
     with ProcessPoolExecutor(max_workers=workers) as ex:
         rows = [r for part in ex.map(_laser_queue, tasks, chunksize=2) for r in part]
     pd.DataFrame(rows).to_csv(QUEUE, index=False)
@@ -65,6 +65,7 @@ if __name__ == "__main__":
         sys.exit(0)
     only = sys.argv[3].split("|") if len(sys.argv) > 3 else None
     out = Path(sys.argv[4]) if len(sys.argv) > 4 else OUT
-    df = run({k: v for k, v in SCENARIOS.items() if not only or k in only}, reps, workers)
+    customers = Path(sys.argv[5]) if len(sys.argv) > 5 else CUSTOMERS
+    df = run({k: v for k, v in SCENARIOS.items() if not only or k in only}, reps, workers, quarters_to=None, customers_to=customers)
     df.to_csv(out, index=False)
     print("wrote", out)

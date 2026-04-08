@@ -85,10 +85,11 @@ def block(title, html):
     return f"<p><b>{title}</b></p>{html}"
 
 
-def page(key, body, toc):
-    """Write the report: its numbered sections and the appendix in the contents, the ordinary quarters written Q2-Q4."""
+def page(key, body, toc, heading=None):
+    """Write the report: its numbered sections and the appendix in the contents, the ordinary quarters written Q2-Q4. The heading is the title after
+    "Report:" unless one is given."""
     stem, title, _ = REPORTS[key]
     out = DOCS / "reports"
     out.mkdir(parents=True, exist_ok=True)
-    (out / f"{stem}.html").write_text(report_shell(f"Report: {title}", "", "", body.replace(REST, RT), toc + [("appendix", "Appendix")]), encoding="utf8")
+    (out / f"{stem}.html").write_text(report_shell(heading or f"Report: {title}", "", "", body.replace(REST, RT), toc + [("appendix", "Appendix")]), encoding="utf8")
     return f"docs/reports/{stem}.html"
