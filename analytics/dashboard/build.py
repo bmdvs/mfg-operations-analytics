@@ -490,9 +490,9 @@ def panel_quoting():
             b + f"<div class='caption'>Quote hit rates by release week and the share of quotes sent within 3 days by week from {wk(QW.index.min())}; the line is 80%.</div>" +
             definition("A quote is met when the working days from the release day to the ship day are at or under it; rush lines are left out. The quoted lead time is the "
                        "class standard (10 days for repeat parts, 15 for new parts, 20 with outside processing) plus the shop's week when the floor is backed up. The "
-                       "quote table is the table fitted on 2023 to 2025 (Flow and On-time Delivery, Table 16): the 80th-percentile lead time of the routing class and "
+                       "quote table is the table fitted on 2023 to 2025 (Flow and On-time Delivery, Table 17): the 80th-percentile lead time of the routing class and "
                        "brake backlog band at release, rounded up, never below the class standard. The recommended rule quotes the class standard below 2.5 days of "
-                       "brake backlog at release and the quote table at or above it (Flow and On-time Delivery, Section 4 and Table 16). Turnaround is weekdays "
+                       "brake backlog at release and the quote table at or above it (Flow and On-time Delivery, Section 5 and Table 17). Turnaround is weekdays "
                        "from RFQ received to quote sent. Win rate is won over quotes sent, with no decision counted as not won."))
 
 
