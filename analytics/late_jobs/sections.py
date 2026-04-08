@@ -24,7 +24,7 @@ WC = {"press_brake": "Press brake", "grind_deburr": "Grind and deburr", "inspect
       "outside_processing": "Outside processing", "shipping": "Shipping", "order entry": "Order entry (promise)", "none": "No stage above normal"}
 WC_SHORT = {"press_brake": "Press\nbrake", "grind_deburr": "Grind and\ndeburr", "inspection_pack": "Inspection\nand pack", "robotic_weld": "Robotic\nweld",
             "powder_coat": "Powder\ncoat", "outside_processing": "Outside\nprocessing"}
-STAGE = {"queue: press brake": "Queue: press brake", "setup and run": "Setup and run", "move": "Move", "complete to ship": "Complete to ship",
+STAGE = {"queue: press brake": "Queue: press brake", "setup and run": "Setup and run", "move": "Move", "complete to ship": "Packed, waiting to ship",
          "queue: assembly": "Queue: assembly", "first-operation queue": "First-operation queue", "queue: grind deburr": "Queue: grind and deburr",
          "material wait at first operation": "Material wait at first operation", "queue: robotic weld": "Queue: robotic weld",
          "release to traveler print": "Release to traveler print", "queue: weld": "Queue: manual weld", "queue: hardware": "Queue: hardware",
@@ -305,9 +305,6 @@ def report():
     ys, rs = y["share"], r["share"]
     b = []
     b.append("<h2 id='f1'>1. Drivers behind late jobs</h2>")
-    b.append(f"<p>In {YEAR}, the shop had {n0(len(LY))} late jobs that shipped a total of {n0(y['total'])} days late (average of {d1(y['total'] / len(LY))} days late "
-             f"for each job), with {n0(len(LR))} of these late jobs ({pct(len(LR) / len(LY), 0)}) in {REST} that shipped a total of {n0(r['total'])} days late "
-             f"(average of {d1(r['total'] / len(LR))} days late for each). See Appendix Tables 7 and 8 for lost days by customer.</p>")
     b.append("<p>We analyzed the ERP and shop-floor records to arrive at an attribution of lost days (i.e., how many days late the jobs shipped) by driver. "
              "For each late job, we considered how many days it ran longer than an on-time job of the same routing class at each stage, as well as material "
              "holds and late purchase order receipts. We then assigned each job to a driver.</p>")
@@ -315,8 +312,8 @@ def report():
              f"while jobs that were released late accounted for {pct(ys['released late'], 0)}, and jobs that waited on material and outside processing accounted for "
              f"{pct(ys['material'], 0)} and {pct(ys['outside processing'], 0)}, respectively. In {REST}, jobs that were released late accounted for "
              f"{pct(rs['released late'], 0)} of the {n0(r['total'])} lost days, with queue constraint ({pct(rs['constraint queue'], 0)}), material "
-             f"({pct(rs['material'], 0)}) and outside processing ({pct(rs['outside processing'], 0)}) the other main drivers.</p>")
-    b.append(f"<p>Jobs were released late when they went to the floor with fewer working days to the due date than the job's quoted lead time; "
+             f"({pct(rs['material'], 0)}) and outside processing ({pct(rs['outside processing'], 0)}) the other main drivers. "
+             f"Jobs were released late when they went to the floor with fewer working days to the due date than the job's quoted lead time; "
              f"this was the largest driver on {n0(r['dominant']['released late'])} of the {n0(len(LR))} ({pct(r['dominant']['released late'] / len(LR), 0)}) late jobs in {REST}. {see(1, 5, 6)}</p>")
     queues = [k for k in NAYs.index if k.startswith("queue:") or k == "first-operation queue"]
     b.append(f"<p>{pct(ys['not attributable'], 0)} of lost days in {YEAR} and {pct(rs['not attributable'], 0)} in {REST} have no attribution. Of the "
@@ -354,9 +351,9 @@ def report():
              f"{n0(cross_all.loc['outside processing'].sum())} coded outside processing ({pct(cross_all.loc['outside processing', 'outside processing'] / cross_all.loc['outside processing'].sum(), 0)}) and quality on {just(cross_all.loc['quality', 'quality'])} of the "
              f"{n0(cross_all.loc['quality'].sum())} ({pct(cross_all.loc['quality', 'quality'] / cross_all.loc['quality'].sum(), 0)}) coded quality. Of the {n0(rel.sum())} jobs where released late is the largest attributed driver, "
              f"{n0(rel['capacity'])} are coded capacity, {n0(rel['blank'])} carry no code and {n0(rel['other'])} are coded other. {see(3, 4)}</p>")
+    b.append(chart("What the shop coded against what the data shows", fig_mosaic()))
     b.append("<p>To increase the accuracy and usefulness of its late-reason codes, the shop should consider process changes to (i) include additional options "
              "(specifically late releases) in the late-reason code dropdown menu, and (ii) enable real-time shop-floor data capture on the reasons for late jobs once they're known.</p>")
-    b.append(chart("What the shop coded against what the data shows", fig_mosaic()))
 
     b.append("<h2 id='rec'>Recommendation and control</h2>")
     b.append("<p>Replace the late-reason code on the shipment with a buffer status record kept by production control: each job's time buffer in thirds, and a reason "
@@ -387,8 +384,6 @@ def report():
     b.append(f"<h3>Table 4. Entered code against largest attributed cause, {YEAR}</h3>" + t_cross())
     b.append(f"<h3>Table 5. Lost days by work center and cause, {YEAR}</h3>" + t_wc(WY))
     b.append(f"<h3>Table 6. Lost days by work center and cause, {YEAR} {REST}</h3>" + t_wc(WR))
-    b.append(f"<h3>Table 7. Lost days by customer, top ten, {YEAR}</h3>" + t_cust(CY))
-    b.append(f"<h3>Table 8. Lost days by customer, top ten, {YEAR} {REST}</h3>" + t_cust(CR))
     b.append("<h3>Table 9. Stage composition of the lost days not attributed</h3>" + t_na())
     b.append("<h3>Table 10. Queue constraint and not attributed shares by queue threshold</h3>" + t_sens())
     b.append("<div class='glossary'>Lost days: working days a job shipped after its promised date. Released late: promised inside the standard lead time of 10, 15 or "

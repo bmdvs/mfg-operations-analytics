@@ -12,7 +12,7 @@ from analytics.reports.combine import write
 
 ORDER = [("Job Flow", [1]), ("Work in Process", [4]), ("Lead Time", [3, 2]), ("Late Jobs", [5, 6, 7, 8])]
 # tables that come in pairs for the year and the ordinary quarters, by the numbers they carry as merged
-PAIRS = {"2a": "2b", "13": "14", "15": "16"}
+PAIRS = {"2a": "2b", "13": "14"}
 
 
 def table_order(body, held):
