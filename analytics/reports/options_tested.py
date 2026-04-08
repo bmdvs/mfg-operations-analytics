@@ -138,8 +138,9 @@ def fig_build(w):
 
 
 def fig_effects():
-    f, axes = fig(h=6.2, ncols=2, grid="x", sharey=True)
-    groups = [("Release and dispatch", sorted(A.RELEASE, key=lambda s: -chg(s, "on_time_delivery"))), ("Capacity", sorted(A.CAPACITY, key=lambda s: -chg(s, "on_time_delivery")))]
+    f, axes = fig(h=7.4, ncols=2, grid="x", sharey=True)
+    groups = [("Release and dispatch", sorted(A.RELEASE, key=lambda s: -chg(s, "on_time_delivery"))), ("Capacity", sorted(A.CAPACITY, key=lambda s: -chg(s, "on_time_delivery"))),
+              ("Combinations", [PACKAGE, P_CELL, P_CHANGER, P_TOWER])]
     rows, y, ticks, heads = [], 0, [], []
     for g, names in groups:
         heads.append((y, g))
@@ -155,6 +156,10 @@ def fig_effects():
             t = [v * 100 for v in A.diff(s, "on_time_delivery", per)]
             ax.barh(yi, t[0], 0.62, color=COLOR[A.VERDICT[s]])
             ax.plot([t[1], t[2]], [yi, yi], color="#222222", lw=1.2)
+            ax.annotate(sg(t[0]), (t[2] if t[0] >= 0 else t[1], yi), textcoords="offset points", xytext=(4 if t[0] >= 0 else -4, 0), va="center",
+                        ha="left" if t[0] >= 0 else "right", fontsize=7.5)
+        lo, hi = ax.get_xlim()
+        ax.set_xlim(lo - (hi - lo) * 0.1, hi + (hi - lo) * 0.1)
         ax.set_title(lab, fontsize=10)
         ax.set_xlabel("Change in on-time delivery (points)")
     axes[0].set_yticks([t[0] for t in ticks] + [h[0] for h in heads])
@@ -166,25 +171,40 @@ def fig_effects():
     return save(f, "scenario_effects", "")
 
 
-def fig_build_up():
-    f, axes = fig(h=3.4, ncols=2, sharey=True)
-    for ax, (per, lab) in zip(axes, PERIODS):
-        base = A.mean(CURRENT, "on_time_delivery", per) * 100
-        steps = [("Current" + "\n" + "practice", base, GREY), ("Setup" + "\n" + "program", A.mean(SETUP, "on_time_delivery", per) * 100, LIGHT_BLUE),
-                 ("Planned Saturdays," + "\n" + "both brakes", A.mean(SAT_BOTH, "on_time_delivery", per) * 100, LIGHT_BLUE),
-                 ("Operating" + "\n" + "package", A.mean(PACKAGE, "on_time_delivery", per) * 100, BRAND_BLUE)]
-        for k, (_, v, c) in enumerate(steps):
-            ax.bar(k, v, 0.62, color=c)
-            ax.annotate(f"{v:.1f}%", (k, v), textcoords="offset points", xytext=(0, 2), ha="center", fontsize=8.5)
-        ax.axhline(95, color=RED, lw=1, ls="--")
-        ax.annotate("95% target", (3.4, 95), textcoords="offset points", xytext=(0, 3), ha="right", fontsize=8, color=RED)
-        ax.set_xticks(range(len(steps)))
-        ax.set_xticklabels([s[0] for s in steps], fontsize=8.5)
-        ax.set_title(lab, fontsize=10)
-        ax.set_ylim(70, 100)
-    axes[0].set_ylabel("On-time delivery (%)")
-    f.tight_layout()
-    return save(f, "package_build_up", "")
+WORKING = [SETUP, SAT_BOTH, SAT_ONE, WELD, CHANGER, CELL, EDD]
+# the outcomes of the chart of changes that work: measure, panel title, decimals, in points, and whether a rise is good for delivery (None: neither)
+PANELS = [("on_time_delivery", "On-time delivery" + chr(10) + "(points)", 1, True, True), ("wip_mean", "Floor WIP" + chr(10) + "(jobs)", 0, False, False),
+          ("late_jobs", "Late jobs" + chr(10), 0, False, False), ("days_late", "Days late" + chr(10), 0, False, False),
+          ("brake_utilization", "Brake" + chr(10) + "utilization (points)", 1, True, None), ("brake_queue_mean", "Brake queue (days" + chr(10) + "per operation)", 2, False, False)]
+BETTER, WORSE, NEUTRAL = BRAND_BLUE, RED, GREY
+
+
+def fig_changes():
+    f, axes = fig(h=4.3, w=9.2, ncols=len(PANELS), grid="x", sharey=True)
+    names = WORKING + [PACKAGE]
+    y = [len(names) - k + 0.6 for k in range(len(WORKING))] + [0.0]              # the package set apart at the bottom
+    for ax, (m, title, d, points, up_is_good) in zip(axes, PANELS):
+        ax.axvline(0, color="#333333", lw=1)
+        ax.axhline(0.8, color=GREY, lw=0.6, ls=":")
+        for yi, s in zip(y, names):
+            t = [v * (100 if points else 1) for v in A.diff(s, m)]
+            color = NEUTRAL if up_is_good is None else (BETTER if (t[0] > 0) == up_is_good else WORSE)
+            ax.plot([t[1], t[2]], [yi, yi], color=color, lw=1.6)
+            ax.scatter([t[0]], [yi], color=color, s=22, zorder=3)
+            lab = sg(t[0], d)
+            ax.annotate(lab.lstrip("+-") if float(lab.replace(",", "")) == 0 else lab, (t[0], yi), textcoords="offset points", xytext=(0, 5), ha="center", fontsize=6.6)
+        lo, hi = ax.get_xlim()
+        ax.set_xlim(lo - (hi - lo) * 0.14, hi + (hi - lo) * 0.14)
+        ax.set_title(title, fontsize=7.8)
+        ax.tick_params(axis="x", labelsize=6.5)
+        ax.locator_params(axis="x", nbins=3)
+    axes[0].set_yticks(y)
+    axes[0].set_yticklabels(names, fontsize=8.2)
+    axes[0].set_ylim(-0.7, max(y) + 0.9)
+    f.legend([Line2D([], [], color=BETTER, marker="o", lw=1.6), Line2D([], [], color=WORSE, marker="o", lw=1.6), Line2D([], [], color=NEUTRAL, marker="o", lw=1.6)],
+             ["Better for delivery", "Worse for delivery", "Neither", ], frameon=False, fontsize=8.5, ncol=3, loc="lower center")
+    f.tight_layout(rect=(0, 0.06, 1, 1), w_pad=0.6)
+    return save(f, "changes_that_work", "")
 
 
 def fig_capital():
@@ -319,7 +339,7 @@ def t_levels(per):
 
 
 def t_scenarios(rows):
-    return table(pd.DataFrame(rows, columns=["Scenario", "The change", "Cost", "Why it could help", "How it is modelled"]))
+    return table(pd.DataFrame([r[:4] for r in rows], columns=["Scenario", "The change", "Cost", "Why it could help"]))
 
 
 def t_hold():
@@ -434,9 +454,11 @@ def build():
           + "<p>Queue is working days from the end of the previous operation to the start; for the lasers and the punch, the first-operation queue. The powder coat queue includes "
             "the wait for the color day. The record does not separate extended-shift brake hours from weekday hours.</p>")
     T.add("assume", "Measured inputs and option assumptions", t_assumptions())
+    T.add("modelled", "How Each Scenario Is Modelled", "")
     T.add("hold", "Release hold under the WIP caps and constraint-paced release", t_hold())
-    T.add("year", f"Scenario results, {YEAR}: current practice, and each scenario's further outcomes as a difference from it with 95% intervals",
-          block("Current practice", t_levels("year")) + block("Further outcomes, difference from current practice", t_results("year", A.FURTHER, A.EVERY, False)))
+    T.add("year", f"Scenario results, {YEAR}: current practice, and each scenario as a difference from it with 95% intervals",
+          block("Current practice", t_levels("year")) + block("Primary and supporting outcomes", t_results("year", A.OUTCOMES, A.EVERY))
+          + block("Further outcomes", t_results("year", A.FURTHER, A.EVERY, False)))
     T.add("rest", f"Scenario results, {RT}: current practice, and each scenario as a difference from it with 95% intervals",
           block("Current practice", t_levels("rest")) + block("Primary and supporting outcomes", t_results("rest", A.OUTCOMES, A.EVERY))
           + block("Further outcomes", t_results("rest", A.FURTHER, A.EVERY, False)))
@@ -452,93 +474,30 @@ def build():
             "beyond overtime and are in the results tables.</p>")
     T.add("customers", f"On-time delivery by customer, {YEAR}: the customers making up 80% of revenue", t_customers([CURRENT, PACKAGE, WELD, P_CHANGER, P_CELL]))
 
-    b = []
-    # 1 ── the shop model
-    b.append("<h2 id='f1'>1. The Shop Model</h2>")
-    b.append(f"<p>On-time delivery was {pc(measured_otd['year'], 0)} in {YEAR} against a 95% target because jobs wait at the brakes and because jobs are released late ({flow}; "
-             f"{capacity}). The record shows what happened under the shop's practice; it cannot show what would have happened under another. This report answers that question with a "
-             f"discrete event simulation of the shop that replays the jobs the shop actually released in {YEAR - 1} and {YEAR} through a floor whose rules can be changed, one at a time, "
-             f"while the demand stays the same.</p>")
-    b.append("<h3 id='f1_1'>How the model works</h3>")
-    b.append(f"<p>The model takes each job as the shop released it and moves it through its routing, machine by machine, under the shop's shift calendars and dispatch rules. What the "
-             f"record fixes, the model keeps: release dates, routings, standards, due dates and rush flags are those of the actual jobs, and machine downtime is the recorded downtime. "
-             f"What varies from job to job, how long each setup and run takes and how long a job waits for material, a move or outside processing, is drawn from the shop's {YEAR} "
-             f"distributions. The behaviours the record does not state as rules are estimated from it: how fully the brakes are crewed when work is waiting, and when and how the shop "
-             f"works a Saturday or an extended brake shift. Each scenario runs 30 times with different draws, and its effect is the difference from current practice, run for run, with "
-             f"a 95% interval.</p>")
-    ps = M["p_saturday"]
-    rows = [
-        ["Jobs", "Every job released from January 2024: release date, routing, setup and run standards, quantity, due date, rush flag and planned operation dates.", "", ""],
-        ["Machines and calendars", "Shift calendars by work center and day, the shifts each machine is crewed, every recorded downtime event and the powder color schedule.", "", ""],
-        ["Setup and run time", "", f"Actual over standard by work center and size of operation; at the brakes by whether the setup is grouped and by lot size. On {pc(M['no_setup_share'])} "
-         f"of brake operations the setup is inside the run, as the record clocks it, so the setup program and the tool changer have no setup to shorten there and are understated by "
-         f"about that share.", ""],
-        ["Waits between operations", "", "Material wait at the first operation by routing class; move and hold time by work center; outside processing time; complete to ship.", ""],
-        ["Dispatch", "Rush first, then jobs due within 2 working days, then planned start. Brake classes by machine, setups grouped on the same tooling up to three in a row, and the "
-         "10:00 daily list at the single-shift work centers.", "", "A job of two or more sheets is cut on arrival; a single-sheet job waits for a second job on its sheet or for 2 working days before its planned start."],
-        ["Brake hours worked", "", "", f"{M['brake_yield']:.3f} of crewed hours on an ordinary weekday, {M['holiday_yield']:.3f} in a holiday week, fitted on weeks with work waiting."],
-        ["Saturday and extended brake shifts", "", "", f"A Saturday is called on {pc(ps[0], 0)} to {pc(ps[4], 0)} of Fridays by the jobs at the brakes, and worked on {pc(M['saturday_worked'], 0)} of those, "
-         f"on one brake at {M['saturday_yield']:.3f} of its hours. An extended shift yields {M['extended_yield']:.3f} of its hours. All fitted on the record's shifts."],
-        ["Laser hours worked", "", "", f"{M['laser_yield']:.3f} of crewed hours, fitted on weeks with over 90 jobs at the lasers."],
-        ["Not modelled", "Scrap and rework as events, operator absence and assignment by name, holds as events, nests and sheets, quoting, and the customer's response to delivery: "
-         "orders and due dates are those of the record under every scenario.", "", ""]]
-    b.append(chart("What the Model Takes, Draws and Assumes", table(pd.DataFrame(rows, columns=["", "Taken from the record", f"Drawn from the shop's {YEAR} distributions", "Estimated or assumed"]))))
-    b.append(f"<p>Operator familiarity enters as a reduction in brake setup time in proportion to the hours measured in {link('capacity', 'the capacity report')}.</p>")
-
-    b.append(f"<h3 id='f1_2'>How well it reproduces {YEAR}</h3>")
-    du = (wcs["utilization_model"] - wcs["utilization_measured"]).abs().max() * 100
-    dq = (wcs["queue_model"] / wcs["queue_measured"] - 1)
-    out_q = wcs[dq.abs() > 0.25]
-    later = wcs.dropna(subset=["queue_days_model"])
-    share_model = later.loc[later["work_center"] == "Press brake", "queue_days_model"].iloc[0] / later["queue_days_model"].sum()
-    share_meas = M["brake_share_of_queue"]
-    assert abs(share_model - share_meas) < 0.02
-    dp = (pct["model"] / pct["measured"] - 1)
-    out_p = pct[dp.abs() > 0.10]
-    assert len(out_q) == 1 and len(out_p) == 1 and ten["within"].all()
-    op, oq_ = out_p.iloc[0], out_q.iloc[0]
-    b.append(f"<p>The model reproduces {YEAR} within tolerance on {WORD[int(ten['within'].sum())]} of the ten measures set before the model was run. Utilization is within "
-             f"{d1(du)} points of measured at every work center, and queue time per operation is within 25% at every work center but the punch ({d2(oq_['queue_model'])} days against "
-             f"{d2(oq_['queue_measured'])}), which takes {n0(punch_ops)} first operations a year. Lead-time percentiles from the 10th to the 95th are within 10% of measured except the 10th "
-             f"for {YEAR} ({d1(op['model'])} days against {d1(op['measured'])}). On-time delivery is {pc(model_otd['year'])} against {pc(measured_otd['year'])} for {YEAR} and "
-             f"{pc(model_otd['rest'])} against {pc(measured_otd['rest'])} in {RT}, and the brakes hold {pc(share_model, 0)} of queue time in the model against {pc(share_meas, 0)} in "
-             f"the record, with the wait for the powder color day left out of both, the capacity report's basis. {T.see('tolerance', 'shop')}</p>")
-    b.append(titled(fig_work_centers(wcs), f"Utilization and Queue Time by Work Center, Measured Against Model, {YEAR}"))
-    b.append(f"<p>The brakes and the robotic weld cell, the two work centers that hold a queue, sit within {d1((wcs['utilization_model'] - wcs['utilization_measured']).iloc[:2].abs().max() * 100)} "
-             f"points of measured utilization and {abs(dq.iloc[:2]).max() * 100:.0f}% of measured queue time.</p>")
-    b.append(titled(fig_lead(pct, curve), "Lead Time of Jobs Shipped, Measured Against Model"))
-    p50, p90 = pct[(pct["period"] == "year") & (pct["percentile"] == 50)].iloc[0], pct[(pct["period"] == "year") & (pct["percentile"] == 90)].iloc[0]
-    b.append(f"<p>The model's curve lies on the shop's in both periods: the {YEAR} median is {d1(p50['model'])} days against {d1(p50['measured'])} and the 90th percentile "
-             f"{d1(p90['model'])} against {d1(p90['measured'])}.</p>")
-
-    b.append("<h3 id='f1_3'>The year-end build</h3>")
-    q1 = qt.loc[f"{YEAR}Q1"]
-    q4 = qt.loc[f"{YEAR - 1}Q4"]
-    lo300, lo250, lo220 = bd["below"][300], bd["below"][250], bd["below"][220]
-    assert lo300[0] == lo300[1] and lo250[0] == lo250[1] and bd["peak_week"] == bd["peak_week_model"]
-    oct_ = wk[(wk.index >= f"{YEAR - 1}-10-07") & (wk.index <= f"{YEAR - 1}-10-28")]
-    b.append(f"<p>The model builds and clears the year-end backlog as the shop did. Floor WIP peaks at {n0(bd['peak_model'])} jobs against {n0(bd['peak_measured'])}, both in the week of "
-             f"{week(bd['peak_week'])}, falls below 300 in the week of {week(lo300[0])} and below 250 in the week of {week(lo250[0])} in both, and below 220 in the week of "
-             f"{week(lo220[1])} against {week(lo220[0])}. The brakes worked {n0(bd['brake_hours_model'])} hours from December through March against {n0(bd['brake_hours_measured'])}, "
-             f"{n0(bd['saturday_hours_model'])} of them on Saturdays against {n0(bd['saturday_hours_measured'])}, and jobs shipped in the first quarter were "
-             f"{pc(q1['on_time_delivery_model'])} on time against {pc(q1['on_time_delivery'])}. The model enters the autumn heavier than the shop, with {n0(oct_['wip_model'].min())} to "
-             f"{n0(oct_['wip_model'].max())} jobs on the floor in October against {n0(oct_['wip_measured'].min())} to {n0(oct_['wip_measured'].max())}, and ships {YEAR - 1} Q4 at "
-             f"{pc(q4['on_time_delivery_model'])} on time against {pc(q4['on_time_delivery'])}; it has converged by the week of November 18.</p>")
-    b.append(f"<p>Three effects in this report are not exact, and the direction of each is known. The setup program and the tool changer are understated by about 6%, because "
-             f"{pc(M['no_setup_share'])} of brake operations carry their setup inside the run and leave nothing for either to shorten. Planned Saturdays with both brakes crewed are "
-             f"likely overstated: both brakes are worked at the weekday yield of {M['brake_yield']:.3f}, the record has {WORD[both_saturdays]} Saturdays with both brakes crewed, and its one-brake "
-             f"Saturdays yield {M['saturday_yield']:.3f}. Effects in {RT} are slightly generous throughout, because the model ships those quarters at {pc(model_otd['rest'])} against "
-             f"{pc(measured_otd['rest'])} and so has about {n0(A.mean(CURRENT, 'late_jobs', 'rest') - late_rest)} more late jobs there to remove.</p>")
-    b.append(titled(fig_build(wk), f"Weekly WIP and Brake Queue Time Through the Year-End Build, Measured Against Model, October {YEAR - 1} to June {YEAR}"))
-
-    # 2 ── the scenarios
-    b.append("<h2 id='f2'>2. The Scenarios Simulated</h2>")
+    b = ["<h2 id='summary'>Executive Summary</h2>"]
+    _pk, _cell, _weld = A.money(PACKAGE), A.money(P_CELL, PACKAGE), A.money(WELD)
+    b.append(f"<p>This report tests changes to the shop's release, dispatch and capacity on a discrete event simulation of the floor that replays every job the shop released in "
+             f"{YEAR - 1} and {YEAR}, under its own shift calendars, dispatch rules and recorded downtime, with setup, run, move and material times drawn from its {YEAR} record. Each "
+             f"change runs 30 times against the same jobs. Under current practice the model reproduces {YEAR} within tolerance on all ten measures set before it was run: "
+             f"{pc(model_otd['year'])} on time against {pc(measured_otd['year'])} measured, {pc(model_otd['rest'])} against {pc(measured_otd['rest'])} in {RT}, and a year-end build "
+             f"that peaks at {n0(bd['peak_model'])} jobs against {n0(bd['peak_measured'])} in the same week (<a href='#f4'>Section 4</a>).</p>")
+    b.append("<p>Changes that add brake hours raise on-time delivery; changes to the order or release of work do not. The setup program, planned Saturday brake shifts, a tool "
+             "changer on B3 and a robotic bending cell each work in a year with a build, and a second shift on the robotic weld cell is the one change that moves an ordinary quarter. "
+             "WIP caps, critical ratio and shortest processing time make delivery worse, and earliest due date removes late jobs without removing days late.</p>")
+    b.append(f"<p>The operating package, the setup program with planned Saturdays on both brakes, raises on-time delivery from {pc(model_otd['year'])} to "
+             f"{pc(A.mean(PACKAGE, 'on_time_delivery'))} for {usd(_pk['one_time'])} and pays back in {d1(_pk['payback'])} years if {n0(_pk['hours'])} of the brake hours it frees are sold "
+             f"each year. On top of it, the robotic cell adds {d1(chg(P_CELL, 'on_time_delivery', 'year', PACKAGE) * 100)} points and returns {musd(_cell['npv'][0])} if half its freed "
+             f"hours are sold, breaking even at {n0(_cell['hours'])} hours a year; the tool changer does not pay at half sold. The weld cell second shift is a separate decision: "
+             f"{sg(chg(WELD, 'on_time_delivery', 'rest') * 100)} point in an ordinary quarter for about {usd(round(_weld['weld'], -3))} a year.</p>")
+    assert ten["within"].all() and bd["peak_week"] == bd["peak_week_model"]
+    # 1 ── the scenarios
+    b.append("<h2 id='f1'>1. The Scenarios Simulated</h2>")
     b.append(f"<p>{link('capacity', 'The capacity report')} finds the brakes are the constraint: they hold {pc(M['brake_share_of_queue'], 0)} of queue time and lose "
              f"{n0(M['setups_over_per_week'])} hours a week to setups over standard. That allows two ways to raise on-time delivery. The first changes how work enters and moves through "
              f"the floor, through release and dispatch rules, and costs nothing but the rule. If late jobs come from too much work on the floor, or from the wrong job going next at the "
              f"brakes, these should move delivery. The second adds hours at the brakes or around them, through operating changes or new equipment, and costs labor or capital. If late "
              f"jobs come from too few brake hours, only these should move it. Each scenario changes one thing in the model and keeps the {YEAR - 1} to {YEAR} releases. "
-             f"{T.see('assume')}</p>")
+             f"{T.see('assume', 'modelled')}</p>")
     wip_now = float(tol[(tol["period"] == "year") & (tol["measure"] == "wip_mean")]["measured"].iloc[0])
     cap_r, flow_r = "the capacity report", "the flow report"
     release = [
@@ -578,9 +537,10 @@ def build():
         ["Operating package (combination)", "The setup program and planned Saturdays with both brakes crewed, together.",
          f"{usd(A.COSTS['setup'][0])} once, and {usd(round(A.COSTS['setup'][1] + sat_cost[SAT_BOTH], -2))} a year", "The two operating changes that add brake hours without capital.", "Both changes in one run."]]
     b.append(chart("Capacity Scenarios", t_scenarios(capacity_rows)))
+    T.held["modelled"] = (T.held["modelled"][0], table(pd.DataFrame([[r[0], r[4]] for r in release + capacity_rows], columns=["Scenario", "How it is modelled"])))
 
-    # 3 ── results
-    b.append("<h2 id='f3'>3. Simulation Results</h2>")
+    # 2 ── results
+    b.append("<h2 id='f2'>2. Simulation Results</h2>")
     works_cap = [s for s in (SETUP, SAT_BOTH, CHANGER, CELL) if A.VERDICT[s] == "Works"]
     worse = [s for s in A.RELEASE if A.VERDICT[s] == "Makes it worse"]
     none = [s for s in A.RELEASE + A.CAPACITY if A.VERDICT[s] == "No effect"]
@@ -597,26 +557,27 @@ def build():
              f"({d1(A.mean(cap180, 'release_hold_days'))} days held) without adding an hour of brake time. {T.see('hold')}</p>")
     b.append(titled(fig_effects(), "Change in On-time Delivery by Scenario, With 95% Intervals"))
 
-    b.append("<h3 id='f3_1'>What each scenario changes</h3>")
-    b.append(f"<p>On-time delivery decides whether a scenario works; five other outcomes show how. The capacity changes that work shorten the wait at the brakes and take jobs off the "
-             f"floor: the setup program cuts queue time per brake operation by {d2(-chg(SETUP, 'brake_queue_mean'))} days and floor WIP by {n0(-chg(SETUP, 'wip_mean'))} jobs, removes "
-             f"{n0(-chg(SETUP, 'late_jobs'))} late jobs and {n0(-chg(SETUP, 'days_late'))} days late, and lowers brake utilization by {d1(-chg(SETUP, 'brake_utilization') * 100)} points. "
-             f"The tool changer does the same through B3's setups ({n0(-chg(CHANGER, 'late_jobs'))} late jobs and {n0(-chg(CHANGER, 'days_late'))} days late removed), and the robotic "
-             f"cell does about twice as much ({n0(-chg(CELL, 'late_jobs'))} late jobs, {n0(-chg(CELL, 'days_late'))} days late, {d2(-chg(CELL, 'brake_queue_mean'))} days of brake queue "
-             f"and {d1(-chg(CELL, 'brake_utilization') * 100)} points of utilization on the manual brakes). Planned Saturdays with both brakes remove {n0(-chg(SAT_BOTH, 'late_jobs'))} late "
-             f"jobs and {n0(-chg(SAT_BOTH, 'days_late'))} days late by adding hours in the build, with brake utilization unchanged.</p>")
-    b.append(f"<p>The rules that fail show the opposite pattern. The WIP caps shorten the brake queue ({d2(-chg(cap180, 'brake_queue_mean'))} days at 180) and raise floor WIP "
-             f"({sg(chg(cap180, 'wip_mean'), 0)} jobs) and days late ({sg(chg(cap180, 'days_late'), 0)}), because the jobs held at the gate are still jobs released and not shipped. Critical "
-             f"ratio adds {n0(chg('Critical ratio', 'late_jobs'))} late jobs. Earliest due date removes {n0(-edd_late[0])} late jobs in {YEAR} and leaves days late where they were "
-             f"({sg(edd_days[0], 0)}, {sg(edd_days[1], 0)} to {sg(edd_days[2], 0)}); in {RT} it adds {n0(chg(EDD, 'days_late', 'rest'))} days late. The laser tower clears the laser queue in the build and does not move delivery "
-             f"({ptsb(TOWER)}), since the work it cuts sooner waits at the brakes. {T.see('year', 'rest', 'tower')}</p>")
-    rows = []
-    for grp, names_ in (("Release and dispatch", A.RELEASE), ("Capacity", A.CAPACITY), ("Package and combinations", [PACKAGE] + A.COMBOS)):
-        for sc in names_:
-            rows.append([grp, sc, A.VERDICT[sc]] + [band(A.diff(sc, m_), d, 100 if p_ else 1) for m_, _, d, p_ in A.OUTCOMES])
-    b.append(chart(f"Scenario Results Against Current Practice, {YEAR}", table(pd.DataFrame(rows, columns=["Group", "Scenario", "Verdict"] + [x[1] for x in A.OUTCOMES]))))
+    b.append("<h3 id='f2_1'>What each scenario changes</h3>")
+    four = (SETUP, SAT_BOTH, CHANGER, CELL)
+    low = lambda m: min(-chg(s, m) for s in four)
+    high = lambda m: max(-chg(s, m) for s in four)
+    b.append(f"<p>On-time delivery decides whether a scenario works; five other outcomes show how. The changes that add brake hours take jobs off the floor: floor WIP falls by "
+             f"{n0(low('wip_mean'))} to {n0(high('wip_mean'))} jobs under the setup program, planned Saturdays on both brakes, the tool changer and the robotic cell, and by "
+             f"{n0(-chg(PACKAGE, 'wip_mean'))} under the operating package. Late jobs fall by {n0(low('late_jobs'))} to {n0(high('late_jobs'))} and days late by "
+             f"{n0(low('days_late'))} to {n0(high('days_late'))} for those four, and by {n0(-chg(PACKAGE, 'late_jobs'))} and {n0(-chg(PACKAGE, 'days_late'))} under the package. At the "
+             f"brakes, the setup program, the tool changer and the cell lower utilization by {d1(-chg(SETUP, 'brake_utilization') * 100)}, "
+             f"{d1(-chg(CHANGER, 'brake_utilization') * 100)} and {d1(-chg(CELL, 'brake_utilization') * 100)} points and cut queue time per operation by "
+             f"{d2(-chg(SETUP, 'brake_queue_mean'))}, {d2(-chg(CHANGER, 'brake_queue_mean'))} and {d2(-chg(CELL, 'brake_queue_mean'))} days; planned Saturdays on both brakes cut the "
+             f"queue by {d2(-chg(SAT_BOTH, 'brake_queue_mean'))} days with utilization unchanged, since they add hours and remove no work. Planned Saturdays as crewed today and the "
+             f"weld cell second shift move each outcome less ({n0(-chg(SAT_ONE, 'late_jobs'))} and {n0(-chg(WELD, 'late_jobs'))} fewer late jobs). Earliest due date trades days for "
+             f"jobs: {n0(-edd_late[0])} fewer late jobs in {YEAR} with no fewer days late ({sg(edd_days[0], 0)}, {sg(edd_days[1], 0)} to {sg(edd_days[2], 0)}), and "
+             f"{n0(chg(EDD, 'days_late', 'rest'))} more days late in {RT}. The laser tower clears the laser queue in the build and does not move delivery ({ptsb(TOWER)}), since the "
+             f"work it cuts sooner waits at the brakes. {T.see('year', 'rest', 'tower')}</p>")
+    b.append(titled(fig_changes(), f"What the Changes That Work Do, Change From Current Practice, {YEAR}, With 95% Intervals"))
+    b.append(f"<div class='caption'>The weld cell second shift works in {RT} ({sg(chg(WELD, 'on_time_delivery', 'rest') * 100)} point); for {YEAR} as a whole its interval includes "
+             f"zero.</div>")
 
-    b.append("<h3 id='f3_2'>Combining the levers that work</h3>")
+    b.append("<h3 id='f2_2'>Combining the levers that work</h3>")
     pk, pkr = A.diff(PACKAGE, "on_time_delivery"), A.diff(PACKAGE, "on_time_delivery", "rest")
     singles = chg(SETUP, "on_time_delivery") + chg(SAT_BOTH, "on_time_delivery")
     e_on = A.diff(P_EDD, "on_time_delivery", "year", PACKAGE)
@@ -627,11 +588,10 @@ def build():
              f"in {RT}, with {n0(-chg(PACKAGE, 'late_jobs'))} fewer late jobs and {n0(-chg(PACKAGE, 'days_late'))} fewer days late in the year. On top of the package the robotic cell "
              f"adds {pts(P_CELL, 'year', PACKAGE)} and the tool changer {pts(P_CHANGER, 'year', PACKAGE)}; the laser tower adds nothing ({ptsb(P_TOWER, 'year', PACKAGE)}). Earliest due "
              f"date on top of the package brings no gain ({ptsb(P_EDD, 'year', PACKAGE)}) and {n0(chg(P_EDD, 'days_late', 'year', PACKAGE))} more days late.</p>")
-    b.append(titled(fig_build_up(), f"From Current Practice to the Operating Package, {YEAR} and {RT}"))
     b.append(titled(fig_capital(), f"What Each Capital Option Adds, Alone and on Top of the Operating Package, {YEAR}"))
 
-    # 4 ── return
-    b.append("<h2 id='f4'>4. Return on the Changes That Work</h2>")
+    # 3 ── return
+    b.append("<h2 id='f3'>3. Return on the Changes That Work</h2>")
     mp, mc, mt, mw = money[PACKAGE], money[P_CELL], money[P_CHANGER], money[WELD]
     assert all(money[sc]["net_without"] < 0 for sc, _ in RETURN) and mt["npv"][2] < 0 and mc["npv"][1] > 0
     b.append(f"<p>Two decisions follow from the results, and they are separate. The operating package addresses the year-end build: it costs {usd(mp['one_time'])} once and "
@@ -639,7 +599,7 @@ def build():
              f"{musd(mp['npv'][0])}. On top of it the robotic cell returns {musd(mc['npv'][0])} with a payback of {d1(mc['payback'])} years and breaks even when {pc(mc['share'], 0)} of its "
              f"freed hours are sold; the tool changer does not reach zero at half sold ({musd(mt['npv'][0])}) and needs {pc(mt['share'], 0)}. The weld cell second shift is the one lever "
              f"that moves an ordinary quarter, at about {usd(round(mw['weld'], -3))} a year with no return in money. Nothing that costs money pays on cost savings alone.</p>")
-    b.append("<h3 id='f4_1'>What the changes cost and return</h3>")
+    b.append("<h3 id='f3_1'>What the changes cost and return</h3>")
     b.append(f"<p>The return on each change is the brake hours it frees, if those hours are sold, plus overtime avoided, less what it costs to run. The operating package frees "
              f"{n0(mp['freed'])} brake hours a year, worth {usd(round(mp['throughput'], -3))} at half sold, and adds {usd(round(mp['added_overtime'], -2))} of Saturday overtime; the robotic "
              f"cell frees a further {n0(mc['freed'])} hours ({usd(round(mc['throughput'], -3))}) and costs {usd(round(mc['added'], -3))} a year to run, {usd(round(mc['cell'], -3))} of it "
@@ -652,7 +612,7 @@ def build():
     b.append(chart(f"Cost and Return, {YEAR}", t_cost(RETURN)))
     b.append(titled(fig_npv(money), f"What Makes Up Each Option's NPV, {YEAR}"))
 
-    b.append("<h3 id='f4_2'>When the freed hours are sold</h3>")
+    b.append("<h3 id='f3_2'>When the freed hours are sold</h3>")
     oc, ot_ = ordinary[P_CELL], ordinary[P_CHANGER]
     b.append(f"<p>Whether the capital options pay depends on one figure the simulation cannot supply: how many of the freed brake hours the shop sells. The package breaks even at "
              f"{n0(mp['hours'])} hours sold a year and the robotic cell at {n0(mc['hours'])}, against the {n0(M['brake_hours'])} brake hours the shop ran in {YEAR}; the tool changer needs "
@@ -660,7 +620,7 @@ def build():
              f"{musd(ordinary[PACKAGE]['npv'][0])}; the cell's is {musd(oc['npv'][0])} and the tool changer's {musd(ot_['npv'][0])}.</p>")
     b.append(titled(fig_sold(money), "NPV Against the Share of Freed Brake Hours Sold"))
 
-    b.append("<h3 id='f4_3'>What the money does not capture</h3>")
+    b.append("<h3 id='f3_3'>What the money does not capture</h3>")
     b.append(f"<p>Several effects of these changes are measured but not priced, and some are not measured at all. {T.see('customers')}</p>")
     base90 = A.lifted(CURRENT, 0.90)
 
@@ -704,10 +664,85 @@ def build():
              f"{n0(mt['hours'])} of {n0(mt['freed'])}. The weld cell second shift is a separate decision: {usd(round(mw['weld'], -3))} a year for {sg(chg(WELD, 'on_time_delivery', 'rest') * 100)} "
              f"point in an ordinary quarter, {n0(-chg(WELD, 'late_jobs', 'rest'))} late jobs and {n0(-chg(WELD, 'days_late', 'rest'))} days late.</p>")
 
+    # 4 ── model accuracy and validation
+    b.append("<h2 id='f4'>4. Model Accuracy & Validation</h2>")
+    b.append("<h3 id='f4_1'>How the model works</h3>")
+    b.append(f"<p>The model takes each job as the shop released it and moves it through its routing, machine by machine, under the shop's shift calendars and dispatch rules. What the "
+             f"record fixes, the model keeps: release dates, routings, standards, due dates and rush flags are those of the actual jobs, and machine downtime is the recorded downtime. "
+             f"What varies from job to job, how long each setup and run takes and how long a job waits for material, a move or outside processing, is drawn from the shop's {YEAR} "
+             f"distributions. The behaviours the record does not state as rules are estimated from it: how fully the brakes are crewed when work is waiting, and when and how the shop "
+             f"works a Saturday or an extended brake shift. Each scenario runs 30 times with different draws, and its effect is the difference from current practice, run for run, with "
+             f"a 95% interval.</p>")
+    ps = M["p_saturday"]
+    rows = [
+        ["Jobs", "Every job released from January 2024: release date, routing, setup and run standards, quantity, due date, rush flag and planned operation dates.", "", ""],
+        ["Machines and calendars", "Shift calendars by work center and day, the shifts each machine is crewed, every recorded downtime event and the powder color schedule.", "", ""],
+        ["Setup and run time", "", f"Actual over standard by work center and size of operation; at the brakes by whether the setup is grouped and by lot size. On {pc(M['no_setup_share'])} "
+         f"of brake operations the setup is inside the run, as the record clocks it, so the setup program and the tool changer have no setup to shorten there and are understated by "
+         f"about that share.", ""],
+        ["Waits between operations", "", "Material wait at the first operation by routing class; move and hold time by work center; outside processing time; complete to ship.", ""],
+        ["Dispatch", "Rush first, then jobs due within 2 working days, then planned start. Brake classes by machine, setups grouped on the same tooling up to three in a row, and the "
+         "10:00 daily list at the single-shift work centers.", "", "A job of two or more sheets is cut on arrival; a single-sheet job waits for a second job on its sheet or for 2 working days before its planned start."],
+        ["Brake hours worked", "", "", f"{M['brake_yield']:.3f} of crewed hours on an ordinary weekday, {M['holiday_yield']:.3f} in a holiday week, fitted on weeks with work waiting."],
+        ["Saturday and extended brake shifts", "", "", f"A Saturday is called on {pc(ps[0], 0)} to {pc(ps[4], 0)} of Fridays by the jobs at the brakes, and worked on {pc(M['saturday_worked'], 0)} of those, "
+         f"on one brake at {M['saturday_yield']:.3f} of its hours. An extended shift yields {M['extended_yield']:.3f} of its hours. All fitted on the record's shifts."],
+        ["Laser hours worked", "", "", f"{M['laser_yield']:.3f} of crewed hours, fitted on weeks with over 90 jobs at the lasers."],
+        ["Not modelled", "Scrap and rework as events, operator absence and assignment by name, holds as events, nests and sheets, quoting, and the customer's response to delivery: "
+         "orders and due dates are those of the record under every scenario.", "", ""]]
+    b.append(chart("What the Model Takes, Draws and Assumes", table(pd.DataFrame(rows, columns=["", "Taken from the record", f"Drawn from the shop's {YEAR} distributions", "Estimated or assumed"]))))
+    b.append(f"<p>Operator familiarity enters as a reduction in brake setup time in proportion to the hours measured in {link('capacity', 'the capacity report')}.</p>")
+
+    b.append(f"<h3 id='f4_2'>How well it reproduces {YEAR}</h3>")
+    du = (wcs["utilization_model"] - wcs["utilization_measured"]).abs().max() * 100
+    dq = (wcs["queue_model"] / wcs["queue_measured"] - 1)
+    out_q = wcs[dq.abs() > 0.25]
+    later = wcs.dropna(subset=["queue_days_model"])
+    share_model = later.loc[later["work_center"] == "Press brake", "queue_days_model"].iloc[0] / later["queue_days_model"].sum()
+    share_meas = M["brake_share_of_queue"]
+    assert abs(share_model - share_meas) < 0.02
+    dp = (pct["model"] / pct["measured"] - 1)
+    out_p = pct[dp.abs() > 0.10]
+    assert len(out_q) == 1 and len(out_p) == 1 and ten["within"].all()
+    op, oq_ = out_p.iloc[0], out_q.iloc[0]
+    b.append(f"<p>The model reproduces {YEAR} within tolerance on {WORD[int(ten['within'].sum())]} of the ten measures set before the model was run. Utilization is within "
+             f"{d1(du)} points of measured at every work center, and queue time per operation is within 25% at every work center but the punch ({d2(oq_['queue_model'])} days against "
+             f"{d2(oq_['queue_measured'])}), which takes {n0(punch_ops)} first operations a year. Lead-time percentiles from the 10th to the 95th are within 10% of measured except the 10th "
+             f"for {YEAR} ({d1(op['model'])} days against {d1(op['measured'])}). On-time delivery is {pc(model_otd['year'])} against {pc(measured_otd['year'])} for {YEAR} and "
+             f"{pc(model_otd['rest'])} against {pc(measured_otd['rest'])} in {RT}, and the brakes hold {pc(share_model, 0)} of queue time in the model against {pc(share_meas, 0)} in "
+             f"the record, with the wait for the powder color day left out of both, the capacity report's basis. {T.see('tolerance', 'shop')}</p>")
+    b.append(titled(fig_work_centers(wcs), f"Utilization and Queue Time by Work Center, Measured Against Model, {YEAR}"))
+    b.append(f"<p>The brakes and the robotic weld cell, the two work centers that hold a queue, sit within {d1((wcs['utilization_model'] - wcs['utilization_measured']).iloc[:2].abs().max() * 100)} "
+             f"points of measured utilization and {abs(dq.iloc[:2]).max() * 100:.0f}% of measured queue time.</p>")
+    b.append(titled(fig_lead(pct, curve), "Lead Time of Jobs Shipped, Measured Against Model"))
+    p50, p90 = pct[(pct["period"] == "year") & (pct["percentile"] == 50)].iloc[0], pct[(pct["period"] == "year") & (pct["percentile"] == 90)].iloc[0]
+    b.append(f"<p>The model's curve lies on the shop's in both periods: the {YEAR} median is {d1(p50['model'])} days against {d1(p50['measured'])} and the 90th percentile "
+             f"{d1(p90['model'])} against {d1(p90['measured'])}.</p>")
+
+    b.append("<h3 id='f4_3'>The year-end build</h3>")
+    q1 = qt.loc[f"{YEAR}Q1"]
+    q4 = qt.loc[f"{YEAR - 1}Q4"]
+    lo300, lo250, lo220 = bd["below"][300], bd["below"][250], bd["below"][220]
+    assert lo300[0] == lo300[1] and lo250[0] == lo250[1] and bd["peak_week"] == bd["peak_week_model"]
+    oct_ = wk[(wk.index >= f"{YEAR - 1}-10-07") & (wk.index <= f"{YEAR - 1}-10-28")]
+    b.append(f"<p>The model builds and clears the year-end backlog as the shop did. Floor WIP peaks at {n0(bd['peak_model'])} jobs against {n0(bd['peak_measured'])}, both in the week of "
+             f"{week(bd['peak_week'])}, falls below 300 in the week of {week(lo300[0])} and below 250 in the week of {week(lo250[0])} in both, and below 220 in the week of "
+             f"{week(lo220[1])} against {week(lo220[0])}. The brakes worked {n0(bd['brake_hours_model'])} hours from December through March against {n0(bd['brake_hours_measured'])}, "
+             f"{n0(bd['saturday_hours_model'])} of them on Saturdays against {n0(bd['saturday_hours_measured'])}, and jobs shipped in the first quarter were "
+             f"{pc(q1['on_time_delivery_model'])} on time against {pc(q1['on_time_delivery'])}. The model enters the autumn heavier than the shop, with {n0(oct_['wip_model'].min())} to "
+             f"{n0(oct_['wip_model'].max())} jobs on the floor in October against {n0(oct_['wip_measured'].min())} to {n0(oct_['wip_measured'].max())}, and ships {YEAR - 1} Q4 at "
+             f"{pc(q4['on_time_delivery_model'])} on time against {pc(q4['on_time_delivery'])}; it has converged by the week of November 18.</p>")
+    b.append(f"<p>Three effects in this report are not exact, and the direction of each is known. The setup program and the tool changer are understated by about 6%, because "
+             f"{pc(M['no_setup_share'])} of brake operations carry their setup inside the run and leave nothing for either to shorten. Planned Saturdays with both brakes crewed are "
+             f"likely overstated: both brakes are worked at the weekday yield of {M['brake_yield']:.3f}, the record has {WORD[both_saturdays]} Saturdays with both brakes crewed, and its one-brake "
+             f"Saturdays yield {M['saturday_yield']:.3f}. Effects in {RT} are slightly generous throughout, because the model ships those quarters at {pc(model_otd['rest'])} against "
+             f"{pc(measured_otd['rest'])} and so has about {n0(A.mean(CURRENT, 'late_jobs', 'rest') - late_rest)} more late jobs there to remove.</p>")
+    b.append(titled(fig_build(wk), f"Weekly WIP and Brake Queue Time Through the Year-End Build, Measured Against Model, October {YEAR - 1} to June {YEAR}"))
+
     b.append("<h2 id='appendix'>Appendix</h2>")
     b.append(T.appendix())
-    toc = [("f1", "1. The Shop Model"), ("f2", "2. The Scenarios Simulated"), ("f3", "3. Simulation Results"), ("f4", "4. Return on the Changes That Work")]
-    print(f"wrote {page('options', chr(10).join(b), toc, heading=REPORTS['options'][1])}: 4 sections, {len(T.order)} appendix tables")
+    toc = [("summary", "Executive Summary"), ("f1", "1. The Scenarios Simulated"), ("f2", "2. Simulation Results"), ("f3", "3. Return on the Changes That Work"),
+           ("f4", "4. Model Accuracy & Validation")]
+    print(f"wrote {page('options', chr(10).join(b), toc, heading=REPORTS['options'][1])}: a summary and 4 sections, {len(T.order)} appendix tables")
 
 
 def main():
