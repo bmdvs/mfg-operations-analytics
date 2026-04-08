@@ -10,9 +10,9 @@ from analytics.reports import quoting_section
 from analytics.reports.combine import write
 
 
-ORDER = [("Work in Process", [4]), ("Lead Time", [1, 2, 3]), ("Late Jobs", [5, 6])]
+ORDER = [("Job Flow", [1]), ("Work in Process", [4]), ("Lead Time", [3, 2]), ("Late Jobs", [5, 6, 7, 8])]
 # tables that come in pairs for the year and the ordinary quarters, by the numbers they carry as merged
-PAIRS = {"2a": "2b", "12": "13", "14": "15"}
+PAIRS = {"2a": "2b", "13": "14", "15": "16"}
 
 
 def table_order(body, held):
@@ -31,7 +31,7 @@ def table_order(body, held):
 
 
 def arrange(body, toc):
-    """Four sections: work in process, lead time and late jobs, the last two with their parts under unnumbered headings, then quoting and early warning;
+    """Five sections: the job flow, work in process, lead time and late jobs, the last two with their parts under unnumbered headings, then quoting and early warning;
     the appendix tables follow that order."""
     start = body.index("<h2 id='f1'>")
     end = body.index("<h2 id='appendix'>")
@@ -45,10 +45,10 @@ def arrange(body, toc):
             out.append(old[members[0]][1])
             continue
         for k, m in enumerate(members, 1):
-            out.append(f"<h3 id='f{n}_{k}'>{old[m][0]}</h3>" + old[m][1])
+            out.append((f"<h3 id='f{n}_{k}'>{old[m][0]}</h3>" if old[m][0] else "") + old[m][1])      # a part with no title opens the section
     n = len(ORDER) + 1
     text, tables = quoting_section.build()
-    out.append(f"<h2 id='f{n}'>{n}. {quoting_section.TITLE}</h2>" + text)
+    out.append(f"<h2 id='f{n}'>{n}. {quoting_section.TITLE}</h2>" + text.replace("id='f4_", f"id='f{n}_"))
     new_toc.append((f"f{n}", f"{n}. {quoting_section.TITLE}"))
     body = body[:start] + "\n".join(out) + body[end:]
     k = body.index("<div class='glossary'>")

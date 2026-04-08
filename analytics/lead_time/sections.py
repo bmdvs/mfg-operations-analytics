@@ -4,7 +4,7 @@ Built by analytics.reports.lead_time_and_late_jobs.
 """
 import numpy as np
 import pandas as pd
-from matplotlib.patches import FancyBboxPatch, Patch
+from matplotlib.patches import FancyBboxPatch, Patch, Rectangle
 
 from analytics.db import q
 from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DARK_GREY as DARK, DOCS, GREEN, GREY, LIGHT_BLUE, RED, TEXT, fig, paired_columns, pct, save, sig, table
@@ -70,6 +70,94 @@ Y, R = summ.loc["year"], summ.loc[REST]
 required = jobs.loc[jobs["key_account"] == True, "required_otd_pct"].max() / 100.0  # noqa: E712
 
 
+# ── the job flow ────────────────────────────────────────────────────────────
+# the share of jobs shipped 2023 to 2025 that pass through each step, and where their recorded holds fall
+CUT, JOIN, FINISH = ["laser", "punch"], ["hardware", "weld", "robotic_weld"], ["powder_coat", "outside_processing"]
+_ops = q("""select jo.job_id, jo.op_seq, jo.work_center from staging.stg_erp__job_operations jo join intermediate.int_job_lead_time l using (job_id)
+            where l.ship_date is not null order by 1, 2""")
+_ops["previous"] = _ops.groupby("job_id")["work_center"].shift(1)
+_flow_jobs = _ops["job_id"].nunique()
+
+
+def _through(mask):
+    return float(_ops[mask]["job_id"].nunique() / _flow_jobs)
+
+
+_brake = _ops[_ops["work_center"] == "press_brake"]
+_second = _brake[_brake.groupby("job_id").cumcount() == 1]
+_wc = _ops["work_center"]
+FLOW = dict(
+    cut=_through(_wc.isin(CUT)), deburr=_through((_wc == "grind_deburr") & _ops["previous"].isin(CUT)),
+    laser_deburr=float(((_wc == "grind_deburr") & (_ops["previous"] == "laser")).sum() / (_wc == "laser").sum()), form=_through(_wc == "press_brake"),
+    second_form=float(len(_second) / _flow_jobs), second_form_after_hardware=float((_second["previous"] == "hardware").mean()), hardware=_through(_wc == "hardware"),
+    weld=_through(_wc.isin(["weld", "robotic_weld"])), join=_through(_wc.isin(JOIN)), grind_welds=_through((_wc == "grind_deburr") & _ops["previous"].isin(["weld", "robotic_weld"])),
+    powder=_through(_wc == "powder_coat"), outside=_through(_wc == "outside_processing"), finish=_through(_wc.isin(FINISH)), assembly=_through(_wc == "assembly"),
+    inspect=_through(_wc == "inspection_pack"))
+assert FLOW["cut"] == FLOW["form"] == FLOW["inspect"] == 1.0 and abs(FLOW["grind_welds"] - FLOW["weld"]) < 1e-9 and FLOW["laser_deburr"] > 0.5
+_holds = q("""select h.op_seq = f.first_seq as at_first, h.hold_reason from staging.stg_mes__holds h join intermediate.int_job_lead_time l using (job_id)
+              join (select job_id, min(op_seq) as first_seq from staging.stg_erp__job_operations group by 1) f using (job_id) where l.ship_date is not null""")
+HOLDS_AT_FIRST = float(_holds["at_first"].mean())
+assert float((_holds[_holds["at_first"]]["hold_reason"] == "material").mean()) > 0.5
+
+# mean working days per job by step in the job flow: waiting, working and at the vendor, with a job that skips a step counted as zero
+FLOW_ROWS = ["Release to traveler print", "Cut (laser or punch)", "Grind and deburr, edges", "Press brake", "Hardware", "Manual weld", "Robotic weld", "Grind and deburr, welds",
+             "Powder coat", "Outside processing", "Assembly", "Inspection and pack", "Holds", "Complete to ship"]
+_ROW = {"press_brake": "Press brake", "hardware": "Hardware", "weld": "Manual weld", "robotic_weld": "Robotic weld", "powder_coat": "Powder coat", "assembly": "Assembly",
+        "inspection_pack": "Inspection and pack"}
+_sd = q(f"""select s.job_id, s.op_seq, s.work_center, s.stage, s.days, quarter(l.ship_date) as ship_quarter from intermediate.int_job_stage_days s
+            join intermediate.int_job_lead_time l using (job_id) where year(l.ship_date) = {YEAR}""").merge(_ops[["job_id", "op_seq", "previous"]], on=["job_id", "op_seq"], how="left")
+
+
+def _step(stage_, wc_, previous):
+    if stage_.startswith("hold"):
+        return "Holds", "waiting"
+    if stage_ == "release to traveler print":
+        return FLOW_ROWS[0], "waiting"
+    if stage_ == "complete to ship":
+        return FLOW_ROWS[-1], "waiting"
+    if stage_ == "outside processing":
+        return "Outside processing", "vendor"
+    kind = "working" if stage_ == "setup and run" else "waiting"
+    if wc_ in CUT:
+        return FLOW_ROWS[1], kind
+    if wc_ == "grind_deburr":
+        return ("Grind and deburr, edges" if previous in CUT else "Grind and deburr, welds"), kind
+    return _ROW[wc_], kind
+
+
+_sd["step"], _sd["kind"] = zip(*[_step(a, b, c) for a, b, c in zip(_sd["stage"], _sd["work_center"], _sd["previous"])])
+
+
+def flow_days(d, n):
+    g = (d.groupby(["step", "kind"])["days"].sum() / n).unstack(fill_value=0.0).reindex(FLOW_ROWS).fillna(0.0)
+    for k in ("waiting", "working", "vendor"):
+        if k not in g:
+            g[k] = 0.0
+    g["total"] = g[["waiting", "working", "vendor"]].sum(axis=1)
+    return g
+
+
+FY, FR = flow_days(_sd, len(jobs)), flow_days(_sd[_sd["ship_quarter"] >= 2], int((jobs["ship_quarter"] >= 2).sum()))
+BRAKE_QUEUE = {"year": float(_sd[(_sd["stage"] == "queue") & (_sd["work_center"] == "press_brake")]["days"].sum() / len(jobs)),
+               "rest": float(_sd[(_sd["stage"] == "queue") & (_sd["work_center"] == "press_brake") & (_sd["ship_quarter"] >= 2)]["days"].sum() / (jobs["ship_quarter"] >= 2).sum())}
+
+# working days from the due date to the ship date for every job shipped in the year: negative is early
+AFTER = q(f"""select cs.wd_index - cd.wd_index as days_after, quarter(j.ship_date) as ship_quarter from marts.mart_job_lead_time j
+              join intermediate.int_working_days cs on cs.calendar_date = j.ship_date join intermediate.int_working_days cd on cd.calendar_date = j.due_date
+              where year(j.ship_date) = {YEAR}""")
+assert len(AFTER) == len(jobs) and int((AFTER["days_after"] > 0).sum()) == int((~jobs["on_time"]).sum())
+EARLY, LATE_CAP = -6, 30
+AFTER_BINS = list(range(EARLY, LATE_CAP + 1))
+AFTER_LABEL = {EARLY: "6 or more early", LATE_CAP: "30 or more"}
+
+
+def after_counts(d):
+    return d["days_after"].clip(lower=EARLY, upper=LATE_CAP).value_counts().reindex(AFTER_BINS).fillna(0).astype(int)
+
+
+AY, AR = after_counts(AFTER), after_counts(AFTER[AFTER["ship_quarter"] >= 2])
+
+
 def stage_pivot(period):
     d = stage[stage["period"] == period]
     p = d.pivot(index="stage", columns="job_class", values="mean_days").fillna(0.0)
@@ -96,7 +184,7 @@ def fig_distribution():
         d = jobs[jobs["routing_class"] == cls]
         ax.hist(d["lead_time_wd"].clip(upper=45), bins=bins, color=LIGHT_BLUE, label=f"{YEAR}")
         ax.hist(d.loc[d["ship_quarter"] >= 2, "lead_time_wd"].clip(upper=45), bins=bins, color=BRAND_BLUE, label=RT)
-        ax.axvline(d["quoted_lead_days"].iloc[0], color=RED, linewidth=1.6, linestyle="--", label="Quoted lead time")
+        ax.axvline(float(d["quoted_lead_days"].mean()), color=RED, linewidth=1.6, linestyle="--", label="Average quoted lead time")
         ax.set_title(cls.capitalize(), fontsize=11)
         ax.set_xlabel("Lead time (working days)")
     axes[0].set_ylabel("Jobs")
@@ -132,67 +220,135 @@ def fig_stages_report():
 WAITING, WORKING = "#DCE6EE", BRAND_BLUE
 
 
-def fig_stages_diagram():
-    """The stages of lead time from release to ship, named as the rows of the stage table."""
-    later = [STAGE[s].replace("Queue: ", "").lower() for s in stage.sort_values("stage_order")["stage"].drop_duplicates() if s.startswith("queue:")]
-    gap, y, h = 0.25, 2.0, 0.86
-    line = [("Release", 0.72, None), ("Release to\ntraveler print", 0.98, WAITING), ("First-operation\nqueue; material wait\nat first operation", 1.3, WAITING),
-            ("Setup and run\n(laser or punch)", 1.08, WORKING), ("Move", 0.6, WAITING), ("Queue", 0.62, WAITING), ("Setup\nand run", 0.72, WORKING),
-            ("Complete\nto ship", 0.82, WAITING), ("Ship", 0.58, None)]
-    branch = 0.5                                   # room after the repeated group for the outside processing branch to rejoin
-    f, ax = fig(h=3.5, w=10.0)
+def fig_job_flow():
+    """The job flow from release to shipment: the steps in sequence, the share of jobs through each, the cycle inside a work center and where holds fall."""
+    P = lambda x: f"{x * 100:.0f}%"
+    # name, width, kind (edge: a point in time; wait: waiting only; step: a work-center step), share, every job
+    steps = [("Release", 0.62, "edge", None, True), ("Release to" + chr(10) + "traveler" + chr(10) + "print", 0.72, "wait", None, True),
+             ("Cut" + chr(10) + "laser or punch," + chr(10) + "after queue and" + chr(10) + "material wait", 1.0, "step", FLOW["cut"], True),
+             ("Deburr" + chr(10) + "edges" + chr(10) + "grind and" + chr(10) + "deburr", 0.78, "step", FLOW["deburr"], False),
+             ("Form" + chr(10) + "press brake", 0.82, "step", FLOW["form"], True),
+             ("Insert" + chr(10) + "and join" + chr(10) + "hardware," + chr(10) + "weld", 0.82, "step", FLOW["join"], False),
+             ("Grind" + chr(10) + "welds" + chr(10) + "grind and" + chr(10) + "deburr", 0.78, "step", FLOW["grind_welds"], False),
+             ("Finish" + chr(10) + "powder coat;" + chr(10) + "outside" + chr(10) + "processing", 0.92, "step", FLOW["finish"], False),
+             ("Assemble", 0.76, "step", FLOW["assembly"], False), ("Inspect" + chr(10) + "and pack", 0.76, "step", FLOW["inspect"], True),
+             ("Complete" + chr(10) + "to ship", 0.72, "wait", None, True), ("Ship", 0.54, "edge", None, True)]
+    gap, y, h = 0.16, 2.35, 1.12
+    f, ax = fig(h=4.1, w=10.0)
     ax.axis("off")
-    arrow = dict(arrowstyle="-|>", color=DARK, linewidth=1.1, shrinkA=0, shrinkB=0, mutation_scale=11)
+    arrow = dict(arrowstyle="-|>", color=DARK, linewidth=1.0, shrinkA=0, shrinkB=0, mutation_scale=9)
     box = lambda x0, y0, w, hh, **kw: ax.add_patch(FancyBboxPatch((x0, y0), w, hh, boxstyle="round,pad=0.02,rounding_size=0.06", **kw))
     x, edges = 0.1, []
-    for k, (name, w, fill) in enumerate(line):
-        box(x, y - h / 2, w, h, facecolor=fill or "white", edgecolor=DARK, linewidth=1.6 if fill is None else 0.8)
-        ax.text(x + w / 2, y, name, ha="center", va="center", fontsize=8.2, color="white" if fill == WORKING else TEXT, fontweight="bold" if fill is None else None)
+    for name, w, kind, share, every in steps:
+        fill = WAITING if kind == "wait" else "white"
+        box(x, y - h / 2, w, h, facecolor=fill, edgecolor=DARK, linewidth=1.6 if kind == "edge" else 0.9, linestyle="-" if every else "--")
+        if kind == "step":
+            lines = name.split(chr(10))
+            head = 2 if lines[0] in ("Deburr", "Insert", "Grind") else 1
+            ax.text(x + w / 2, y + h / 2 - 0.09, chr(10).join(lines[:head]), ha="center", va="top", fontsize=8.2, color=TEXT, fontweight="bold")
+            ax.text(x + w / 2, y + h / 2 - 0.09 - 0.2 * head - 0.03, chr(10).join(lines[head:]), ha="center", va="top", fontsize=6.8, color=TEXT)
+            # the cycle inside the step: waiting, then working
+            ax.add_patch(Rectangle((x + 0.06, y - h / 2 + 0.06), (w - 0.12) * 0.62, 0.1, facecolor=WAITING, edgecolor=DARK, linewidth=0.4))
+            ax.add_patch(Rectangle((x + 0.06 + (w - 0.12) * 0.62, y - h / 2 + 0.06), (w - 0.12) * 0.38, 0.1, facecolor=WORKING, edgecolor=DARK, linewidth=0.4))
+            ax.text(x + w / 2, y - h / 2 - 0.1, P(share) + " of jobs", ha="center", va="top", fontsize=7.6, color=TEXT)
+        else:
+            ax.text(x + w / 2, y, name, ha="center", va="center", fontsize=8.0, color=TEXT, fontweight="bold" if kind == "edge" else None)
         edges.append((x, x + w))
-        x += w + (gap + branch if k == 6 else gap)
+        x += w + gap
     for (_, a), (c, _) in zip(edges[:-1], edges[1:]):
-        ax.annotate("", (c - 0.03, y), (a + 0.03, y), arrowprops=arrow)
+        ax.annotate("", (c - 0.02, y), (a + 0.02, y), arrowprops=arrow)
     total = edges[-1][1] + 0.1
-    # the repeated group, framed and named
-    fa, fb = edges[4][0] - 0.12, edges[6][1] + 0.12
-    ax.add_patch(FancyBboxPatch((fa, y - h / 2 - 0.14), fb - fa, h + 0.28, boxstyle="round,pad=0.0,rounding_size=0.08", facecolor="none", edgecolor=ACCENT,
-                                linewidth=1.0, linestyle="--"))
-    ax.text((fa + fb) / 2, y + h / 2 + 0.24, "each later work center on the routing:\n" + ", ".join(later[:4]) + ",\n" + ", ".join(later[4:]),
-            ha="center", va="bottom", fontsize=8, color=TEXT)
-    # outside processing, for the routings that need it: it leaves the group and rejoins before complete to ship
-    xa, xb, yo, ho = fb - 0.4, (fb + edges[7][0]) / 2, 0.95, 0.62
-    oa, ob = xb - 0.22, edges[-1][1]
-    box(oa, yo - ho / 2, ob - oa, ho, facecolor=WAITING, edgecolor=DARK, linewidth=0.8)
-    ax.text((oa + ob) / 2, yo, "Outside processing\n(PO to receipt)", ha="center", va="center", fontsize=8.2, color=TEXT)
-    ax.text((oa + ob) / 2, yo - ho / 2 - 0.1, "routings that need it", ha="center", va="top", fontsize=8, color=TEXT, style="italic")
-    ax.plot([xa, xa], [y - h / 2 - 0.14, yo], color=DARK, linewidth=1.1)
-    ax.annotate("", (oa - 0.03, yo), (xa, yo), arrowprops=arrow)
-    ax.annotate("", (xb, y - 0.02), (xb, yo + ho / 2 + 0.03), arrowprops=arrow)
-    # holds sit off the path
-    ha_, hb_ = edges[1][0], edges[3][1]
+    # inside every work-center step
+    ix, iy, ih = edges[2][0], 3.62, 0.36
+    ax.text(ix, iy + ih / 2 + 0.1, "Inside each work-center step:", ha="left", va="bottom", fontsize=7.8, color=TEXT)
+    for name, w, fill in (("Move", 0.62, WAITING), ("Queue", 0.66, WAITING), ("Setup and run", 1.05, WORKING)):
+        box(ix, iy - ih / 2, w, ih, facecolor=fill, edgecolor=DARK, linewidth=0.7)
+        ax.text(ix + w / 2, iy, name, ha="center", va="center", fontsize=7.8, color="white" if fill == WORKING else TEXT)
+        if name != "Setup and run":
+            ax.annotate("", (ix + w + 0.14, iy), (ix + w + 0.03, iy), arrowprops=arrow)
+        ix += w + 0.17
+    ax.text(ix + 0.1, iy, "Dashed border: a step not every job takes", ha="left", va="center", fontsize=7.8, color=TEXT)
+    # holds, under every work-center step
+    ha_, hb_, yo, ho = edges[2][0], edges[9][1], 1.02, 0.36
     box(ha_, yo - ho / 2, hb_ - ha_, ho, facecolor=WAITING, edgecolor=DARK, linewidth=0.8, linestyle=":")
-    ax.text((ha_ + hb_) / 2, yo, "Holds: anywhere on the routing", ha="center", va="center", fontsize=8.2, color=TEXT)
+    ax.text((ha_ + hb_) / 2, yo, f"Holds: at any operation on the routing ({P(HOLDS_AT_FIRST)} at the first operation, most of them for material)", ha="center", va="center",
+            fontsize=8.0, color=TEXT)
     # the span that is lead time
-    ax.annotate("", (edges[-1][1], 0.12), (edges[0][0], 0.12), arrowprops=dict(arrowstyle="<|-|>", color=DARK, linewidth=0.8, mutation_scale=9, shrinkA=0, shrinkB=0))
-    ax.text(total / 2, 0.19, "Lead time, working days", ha="center", va="bottom", fontsize=8.2, color=TEXT)
+    ax.annotate("", (edges[-1][1], 0.3), (edges[0][0], 0.3), arrowprops=dict(arrowstyle="<|-|>", color=DARK, linewidth=0.8, mutation_scale=9, shrinkA=0, shrinkB=0))
+    ax.text(total / 2, 0.37, "In WIP from release to shipment: lead time, working days", ha="center", va="bottom", fontsize=8.2, color=TEXT)
     ax.set_xlim(0, total)
-    ax.set_ylim(-0.05, 3.5)
+    ax.set_ylim(0.1, 4.15)
     f.legend([Patch(facecolor=WAITING, edgecolor=DARK, linewidth=0.6), Patch(facecolor=WORKING)], ["Waiting", "Working"], frameon=False, fontsize=9, ncol=2,
              loc="lower center")
-    f.tight_layout(rect=(0, 0.07, 1, 1))
-    return save(f, "lead_time_stages_diagram", "Lead time stages, release to shipment")
-
-
-def fig_queue():
-    d = queue.loc["year"].sort_values("share_of_queue", ascending=False)
-    r = queue.loc[REST].reindex(d.index)
-    f, ax = fig(h=3.7)
-    paired_columns(ax, [WC[w] for w in d.index], list(d["share_of_queue"] * 100), list(r["share_of_queue"] * 100), (f"{YEAR}", RT), percent=True)
-    ax.set_ylabel("Share of queue time")
-    h, lab = ax.get_legend_handles_labels()
-    f.legend(h, lab, frameon=False, fontsize=9, ncol=2, loc="lower center")
     f.tight_layout(rect=(0, 0.06, 1, 1))
-    return save(f, "lead_time_queue_share", "Queue share by work center")
+    return save(f, "job_flow_diagram", "Job Flow Through the Shop, Release to Shipment")
+
+
+VENDOR = AMBER
+
+
+def flow_shares(g):
+    t = g["total"].sum()
+    return dict(total=float(t), waiting=float(g["waiting"].sum() / t), working=float(g["working"].sum() / t), vendor=float(g["vendor"].sum() / t))
+
+
+def fig_flow_days():
+    f, axes = fig(h=5.4, ncols=2, grid="x", sharey=True, sharex=True)
+    yy = np.arange(len(FLOW_ROWS))[::-1]
+    for ax, (g, label) in zip(axes, ((FY, f"{YEAR}"), (FR, RT))):
+        s = flow_shares(g)
+        ax.barh(yy, g["waiting"], height=0.66, color=WAITING, edgecolor=DARK, linewidth=0.4, label="Waiting (move and queue)")
+        ax.barh(yy, g["working"], height=0.66, left=g["waiting"], color=WORKING, label="Working (setup and run)")
+        ax.barh(yy, g["vendor"], height=0.66, left=g["waiting"] + g["working"], color=VENDOR, label="At the vendor")
+        for yi, v in zip(yy, g["total"]):
+            ax.annotate(f"{v:.2f}", (v, yi), textcoords="offset points", xytext=(3, 0), va="center", fontsize=7.8)
+        ax.set_yticks(yy)
+        ax.set_yticklabels(FLOW_ROWS, fontsize=9)
+        ax.set_title(f"{label}" + chr(10) + f"mean lead time {s['total']:.1f} working days" + chr(10) + f"{s['waiting'] * 100:.0f}% waiting", fontsize=10)
+        ax.set_xlabel("Working days per job")
+    axes[0].set_xlim(0, float(FY["total"].max()) * 1.12)
+    h, lab = axes[0].get_legend_handles_labels()
+    f.legend(h, lab, frameon=False, fontsize=9, ncol=3, loc="lower center")
+    f.tight_layout(rect=(0, 0.05, 1, 1))
+    return save(f, "lead_time_by_flow_step", f"Where Lead Time Goes: Mean Working Days per Job by Step in the Job Flow, {YEAR} and {RT}")
+
+
+def late_stats(d):
+    late = d[d["days_after"] > 0]["days_after"]
+    return dict(late=int(len(late)), share=float(len(late) / len(d)), median=float(late.median()), p90=float(late.quantile(0.9)))
+
+
+def fig_after_due():
+    f, ax = fig(h=3.8)
+    x = np.array(AFTER_BINS, dtype=float)
+    ax.axvspan(0.5, LATE_CAP + 0.6, color=RED, alpha=0.06, lw=0)
+    ax.bar(x, AY.to_numpy(), 0.86, color=LIGHT_BLUE, label=f"{YEAR}")
+    ax.bar(x, AR.to_numpy(), 0.86, color=BRAND_BLUE, label=RT)
+    ax.axvline(0, color=RED, linewidth=1.6, linestyle="--", label="Due date")
+    # the bin of jobs six or more days early is several times any other: the axis stops above the rest and that bar carries its counts
+    top = float(AY.iloc[1:].max()) * 1.35
+    ax.set_ylim(0, top)
+    ax.text(EARLY + 0.6, top * 0.97, f"{AY.iloc[0]:,} in {YEAR}," + chr(10) + f"{AR.iloc[0]:,} in {RT}", ha="left", va="top", fontsize=8, color=TEXT)
+    for k, (lab, d) in enumerate(((f"{YEAR}", AFTER), (RT, AFTER[AFTER["ship_quarter"] >= 2]))):
+        s = late_stats(d)
+        ax.text(LATE_CAP, top * (0.92 - 0.1 * k), f"{lab}: {s['late']:,} late jobs, {s['share'] * 100:.0f}% of jobs; median {s['median']:.0f} days late, 90th percentile {s['p90']:.0f}",
+                ha="right", va="top", fontsize=8.5, color=TEXT)
+    ticks = [EARLY, -4, -2, 0, 2, 4, 6, 8, 10, 15, 20, 25, LATE_CAP]
+    ax.set_xticks(ticks)
+    ax.set_xticklabels(["6 or more" + chr(10) + "early" if t == EARLY else "30 or" + chr(10) + "more" if t == LATE_CAP else str(t) for t in ticks], fontsize=8.5)
+    ax.set_xlim(EARLY - 0.8, LATE_CAP + 0.8)
+    ax.set_xlabel("Working days shipped after the due date")
+    ax.set_ylabel("Jobs")
+    h, lab = ax.get_legend_handles_labels()
+    f.legend(h, lab, frameon=False, fontsize=9, ncol=3, loc="lower center")
+    f.tight_layout(rect=(0, 0.07, 1, 1))
+    return save(f, "days_after_due_date", f"Working Days Shipped After the Due Date, {YEAR} and {RT}")
+
+
+def t8():
+    rows = [[AFTER_LABEL.get(k, ("on the due date" if k == 0 else f"{-k} early" if k < 0 else f"{k} late")), n0(AY[k]), n0(AR[k])] for k in AFTER_BINS]
+    rows.append(["All jobs", n0(AY.sum()), n0(AR.sum())])
+    return table(pd.DataFrame(rows, columns=["Working days from the due date to the ship date", f"Jobs shipped, {YEAR}", f"Jobs shipped, {YEAR} {REST}"]))
 
 
 def fig_wip():
@@ -405,50 +561,42 @@ def report():
     ya, ra = Y.loc["all"], R.loc["all"]
     bq = "queue: press brake"
     b = []
-    b.append("<h2 id='f1'>1. Lead time stages</h2>")
-    b.append("<p>A job's lead time is the number of working days from its release onto the floor to its shipment to the customer. A job moves through the stages "
-             "outlined in the diagram below. First, the traveler is printed and the job waits in queue at its first operation, either the laser cutting station or "
-             "the punch, and for its material when it is not on hand. It is then cut, and repeats through move, queue, and setup and run at each later work center "
-             "on its routing. Where the routing calls for it, the job goes out for outside processing and returns. Holds are counted as their own stage at whatever "
-             "point on the routing they occur. Once the job is complete it waits to ship. Queue is defined as arrival at a work center to first start. Setup and run "
-             "is measured from first start to completion, and move is measured from the end of one operation to arrival at the next.</p>")
-    b.append(chart("Lead time stages, release to shipment", fig_stages_diagram()))
+    P0 = lambda x: pct(x, 0)
+    b.append("<h2 id='f1'>1. Job Flow</h2>")
+    b.append(f"<p>Every job follows the same flow through the shop between its release onto the floor and its shipment to the customer, shown below. It is cut on the laser "
+             f"or the punch, waiting first for its traveler to print and, when it is not on hand, for its material. Most laser-cut parts then have their edges deburred. Every "
+             f"job is formed on the press brakes ({P0(FLOW['second_form'])} return to them for a second forming operation, {P0(FLOW['second_form_after_hardware'])} of those after "
+             f"hardware is inserted between bends). {P0(FLOW['hardware'])} then have hardware inserted and {P0(FLOW['weld'])} are welded, by hand or on the robotic cell, and every "
+             f"welded part is ground. {P0(FLOW['powder'])} are powder coated and {P0(FLOW['outside'])} go out for plating or other outside processing; {P0(FLOW['assembly'])} are "
+             f"then assembled. Every job ends at inspection and pack, then waits to ship. At each work center the job moves, queues, and is set up and run, and holds can stop it "
+             f"at any point. At any moment every job in WIP sits somewhere in this flow, and its lead time, the working days from release to shipment, is the time it takes to pass "
+             f"through it. Queue is measured from arrival at a work center to first start, setup and run from first start to completion, and move from the end of one operation "
+             f"to arrival at the next.</p>")
+    b.append(chart("Job Flow Through the Shop, Release to Shipment", fig_job_flow()))
 
     b.append("<h2 id='f2'>2. Actual vs. quoted lead times</h2>")
     b.append(f"<p>In {YEAR}, the median job shipped in {d1(ya['lead_time_median'])} working days vs. an average quoted lead time of {d1(ya['quoted_lead_days'])}; "
              f"in {RT}, it was {d1(ra['lead_time_median'])} vs. {d1(ra['quoted_lead_days'])}. The quoted lead time was met on {pct(ya['share_within_quoted'], 0)} of jobs in "
-             f"{YEAR} and {pct(ra['share_within_quoted'], 0)} in {RT}. The shop quotes a standard lead time by routing class, 10 working days for repeat parts, 15 for new parts and 20 with outside "
-             f"processing, and adds a week to new quotes once the floor has been backed up for several weeks; the due date is the later of the quote and the "
-             f"customer's requested date. The quote was met on {hit['repeat part'][0]} of repeat-part jobs in {YEAR} ({hit['repeat part'][1]} in {RT}), "
+             f"{YEAR} and {pct(ra['share_within_quoted'], 0)} in {RT}. The quote was met on {hit['repeat part'][0]} of repeat-part jobs in {YEAR} ({hit['repeat part'][1]} in {RT}), "
              f"{hit['new part'][0]} of new-part jobs ({hit['new part'][1]}) and {hit['outside processing'][0]} of outside-processing jobs "
              f"({hit['outside processing'][1]}). {see('1')}</p>")
-    b.append(f"<p>{pct(ya['on_time_delivery'], 0)} of jobs shipped by the due date in {YEAR} and {pct(ra['on_time_delivery'], 0)} in {RT}, against the "
-             f"shop's {pct(required, 0)} target. The 90th-percentile lead time for all jobs is {d1(ya['lead_time_p90'])} days for {YEAR} and "
-             f"{d1(ra['lead_time_p90'])} in {RT}. Late jobs have a median lead time of {d1(ya['lead_time_median_late'])} days against "
-             f"{d1(ya['lead_time_median_on_time'])} for on-time jobs. {see('5a')}</p>")
+    b.append("<p>The shop quotes lead times by starting with a routing class standard (10 working days for repeat parts, 15 for new parts and 20 with outside processing) "
+             "which is then adjusted slightly based on current shop capacity and WIP levels. <a href='#f5'>Section 5</a> analyzes the quote against the brake backlog.</p>")
     b.append(chart("Actual vs. Quoted Lead Times, by Routing Class", fig_distribution()))
 
     b.append("<h2 id='f3'>3. Lead time decomposition</h2>")
-    b.append(f"<p>In {YEAR}, the brake queue was {pct(st(SY, bq, 'share'), 0)} of all jobs' lead time and accounted for the largest share of the extra days on "
-             f"late jobs: {d2(st(SY, bq, 'late'))} days against {d2(st(SY, bq, 'on time'))} for on-time jobs. This was due to the first quarter's backlog: the "
-             f"2024 year-end build released more work than the brakes could absorb and put {n0(q1['late_jobs'])} of the year's {n0(ya['late_jobs'])} late jobs "
-             f"into Q1. In {RT}, with the backlog cleared, late jobs waited less at the brakes than on-time jobs "
-             f"({d2(st(SR, bq, 'late'))} days against {d2(st(SR, bq, 'on time'))}).</p>")
-    b.append(f"<p>In {RT}, the extra days on late jobs were due to material wait at the first operation "
-             f"({d2(st(SR, 'material wait at first operation', 'late'))} days for late jobs vs. {d2(st(SR, 'material wait at first operation', 'on time'))} for "
-             f"on-time jobs), outside processing ({d2(st(SR, 'outside processing', 'late'))} vs. {d2(st(SR, 'outside processing', 'on time'))}), "
-             f"the robotic weld queue ({d2(st(SR, 'queue: robotic weld', 'late'))} vs. {d2(st(SR, 'queue: robotic weld', 'on time'))}) and "
-             f"setup and run ({d2(st(SR, 'setup and run', 'late'))} vs. {d2(st(SR, 'setup and run', 'on time'))}; the average lot size for late jobs was "
-             f"{n0(lot_late)} pieces vs. {n0(lot_on)} for on-time jobs). {see('2a', '2b')}</p>")
-    b.append(chart("Lead time by stage, on-time vs. late jobs", fig_stages_report()))
+    b.append(chart(f"Where Lead Time Goes: Mean Working Days per Job by Step in the Job Flow, {YEAR} and {RT}", fig_flow_days()))
+    fy, fr = flow_shares(FY), flow_shares(FR)
+    b.append(f"<p>Of the {d1(fy['total'])} working days the average job spent from release to shipment in {YEAR}, {P0(fy['waiting'])} was waiting and {P0(fy['working'])} was "
+             f"setup and run, with the rest at outside vendors; the brake queue alone was {d1(BRAKE_QUEUE['year'])} days, {P0(BRAKE_QUEUE['year'] / fy['total'])} of the total. In "
+             f"{RT} the average job took {d1(fr['total'])} days, {P0(fr['waiting'])} of them waiting, and the brake queue's share fell to {P0(BRAKE_QUEUE['rest'] / fr['total'])}.</p>")
     g, i, pb = "grind_deburr", "inspection_pack", "press_brake"
-    b.append(f"<p>Across all work centers, for both on-time and late jobs, the brakes accounted for {pct(qy.loc[pb, 'share_of_queue'], 0)} of queue time in {YEAR} and "
-             f"{pct(qr.loc[pb, 'share_of_queue'], 0)} in {RT}. Grind and deburr follows at {pct(qy.loc[g, 'share_of_queue'], 0)} in {YEAR} and "
-             f"{pct(qr.loc[g, 'share_of_queue'], 0)} in {RT}, and inspection and pack at {pct(qy.loc[i, 'share_of_queue'], 0)} and "
-             f"{pct(qr.loc[i, 'share_of_queue'], 0)}. The brake queue per operation has a median of {d1(qy.loc[pb, 'median_queue_days'])} day in {YEAR} vs. "
+    b.append(f"<p>The waiting is concentrated: the brakes held {pct(qy.loc[pb, 'share_of_queue'], 0)} of all queue time in {YEAR} and {pct(qr.loc[pb, 'share_of_queue'], 0)} in "
+             f"{RT}, grind and deburr {pct(qy.loc[g, 'share_of_queue'], 0)} and {pct(qr.loc[g, 'share_of_queue'], 0)}, and inspection and pack "
+             f"{pct(qy.loc[i, 'share_of_queue'], 0)} and {pct(qr.loc[i, 'share_of_queue'], 0)}. The brake queue per operation has a median of "
+             f"{d1(qy.loc[pb, 'median_queue_days'])} day in {YEAR} vs. "
              f"{d1(qr.loc[pb, 'median_queue_days'])} in {RT}, and a 90th percentile of {d1(qy.loc[pb, 'p90_queue_days'])} days in {YEAR} vs. "
              f"{d1(qr.loc[pb, 'p90_queue_days'])} in {RT}. {see('3')}</p>")
-    b.append(chart("Queue Time by Work Center", fig_queue()))
 
     b.append("<h2 id='f4'>4. Work in Process</h2>")
     spare = wr["wip_at_quoted_lead_times"] - wr["wip_mean"]
@@ -484,8 +632,30 @@ def report():
              f"meaning the floor was in balance. The {NUMBER[len(llq_miss)]} quarters that miss are all year-end quarters: the builds ({join_and(ahead)}), when WIP "
              f"ran ahead of shipments, and the quarters in which a build shipped ({join_and(behind)}), when shipments ran ahead of WIP. {see('6')}</p>")
 
+    b.append("<h2 id='f5'>5. </h2>")
+    b.append(f"<p>A job's due date is the later of the quote and the customer's requested date. {pct(ya['on_time_delivery'], 0)} of jobs shipped by the due date in {YEAR} and {pct(ra['on_time_delivery'], 0)} in {RT}, against the "
+             f"shop's {pct(required, 0)} target. The 90th-percentile lead time for all jobs is {d1(ya['lead_time_p90'])} days for {YEAR} and "
+             f"{d1(ra['lead_time_p90'])} in {RT}. Late jobs have a median lead time of {d1(ya['lead_time_median_late'])} days against "
+             f"{d1(ya['lead_time_median_on_time'])} for on-time jobs. {see('5a', '8')}</p>")
+    b.append(chart(f"Working Days Shipped After the Due Date, {YEAR} and {RT}", fig_after_due()))
+
+    b.append("<h2 id='f6'>6. Where late jobs spend their time</h2>")
+    b.append("<p>Late jobs spend their extra days in different stages in the year-end build and in ordinary quarters.</p>")
+    b.append(f"<p>In {YEAR}, the brake queue was {pct(st(SY, bq, 'share'), 0)} of all jobs' lead time and accounted for the largest share of the extra days on "
+             f"late jobs: {d2(st(SY, bq, 'late'))} days against {d2(st(SY, bq, 'on time'))} for on-time jobs. This was due to the first quarter's backlog: the "
+             f"2024 year-end build released more work than the brakes could absorb and put {n0(q1['late_jobs'])} of the year's {n0(ya['late_jobs'])} late jobs "
+             f"into Q1. In {RT}, with the backlog cleared, late jobs waited less at the brakes than on-time jobs "
+             f"({d2(st(SR, bq, 'late'))} days against {d2(st(SR, bq, 'on time'))}).</p>")
+    b.append(f"<p>In {RT}, the extra days on late jobs were due to material wait at the first operation "
+             f"({d2(st(SR, 'material wait at first operation', 'late'))} days for late jobs vs. {d2(st(SR, 'material wait at first operation', 'on time'))} for "
+             f"on-time jobs), outside processing ({d2(st(SR, 'outside processing', 'late'))} vs. {d2(st(SR, 'outside processing', 'on time'))}), "
+             f"the robotic weld queue ({d2(st(SR, 'queue: robotic weld', 'late'))} vs. {d2(st(SR, 'queue: robotic weld', 'on time'))}) and "
+             f"setup and run ({d2(st(SR, 'setup and run', 'late'))} vs. {d2(st(SR, 'setup and run', 'on time'))}; the average lot size for late jobs was "
+             f"{n0(lot_late)} pieces vs. {n0(lot_on)} for on-time jobs). {see('2a', '2b')}</p>")
+    b.append(chart("Lead time by stage, on-time vs. late jobs", fig_stages_report()))
+
     b.append("<h2 id='rec'>Recommendation</h2>")
-    b.append(f"<p>Restate the fixed quote as a percentile of the measured lead-time distribution by routing class (Section 4): the 10-day repeat quote is met on "
+    b.append(f"<p>Restate the fixed quote as a percentile of the measured lead-time distribution by routing class (Section 5): the 10-day repeat quote is met on "
              f"{hit['repeat part'][1]} of jobs in an ordinary quarter. Plan the fourth-quarter peak with planned Saturday brake shifts from November through February and the setup program, sized on the shop model ([[R:options]]); "
              f"the 2024 build put {n0(q1['late_jobs'])} jobs late in the first quarter of {YEAR}. Ordinary-quarter lateness is taken up in <a href='#f3'>Section 3</a>, where material, vendor and "
              f"robotic weld causes are attributed job by job.</p>")
@@ -514,9 +684,11 @@ def report():
     b.append("<h3 id='t5a'>Table 5a. On-time delivery and lead time by quarter shipped</h3>" + t5a())
     b.append("<h3 id='t6'>Table 6. WIP, throughput and days in WIP by calendar quarter</h3>" + t6())
     b.append("<h3 id='t7'>Table 7. Year-end WIP build by year</h3>" + t7())
+    b.append(f"<h3 id='t8'>Table 8. Jobs shipped by working days from the due date to the ship date, {YEAR} and {REST}</h3>" + t8())
     b.append("<div class='glossary'>WIP: jobs released and not shipped. Quoted lead time: 10 working days for repeat parts, 15 for new parts, "
              "20 with outside processing. On time: shipped on or before the promised date as last revised.</div>")
-    toc = [("f1", "Lead time stages"), ("f2", "Actual vs. quoted lead times"), ("f3", "Lead time decomposition"), ("f4", "Work in Process"),
+    toc = [("f1", "Job Flow"), ("f2", "Actual vs. quoted lead times"), ("f3", "Lead time decomposition"), ("f4", "Work in Process"), ("f5", ""),
+           ("f6", "Where late jobs spend their time"),
            ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
     scope = (f"Jobs shipped in {YEAR}, whole year and {REST}; records from January 2023 to December 2025.<br>"
              f"Sources: ERP, shop-floor data collection, quality, maintenance and attendance exports (batch {batch}).")
