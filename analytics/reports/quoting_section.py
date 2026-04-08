@@ -1,16 +1,14 @@
-"""The quoting section and the early warning section of the flow report, each with its appendix tables."""
+"""The quoting section of the flow report, with its appendix tables."""
 import numpy as np
 import pandas as pd
 from matplotlib.patches import Patch
 
-from analytics.leading_indicators import analysis as LA
-from analytics.leading_indicators import sections as L
 from analytics.quoting import accuracy as A
-from analytics.reports.layout import RT, Tables, block, chart, join_and, titled
+from analytics.reports.layout import Tables, block, chart, titled
 from analytics.style.style import AMBER, BRAND_BLUE, GREY, LIGHT_BLUE, RED, fig, pct, save_conformed as save, table
 
 YEAR = A.YEAR
-QUOTING, WARNING = "Quoting", "Early Warning"
+QUOTING = "Quoting"
 CLS = {"repeat part": "Repeat part", "new part": "New part", "outside processing": "Outside processing", "all": "All"}
 FITTED = "fitted on 2023 to 2025"
 SHORT = {A.CURRENT: "Current quote", A.CLASS: "Class median", A.REC: "Recommended quote, out of sample", A.REC_FIT: f"Recommended quote, {FITTED}"}
@@ -49,25 +47,6 @@ def fig_quote_and_actual(m):
     ax.set_ylim(0, None)
     f.tight_layout()
     return save(f, "quote_and_actual_by_release_month", "")
-
-
-def fig_conditions(backlog, outside):
-    f, axes = fig(h=3.4, ncols=2, sharey=True, gridspec_kw=dict(width_ratios=[2.2, 1]))
-    for ax, t, lab in ((axes[0], backlog, "Brake backlog at release (days)"), (axes[1], outside, "Outside processing on the routing")):
-        x = np.arange(len(t))
-        ax.bar(x, t["bias"], 0.62, color=[RED if v > 0 else BRAND_BLUE for v in t["bias"]])
-        ax.axhline(0, color="#333333", lw=1)
-        for xi, v in zip(x, t["bias"]):
-            ax.annotate(sg(v, 1), (xi, v), textcoords="offset points", xytext=(0, 3 if v > 0 else -10), ha="center", fontsize=8.5)
-        ax.set_xticks(x)
-        ax.set_xticklabels([str(i).capitalize() for i in t.index], fontsize=9)
-        ax.set_xlabel(lab)
-    axes[0].set_ylabel("Actual less quoted lead time," + "\n" + "working days")
-    lo, hi = axes[0].get_ylim()
-    axes[0].set_ylim(lo - 0.8, hi + 0.8)
-    f.legend([Patch(color=RED), Patch(color=BRAND_BLUE)], ["Quote too short", "Quote too long"], frameon=False, fontsize=9, ncol=2, loc="lower center")
-    f.tight_layout(rect=(0, 0.07, 1, 1))
-    return save(f, "quote_error_by_condition", "")
 
 
 def fig_error_by_month(m):
@@ -121,17 +100,6 @@ def t_periods():
             rows.append([per, CLS[c], n0(s["jobs"]), d2(s["actual"]), d2(s["quoted"]), sg(s["bias"]), d2(s["mae"]), pct(s["within"]), d2(s["backlog"])])
     return table(pd.DataFrame(rows, columns=["Period, by release date", "Routing class", "Jobs", "Mean actual lead time", "Mean quoted lead time", "Mean error", "Mean absolute error",
                                              f"Within {A.WITHIN} days", "Mean brake backlog at release"]))
-
-
-def t_months(m):
-    rows = []
-    for i, r in m.iterrows():
-        note = "loaded" if r["loaded"] else "incomplete" if r["incomplete"] else ""
-        rows.append([f"{i}", n0(r["jobs"]), d2(r["actual"]), d2(r[f"quoted|{A.CURRENT}"]), sg(r[f"bias|{A.CURRENT}"]), d2(r[f"mae|{A.CURRENT}"]), pct(r[f"within|{A.CURRENT}"]), d2(r["backlog"])]
-                    + [f"{d2(r[f'mae|{k}'])} ({sg(r[f'bias|{k}'])})" for k in (A.CLASS, A.REC, A.REC_FIT)] + [note])
-    return table(pd.DataFrame(rows, columns=["Release month", "Jobs", "Mean actual lead time", "Mean quoted lead time", "Mean error", "Mean absolute error", f"Within {A.WITHIN} days",
-                                             "Mean brake backlog at release", "Class median: mean absolute error (mean error)", "Recommended quote, out of sample",
-                                             f"Recommended quote, {FITTED}", "Note"]))
 
 
 def t_conditions():
@@ -193,7 +161,6 @@ def quoting(n, start=100):
     shown = months[~months["incomplete"]]
     grid = A.grid()
     backlog, r2_backlog = A.condition("c_backlog")
-    outside, _ = A.condition("c_outside")
     r2_small = max(A.condition("c_brake")[1], A.condition("c_lot")[1])
     out_class = A.score(D[D["routing_class"] == "outside processing"])
     assert len(A.LOADED) == 4 and A.LOADED[0] == pd.Period(f"{YEAR - 1}-12") and A.LOADED[-1] == pd.Period(f"{YEAR}-03") and r2_small < 0.01
@@ -204,40 +171,27 @@ def quoting(n, start=100):
           + f"<p>{n0(len(D))} non-rush jobs released from January 2023 and shipped by December {YEAR}. Left out: {n0(len(A.EARLIER))} released before January 2023, which the record holds "
             f"only where they shipped late, and {n0(int(A.HISTORY['inside'].sum()))} lines customer service accepted inside the quote. Error is the actual lead time less the quoted lead "
             f"time in whole working days; a loaded month has a mean brake backlog at release of {A.LOADED_AT:g} days or more.</p>")
-    T.add("months", "Quote error by release month: the current quote, the class median and the recommended quote", t_months(months)
-          + f"<p>{join_and([month(m) for m in A.INCOMPLETE])} is incomplete: most of the jobs released in it had not shipped when the record closes, so it holds only its faster jobs.</p>")
     T.add("conditions", "Quote error by condition at release, non-rush jobs released 2023 to 2025", t_conditions())
     T.add("candidates", "Every quote tested: error by period, change from the current quote, and how each quote was reached", t_candidates())
     T.add("commitment", "The recommended quote at the median and at the 80th percentile: jobs shipped within the quote and error", t_commitment())
     T.add("size", "The quote grid with brake standard hours in thirds, fitted on 2023 to 2025: median lead time (jobs in the cell)", t_size_grid())
 
-    repeat = grid.loc["repeat part"]
-    b = [f"<p>The shop's quote misses the lead time a job actually takes by {d1(cur(every)['mae'])} working days on average, and in opposite directions: in ordinary months it is "
-         f"{d1(-cur(ordinary)['bias'])} days too long, with the median repeat part shipping in {n0(repeat['median'])} days against a {n0(repeat['standard'])}-day standard, and in the "
-         f"four months of the {YEAR - 1} year-end build it was {d1(cur(loaded)['bias'])} days too short. A quote set from what jobs of the same routing class actually take cuts the miss "
-         f"in ordinary months from {d1(cur(ordinary)['mae'])} to {d1(cls(ordinary)['mae'])} days. Adding the brake backlog at release lets the quote lengthen when the brakes load up. "
-         f"The record could teach that only once it held a build, so out of sample it would not have helped in {YEAR - 1}; {FITTED}, it misses by {d1(fit(loaded)['mae'])} days in the "
-         f"build against {d1(cur(loaded)['mae'])} for the current quote. {T.see('periods')}</p>"]
-
-    b.append(f"<h3 id='f{n}_1'>How accurate the quote is</h3>")
-    short = shown[shown[f"bias|{A.CURRENT}"] > 0.5]
-    assert len(short) == 4 and short.index[0] == pd.Period(f"{YEAR - 1}-11") and short.index[-1] == pd.Period(f"{YEAR}-02")
-    b.append(f"<p>The quote barely moves while lead time swings with the brake backlog. The mean quote stays between {d1(shown[f'quoted|{A.CURRENT}'].min())} and "
-             f"{d1(shown[f'quoted|{A.CURRENT}'].max())} days while the mean lead time runs from {d1(shown['actual'].min())} to {d1(shown['actual'].max())}; the quote is too long in "
-             f"{len(shown[shown[f'bias|{A.CURRENT}'] < -0.5])} of the {len(shown)} months and too short from {month(short.index[0])} to {month(short.index[-1])}. {T.see('months')}</p>")
-    b.append(titled(fig_quote_and_actual(shown), "Quoted and Actual Lead Time by Release Month, Non-rush Jobs, 2023 to 2025"))
-
-    b.append(f"<h3 id='f{n}_2'>When the quote misses</h3>")
     nov = months.loc[pd.Period(f"{YEAR - 1}-11")]
     deep = backlog["bias"].iloc[3:]
-    b.append(f"<p>Brake backlog at release explains {pct(r2_backlog, 0)} of the error. The quote runs {d1(-backlog['bias'].iloc[0])} days long below 1 day of backlog and "
-             f"{d1(deep.min())} to {d1(deep.max())} days short above 3, across all three years, not only in the build. Outside processing quotes run {d1(-out_class['bias'])} days long: "
+    b = [f"<p>The shop's quoted lead time was off by {d1(cur(every)['mae'])} days on average from 2023 to {YEAR}. The current practice of quoting standard lead times based on the part's "
+         f"routing class, and then adjusting this higher during periods of low capacity, proved to be inaccurate in both directions.</p>"]
+    b.append(f"<p>First, the fixed standards were consistently too high: in months of normal capacity, the shop over-estimated lead times by an average of "
+             f"{d1(-cur(ordinary)['bias'])} days. Second, during the period in Q4 {YEAR - 1} to Q1 {YEAR} when the shop's capacity was constrained and lead times increased, the shop's "
+             f"lead time adjustments arrived too late and were too low in quantity, and so under-estimated lead times by {d1(cur(loaded)['bias'])} days in the four months from "
+             f"{month(A.LOADED[0])} to {month(A.LOADED[-1])}. {T.see('periods')}</p>")
+    b.append(titled(fig_quote_and_actual(shown), "Quoted and Actual Lead Time by Release Month, Non-rush Jobs, 2023 to 2025"))
+    b.append(f"<p>Brake backlog at release explains {pct(r2_backlog, 0)} of the lead time quoting error. The quote runs {d1(-backlog['bias'].iloc[0])} days long below 1 day of "
+             f"backlog and {d1(deep.min())} to {d1(deep.max())} days short above 3. Outside processing quotes run {d1(-out_class['bias'])} days long: "
              f"the median job takes {n0(grid.loc['outside processing', 'median'])} days against the {n0(grid.loc['outside processing', 'standard'])}-day standard. Job size and lot size "
              f"explain under 1%. The backlog at release sees a build late: jobs released in {month(nov.name)} ran {d1(nov[f'bias|{A.CURRENT}'])} days over their quotes at "
              f"{d1(nov['backlog'])} days of backlog. {T.see('conditions')}</p>")
-    b.append(titled(fig_conditions(backlog, outside), "Quote Error by Condition at Release, Non-rush Jobs, 2023 to 2025"))
 
-    b.append(f"<h3 id='f{n}_3'>A more accurate quote</h3>")
+    b.append(f"<h3 id='f{n}_1'>A more accurate quote</h3>")
     co, cf = A.against_current(A.REC), A.against_current(A.REC_FIT)
     assert int((A.HISTORY[A.HISTORY["ship_date"] < f"{YEAR - 1}-12-01"]["brake_backlog_days"] >= 3).sum()) == 0
     b.append(f"<p>The recommended quote is the median lead time of jobs of the same routing class at the same brake backlog at release, refitted monthly from the jobs shipped; "
@@ -250,51 +204,4 @@ def quoting(n, start=100):
     b.append(chart("Quoted Lead Time by Routing Class and Brake Backlog at Release, Working Days, Fitted on 2023 to 2025", t_grid(grid)))
     b.append(titled(fig_error_by_month(shown), "Mean Absolute Error of the Quote by Release Month, Current Quote Against the Recommended Quote, 2023 to 2025"))
     b.append(titled(fig_ordinary_and_loaded(S), "Quote Error in Ordinary and Loaded Months, Current Quote Against Each Candidate"))
-    b.append("<p>Quote from the routing class and the brake backlog at release, from the jobs shipped and refitted monthly, and commit to the customer at the 80th percentile of the "
-             "same quote.</p>")
     return "\n".join(b), T.appendix()
-
-
-# ── early warning ───────────────────────────────────────────────────────────
-def early_warning(n, start=200):
-    T = Tables(start)
-    T.add("bands", "Late rate by brake backlog at release", L.t_bands())
-    T.add("threshold", f"Jobs released above {LA.BACKLOG_THRESHOLD:.0f} days of brake backlog", L.t_threshold())
-    T.add("late", "Jobs released late", L.t_short())
-    T.add("defs", "Weekly indicators and definitions", table(pd.DataFrame(L.DEFS, columns=["Indicator", "Definition", "Adverse direction"])))
-    T.add("lags_event", "Correlation with on-time delivery by weeks of lead, ordinary weeks", L.t_lags(L.LE))
-    T.add("lags_all", "Correlation with on-time delivery by weeks of lead, all weeks", L.t_lags(L.LA))
-    T.add("declines", "Declines in on-time delivery", L.t_declines())
-    T.add("lead_by", "Weeks each indicator moved before each decline", L.t_lead_by_decline())
-
-    b = ["<p>Two flags at release mark the jobs most likely to ship late, and one weekly measure warns of a decline in on-time delivery a week ahead.</p>"]
-    b.append(f"<h3 id='f{n}_1'>Flags at release</h3>")
-    ty, tq, sr = L.THR.loc[L.PY], L.THR.loc[L.PR], L.SHORT.loc[L.PR]
-    assert tq["late_jobs_above"] == 0 and tq["share_of_all_jobs_above"] == 0
-    b.append(f"<p>Brake backlog flags jobs in a build, and a short due date flags them in an ordinary quarter. Jobs released above "
-             f"{LA.BACKLOG_THRESHOLD:.0f} days of brake backlog are {pct(ty['share_of_all_jobs_above'], 0)} of jobs released in {YEAR} and "
-             f"{pct(ty['share_of_late_jobs_above'], 0)} of late jobs, a late rate of {pct(ty['late_rate_above'], 0)} against {pct(ty['late_rate_below'], 0)}; no job "
-             f"released in {RT} crossed it. Jobs released late are {pct(sr['share_of_jobs'], 0)} of jobs released in {RT} and {pct(sr['share_of_late_jobs'], 0)} of "
-             f"late jobs, a late rate of {pct(sr['late_rate_inside'])} against {pct(sr['late_rate_other'])}. Each late release should be a decision: flag the job as a "
-             f"rush, with a named approver, and count these releases weekly. {T.see('bands', 'threshold', 'late')}</p>")
-    b.append(titled(L.fig_backlog(), "Late Rate by Brake Backlog at Release"))
-
-    b.append(f"<h3 id='f{n}_2'>Weekly indicators</h3>")
-    e, o, lt = L.CE.loc[L.OTS], L.DL.loc[L.OTS], L.LT
-    others = [x for x in L.ABOVE_E if x != L.OTS]
-    assert e["best_lead_weeks"] == 1 and L.OTS in L.ABOVE_E and o["preceded"] == len(L.DEC) and min(o["shuffled_p"], o["shifted_p"]) > 0.05
-    assert others == [L.OUTSIDE], others
-    laser = lt.loc[L.LASER].dropna()
-    la = L.DL.loc[L.LASER]
-    assert min(la["shuffled_p"], la["shifted_p"]) > 0.05
-    when = lambda t: f"{t:%B %Y}"
-    b.append(f"<p>The on-time start rate leads on-time delivery by one week in ordinary weeks (correlation {e['r_best_lead']:.2f}, against chance levels of "
-             f"{e['shuffled_p95']:.2f} and {e['shifted_p95']:.2f}). It moved {join_and([f'{x:.0f}' for x in lt.loc[L.OTS]])} weeks before the "
-             f"{L.word(len(L.DEC))} declines in on-time delivery, which cannot be told apart from chance ({d1(o['shuffled_expected'])} and {d1(o['shifted_expected'])} "
-             f"expected). Jobs waiting at the lasers moved "
-             f"{join_and([f'{v:.0f} weeks before the {when(pd.Timestamp(k))} decline' for k, v in laser.items()])}, {len(laser)} of {len(L.DEC)} and no better than "
-             f"chance. Outside-processing receipts on time clear both chance levels only at a {L.CE.loc[L.OUTSIDE, 'best_lead_weeks']}-week lead (correlation "
-             f"{L.CE.loc[L.OUTSIDE, 'r_best_lead']:.2f}); no other measure leads in ordinary weeks. "
-             f"{T.see('defs', 'lags_event', 'lags_all', 'declines', 'lead_by')}</p>")
-    b.append(f"<p>Flag at release every job above {LA.BACKLOG_THRESHOLD:.0f} days of brake backlog and every job released late, and review the on-time start rate weekly.</p>")
-    return "\n".join(b).replace(L.REST, RT), T.appendix().replace(L.REST, RT)
