@@ -28,11 +28,11 @@ LEAD, CAPACITY, OPTIONS = "lead_time_and_late_jobs", "capacity_constraints_and_s
 
 def _lead_time():
     share, late, on_time = re.search(r"the brake queue was ([\d.]+%) of all jobs' lead time .*?: ([\d.]+) days against ([\d.]+) for on-time jobs\.",
-                                     section_text(LEAD, "f4_2")).groups()
+                                     section_text(LEAD, "f3_2")).groups()
     median, quote, rest = re.search(r"shipped in ([\d.]+) working days vs\. an average quoted lead time of ([\d.]+); in Q2-Q4, it was ([\d.]+) vs\.",
-                                    section_text(LEAD, "f3_2")).groups()
-    causes = re.search(r"In 2025, jobs waiting at work centers .*? respectively\.", section_text(LEAD, "f4_3")).group(0)
-    quoting = re.search(r"The shop's quote misses the lead time .*? from \S+ to \S+ days\.", section_text(LEAD, "f5")).group(0)
+                                    section_text(LEAD, "f2_2")).groups()
+    causes = re.search(r"In 2025, jobs waiting at work centers .*? respectively\.", section_text(LEAD, "f3_3")).group(0)
+    quoting = re.search(r"The shop's quote misses the lead time .*? from \S+ to \S+ days\.", section_text(LEAD, "f4")).group(0)
     return (f"Queue at the brakes is {share} of lead time and the stage that separates late jobs from on-time jobs ({late} days against {on_time}); the median job "
             f"ships in {median} working days against an average quoted lead time of {quote}, {rest} in Q2-Q4. " + causes + " " + quoting)
 
