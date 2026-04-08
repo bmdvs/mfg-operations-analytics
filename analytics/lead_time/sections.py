@@ -150,9 +150,9 @@ AFTER = q(f"""select cs.wd_index - cd.wd_index as days_after, quarter(j.ship_dat
               left join intermediate.int_working_days cr on cr.calendar_date = ol.requested_date left join intermediate.int_working_days co on co.calendar_date = ol.order_date
               where year(j.ship_date) = {YEAR}""")
 assert len(AFTER) == len(jobs) and int((AFTER["days_after"] > 0).sum()) == int((~jobs["on_time"]).sum())
-EARLY, LATE_CAP = -8, 15
+EARLY, LATE_CAP = -10, 10
 AFTER_BINS = list(range(EARLY, LATE_CAP + 1))
-AFTER_LABEL = {EARLY: "8 or more early", LATE_CAP: "15 or more late"}
+AFTER_LABEL = {EARLY: "10 or more early", LATE_CAP: "10 or more late"}
 
 
 def after_counts(d):
@@ -341,7 +341,7 @@ def fig_flow_days():
             ax.annotate(f"{v:.2f}", (v, yi), textcoords="offset points", xytext=(3, 0), va="center", fontsize=7.8)
         ax.set_yticks(yy)
         ax.set_yticklabels(FLOW_ROWS, fontsize=9)
-        ax.set_title(label, fontsize=10)
+        ax.set_title(label + chr(10) + f"Avg. Lead Time: {s['total']:.1f} Days", fontsize=10)
         ax.set_xlabel("Working days per job")
     axes[0].set_xlim(0, float(FY["total"].max()) * 1.12)
     h, lab = axes[0].get_legend_handles_labels()
@@ -363,7 +363,7 @@ def fig_after_due():
     ax.bar(x, AR.to_numpy(), 0.86, color=BRAND_BLUE, label=RT)
     ax.axvline(0, color=RED, linewidth=1.6, linestyle="--", label="Due date")
     ax.set_xticks(AFTER_BINS)
-    ax.set_xticklabels(["8 or" + chr(10) + "more" + chr(10) + "early" if t == EARLY else "15 or" + chr(10) + "more" + chr(10) + "late" if t == LATE_CAP else str(t) for t in AFTER_BINS],
+    ax.set_xticklabels(["10 or" + chr(10) + "more" + chr(10) + "early" if t == EARLY else "10 or" + chr(10) + "more" + chr(10) + "late" if t == LATE_CAP else str(t) for t in AFTER_BINS],
                        fontsize=8)
     ax.set_xlim(EARLY - 0.8, LATE_CAP + 0.8)
     ax.set_xlabel("Working days shipped after the due date")
@@ -632,7 +632,7 @@ def report():
              f"normal quarter, and it took through Q1 and into Q2 {YEAR} to clear this backlog. {see('7')}</p>")
     b.append(chart("Weekly WIP and Net Inflow, Q3 2024 to Q2 2025", fig_weekly_year()))
     turn = lambda a, c: "falls" if c < a else "rises"
-    b.append(f"<p>By location, the brakes (queue and run together) hold {pct(ws_year['press_brake'], 0)} of WIP in {YEAR}, while the laser cutting stations hold "
+    b.append(f"<p>By location, the brakes (queue, setup and run together) hold {pct(ws_year['press_brake'], 0)} of WIP in {YEAR}, while the laser cutting stations hold "
              f"{pct(ws_year['laser'], 0)} and outside processing {pct(ws_year['outside_processing'], 0)}. The other {NUMBER[len(other_centers)]} work centers and jobs "
              f"complete but not yet shipped hold the remaining {pct(ws_other.sum(), 0)} between them, none above {pct(ws_other.max(), 0)}. In {RT} the brakes' share "
              f"{turn(ws_year['press_brake'], ws_rest['press_brake'])} to {pct(ws_rest['press_brake'], 0)} and the lasers' "
@@ -655,7 +655,7 @@ def report():
              f"shipped 6 days or more before the due date. {see('5a', '8')}</p>")
     b.append(chart(f"Working Days Shipped After the Due Date, {YEAR} and {RT}", fig_after_due()))
 
-    b.append("<h2 id='f6'>6. Where late jobs spend their time</h2>")
+    b.append("<h2 id='f6'>6. Late job lead time decomposition</h2>")
     b.append(f"<p>In {YEAR}, the brake queue was {pct(st(SY, bq, 'share'), 0)} of all jobs' lead time and accounted for the largest share of the extra days on "
              f"late jobs: {d2(st(SY, bq, 'late'))} days against {d2(st(SY, bq, 'on time'))} for on-time jobs. This was due to the first quarter's backlog: the "
              f"2024 year-end build released more work than the brakes could absorb and put {n0(q1['late_jobs'])} of the year's {n0(ya['late_jobs'])} late jobs "
@@ -702,7 +702,7 @@ def report():
     b.append("<div class='glossary'>WIP: jobs released and not shipped. Quoted lead time: 10 working days for repeat parts, 15 for new parts, "
              "20 with outside processing. On time: shipped on or before the promised date as last revised.</div>")
     toc = [("f1", ""), ("f2", "Actual vs. quoted lead times"), ("f3", "Lead time decomposition"), ("f4", ""), ("f5", ""),
-           ("f6", "Where late jobs spend their time"),
+           ("f6", "Late job lead time decomposition"),
            ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
     scope = (f"Jobs shipped in {YEAR}, whole year and {REST}; records from January 2023 to December 2025.<br>"
              f"Sources: ERP, shop-floor data collection, quality, maintenance and attendance exports (batch {batch}).")

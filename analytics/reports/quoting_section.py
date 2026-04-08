@@ -191,7 +191,7 @@ def quoting(n, start=100):
              f"explain under 1%. The backlog at release sees a build late: jobs released in {month(nov.name)} ran {d1(nov[f'bias|{A.CURRENT}'])} days over their quotes at "
              f"{d1(nov['backlog'])} days of backlog. {T.see('conditions')}</p>")
 
-    b.append(f"<h3 id='f{n}_1'>A more accurate quote</h3>")
+    b.append(f"<h3 id='f{n}_1'>Recommendation</h3>")
     co, cf = A.against_current(A.REC), A.against_current(A.REC_FIT)
     assert int((A.HISTORY[A.HISTORY["ship_date"] < f"{YEAR - 1}-12-01"]["brake_backlog_days"] >= 3).sum()) == 0
     b.append(f"<p>The recommended quote is the median lead time of jobs of the same routing class at the same brake backlog at release, refitted monthly from the jobs shipped; "
