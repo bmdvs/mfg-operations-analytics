@@ -10,14 +10,14 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from analytics.release_control.model import Inputs, Shop, generator_seed, measures, quarter_measures
+from analytics.release_control.model import Inputs, Shop, customer_measures, generator_seed, measures, quarter_measures
 
 OUT = Path(__file__).resolve().parent / "results" / "scenario_runs.csv"
 QUARTERS = Path(__file__).resolve().parent / "results" / "validation_quarters.csv"
+CUSTOMERS = Path(__file__).resolve().parent / "results" / "customer_delivery.csv"
 PEAK_MONTHS = (11, 12, 1, 2)
-MEASURES = ["lead_time_median", "lead_time_p90", "on_time_delivery", "wip_mean", "brake_utilization", "robotic_weld_utilization", "saturday_shifts",
-            "extended_hours", "jobs_shipped", "on_time_delivery_load_aware", "promises_longer_than_fixed_quote", "release_hold_days",
-            "on_time_delivery_quote_table", "promises_longer_quote_table"]
+MEASURES = ["on_time_delivery", "late_jobs", "days_late", "brake_queue_mean", "wip_mean", "brake_utilization", "lead_time_median", "lead_time_p90", "queue_mean_all",
+            "robotic_weld_utilization", "laser_utilization", "jobs_shipped", "saturday_shifts", "extended_hours", "release_hold_days"]
 
 SCENARIOS = {
     "S0 Current practice": {},
@@ -32,24 +32,15 @@ SCENARIOS = {
     "S5 Second shift on the robotic weld cell": {"second_shift": "R1"},
     "S6 Third weekly color day for black": {"extra_color_day": ("black", 4)},
     "S7 Planned Saturday brake shift, November to February": {"planned_saturday_months": PEAK_MONTHS},
+    "S7 Planned Saturday brake shift on both brakes, November to February": {"planned_saturday_months": PEAK_MONTHS, "planned_saturday_crew": "both"},
     "S8 Setup reduction": {"setup_reduction": True},
 }
 
 
-def combos(best_cap):
-    cap = {"wip_cap": best_cap}
-    return {
-        f"S10 WIP cap {best_cap} + earliest due date": {**cap, "dispatch": "edd"},
-        f"S10 WIP cap {best_cap} + earliest due date + weld second shift": {**cap, "dispatch": "edd", "second_shift": "R1"},
-        "S10 Planned Saturdays + light work on B1 and B2": {"planned_saturday_months": PEAK_MONTHS, "light_relief_days": 2.0},
-        f"S10 WIP cap {best_cap} + earliest due date + weld second shift + setup reduction": {**cap, "dispatch": "edd", "second_shift": "R1",
-                                                                                         "setup_reduction": True},
-    }
-
-
+PACKAGE = "Package Setup reduction + planned Saturdays on both brakes"
 PACKAGES = {
-    "Package 1 Setup reduction + weld second shift": {"setup_reduction": True, "second_shift": "R1"},
-    "Package 2 Setup reduction + weld second shift + planned Saturdays": {"setup_reduction": True, "second_shift": "R1", "planned_saturday_months": PEAK_MONTHS},
+    PACKAGE: {"setup_reduction": True, "planned_saturday_months": PEAK_MONTHS, "planned_saturday_crew": "both"},
+    "Package + earliest due date": {"setup_reduction": True, "planned_saturday_months": PEAK_MONTHS, "planned_saturday_crew": "both", "dispatch": "edd"},
 }
 
 
@@ -96,24 +87,27 @@ def run_one(args):
         sc["setup_reduction"] = _RED
     shop = Shop(_INP, generator_seed(name, rep), scenario=sc).run()
     rows = []
-    for fq, label in ((1, "year"), (2, "Q2 to Q4")):
+    for fq, label in ((1, "year"), (2, "Q2 to Q4"), (3, "Q3 to Q4")):
         m = measures(shop, fq)
         rows.append(dict(scenario=name, replication=rep, period=label, **m))
     quarters = quarter_measures(shop).assign(replication=rep).to_dict("records") if name.startswith("S0") else []
-    return rows, quarters
+    customers = [dict(scenario=name, replication=rep, **c) for c in customer_measures(shop)]
+    return rows, quarters, customers
 
 
-def run(scenarios, reps, workers):
+def run(scenarios, reps, workers, quarters_to=QUARTERS, customers_to=CUSTOMERS):
     tasks = [(n, sc, k + 1) for n, sc in scenarios.items() for k in range(reps)]
-    rows, quarters = [], []
+    rows, quarters, customers = [], [], []
     with ProcessPoolExecutor(max_workers=workers) as ex:
         for i, r in enumerate(ex.map(run_one, tasks, chunksize=2)):
             rows.extend(r[0])
             quarters.extend(r[1])
+            customers.extend(r[2])
             if (i + 1) % 30 == 0:
                 print(f"{i + 1} of {len(tasks)} runs", flush=True)
-    if quarters:
-        pd.DataFrame(quarters).to_csv(QUARTERS, index=False)
+    if quarters and quarters_to is not None:
+        pd.DataFrame(quarters).to_csv(quarters_to, index=False)
+    pd.DataFrame(customers).to_csv(customers_to, index=False)
     return pd.DataFrame(rows)
 
 
@@ -135,28 +129,13 @@ def summarize(df):
     return pd.DataFrame(out)
 
 
-def best_cap(summary):
-    """The cap with the highest Q2 to Q4 on-time delivery among those that ship no fewer jobs than current practice."""
-    s = summary[(summary["scenario"].str.startswith("S1 ")) & (summary["period"] == "Q2 to Q4")]
-    ok = s[(s["measure"] == "jobs_shipped") & (s["diff_high"] >= 0)]["scenario"]
-    otd = s[(s["measure"] == "on_time_delivery") & s["scenario"].isin(ok)].sort_values("mean", ascending=False)
-    pick = otd.iloc[0]["scenario"] if len(otd) else s[s["measure"] == "on_time_delivery"].sort_values("mean", ascending=False).iloc[0]["scenario"]
-    return int(pick.split()[-1])
-
-
 if __name__ == "__main__":
     reps = int(sys.argv[1]) if len(sys.argv) > 1 else 30
     workers = int(sys.argv[2]) if len(sys.argv) > 2 else 6
     out = Path(sys.argv[3]) if len(sys.argv) > 3 else OUT
     only = sys.argv[4].split("|") if len(sys.argv) > 4 else None
-    if only:
-        every = {**SCENARIOS, **combos(240), **PACKAGES}
-        run({n: every[n] for n in only}, reps, workers).to_csv(out, index=False)
-        sys.exit(0)
-    df = run({**SCENARIOS, **PACKAGES}, reps, workers)
-    df.to_csv(out, index=False)
-    cap = best_cap(summarize(df))
-    print("best cap", cap, flush=True)
-    df = pd.concat([df, run(combos(cap), reps, workers)], ignore_index=True)
-    df.to_csv(out, index=False)
+    every = {**SCENARIOS, **PACKAGES}
+    side = out.parent if out != OUT else None                # a second run writes all of its files beside its runs
+    run({n: sc for n, sc in every.items() if not only or n in only}, reps, workers, quarters_to=side / QUARTERS.name if side else QUARTERS,
+        customers_to=side / CUSTOMERS.name if side else CUSTOMERS).to_csv(out, index=False)
     print("wrote", out)
