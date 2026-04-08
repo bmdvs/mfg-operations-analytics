@@ -144,7 +144,7 @@ def t_measured(short=False):
         ["Laser utilization, weeks of November 11, 18 and 25, 2024", ", ".join(f"{x:.2f}" for x in nv["laser_utilization"]) +
          f" ({join_and([n0(x) for x in nv['wip_at_laser']])} jobs waiting)", "[[N:lead]]"],
         ["Robotic weld utilization", f"{M['robotic_weld_utilization']:.3f}", "[[N:capacity]]"],
-        ["Saturday brake shifts and extended hours", f"{n0(M['saturday_shifts'])} shifts, {n0(M['extended_hours'])} hours", "[[N:quoting]]"],
+        ["Saturday brake shifts and extended hours", f"{n0(M['saturday_shifts'])} shifts, {n0(M['extended_hours'])} hours", "[[N:lead]]"],
         [f"Revenue of jobs shipped in {YEAR}", usd(M["revenue"]), "ERP"],
         ["Crewed brake hours worked", n0(M["brake_hours"]), "[[N:capacity]]"],
         ["Revenue per brake hour", usd(M["revenue_per_brake_hour"]), "the two lines above"],
