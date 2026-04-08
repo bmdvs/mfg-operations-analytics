@@ -31,7 +31,7 @@ def table_order(body, held):
 
 
 def arrange(body, toc):
-    """Five sections: flow and work in process, lead time and late jobs, the last two with their parts under unnumbered headings, then quoting and early warning;
+    """Four sections: flow and work in process, lead time and late jobs, the last two with their parts under unnumbered headings, then quoting;
     the appendix tables follow that order."""
     start = body.index("<h2 id='f1'>")
     end = body.index("<h2 id='appendix'>")
@@ -47,7 +47,7 @@ def arrange(body, toc):
         for k, m in enumerate(members, 1):
             out.append((f"<h3 id='f{n}_{k}'>{old[m][0]}</h3>" if old[m][0] else "") + old[m][1])      # a part with no title opens the section
     tables = ""
-    for title, build in ((quoting_section.QUOTING, quoting_section.quoting), (quoting_section.WARNING, quoting_section.early_warning)):
+    for title, build in ((quoting_section.QUOTING, quoting_section.quoting),):
         n = len(new_toc) + 1
         text, appendix = build(n, start=100 * n)
         out.append(f"<h2 id='f{n}'>{n}. {title}</h2>" + text)
