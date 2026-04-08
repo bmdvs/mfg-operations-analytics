@@ -316,16 +316,16 @@ def report():
              f"Jobs were released late when they went to the floor with fewer working days to the due date than the job's quoted lead time; "
              f"this was the largest driver on {n0(r['dominant']['released late'])} of the {n0(len(LR))} ({pct(r['dominant']['released late'] / len(LR), 0)}) late jobs in {REST}. {see(1, 5, 6)}</p>")
     queues = [k for k in NAYs.index if k.startswith("queue:") or k == "first-operation queue"]
-    b.append(f"<p>{pct(ys['not attributable'], 0)} of lost days in {YEAR} and {pct(rs['not attributable'], 0)} in {REST} have no attribution. Of the "
-             f"{n0(NAY.sum())} non-attributed lost days in {YEAR}, {pct(NAYs[queues].sum(), 0)} was from work center queue time above on-time median but below "
-             f"the attribution threshold, {pct(NAYs['setup and run'], 0)} from setup and run time above normal with no overrun or rework recorded, and "
-             f"{pct(NAYs['move'], 0)} from movement between stages. The remainder have no single discernible driver. {see(9, 10)}</p>")
     b.append(chart("Lost days by attributed driver", fig_causes()))
     b.append(f"<p>The chart below shows where on the floor the lost days were incurred: each work center's lost days in {YEAR} and in {REST}, split by attributed "
              f"driver. It excludes the days attributed to jobs released late ({n0(y['days']['released late'])} of the {n0(y['total'])} lost days in {YEAR} and "
              f"{n0(r['days']['released late'])} of the {n0(r['total'])} in {REST}), since those days are lost at order entry, before the job reaches a work "
              f"center.</p>")
     b.append(chart("Lost days by work center and attributed driver", fig_work_center()))
+    b.append(f"<p>{pct(ys['not attributable'], 0)} of lost days in {YEAR} and {pct(rs['not attributable'], 0)} in {REST} have no attribution. Of the "
+             f"{n0(NAY.sum())} non-attributed lost days in {YEAR}, {pct(NAYs[queues].sum(), 0)} was from work center queue time above on-time median but below "
+             f"the attribution threshold, {pct(NAYs['setup and run'], 0)} from setup and run time above normal with no overrun or rework recorded, and "
+             f"{pct(NAYs['move'], 0)} from movement between stages. The remainder have no single discernible driver. {see(9, 10)}</p>")
 
     b.append("<h2 id='f2'>2. The shop's own records</h2>")
     b.append(f"<p>Late-reason codes are inputted retroactively on late jobs by the customer service team during the weekly delivery review. These codes are pulled "
