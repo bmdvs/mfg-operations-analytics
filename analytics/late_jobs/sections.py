@@ -296,6 +296,10 @@ def chart(title, img):
     return f"<div class='chart-title'>{title}</div>{img}"
 
 
+def just(n):
+    return "none" if n == 0 else f"just {n0(n)}"
+
+
 def report():
     y, r = CA["year"], CA[REST]
     ys, rs = y["share"], r["share"]
@@ -303,7 +307,7 @@ def report():
     b.append("<h2 id='f1'>1. Drivers behind late jobs</h2>")
     b.append(f"<p>In {YEAR}, the shop had {n0(len(LY))} late jobs that shipped a total of {n0(y['total'])} days late (average of {d1(y['total'] / len(LY))} days late "
              f"for each job), with {n0(len(LR))} of these late jobs ({pct(len(LR) / len(LY), 0)}) in {REST} that shipped a total of {n0(r['total'])} days late "
-             f"(average of {d1(r['total'] / len(LR))} days late for each).</p>")
+             f"(average of {d1(r['total'] / len(LR))} days late for each). See Appendix Tables 7 and 8 for lost days by customer.</p>")
     b.append("<p>We analyzed the ERP and shop-floor records to arrive at an attribution of lost days (i.e., how many days late the jobs shipped) by driver. "
              "For each late job, we considered how many days it ran longer than an on-time job of the same routing class at each stage, as well as material "
              "holds and late purchase order receipts. We then assigned each job to a driver.</p>")
@@ -312,9 +316,8 @@ def report():
              f"{pct(ys['material'], 0)} and {pct(ys['outside processing'], 0)}, respectively. In {REST}, jobs that were released late accounted for "
              f"{pct(rs['released late'], 0)} of the {n0(r['total'])} lost days, with queue constraint ({pct(rs['constraint queue'], 0)}), material "
              f"({pct(rs['material'], 0)}) and outside processing ({pct(rs['outside processing'], 0)}) the other main drivers.</p>")
-    b.append(f"<p>Jobs were released late when they went to the floor with fewer working days to the promised shipment date than the standard quoted lead time for "
-             f"their routing class; this was the largest driver on {n0(r['dominant']['released late'])} of the {n0(len(LR))} ({pct(r['dominant']['released late'] / len(LR), 0)}) late jobs in {REST}. Each such release "
-             f"should be a decision: flag the job as a rush, with a named approver, and count and monitor these releases weekly. {see(1, 5, 6)}</p>")
+    b.append(f"<p>Jobs were released late when they went to the floor with fewer working days to the due date than the job's quoted lead time; "
+             f"this was the largest driver on {n0(r['dominant']['released late'])} of the {n0(len(LR))} ({pct(r['dominant']['released late'] / len(LR), 0)}) late jobs in {REST}. {see(1, 5, 6)}</p>")
     queues = [k for k in NAYs.index if k.startswith("queue:") or k == "first-operation queue"]
     b.append(f"<p>{pct(ys['not attributable'], 0)} of lost days in {YEAR} and {pct(rs['not attributable'], 0)} in {REST} have no attribution. Of the "
              f"{n0(NAY.sum())} non-attributed lost days in {YEAR}, {pct(NAYs[queues].sum(), 0)} was from work center queue time above on-time median but below "
@@ -346,9 +349,9 @@ def report():
              f"attributed cause on just {pct(AG['year']['agree'])} of coded late jobs against the {pct(AG['year']['chance'])} expected had the codes been assigned at random "
              f"({pct(AG[REST]['agree'])} against {pct(AG[REST]['chance'])} in {REST}). Queue constraint is the largest attributed driver on just "
              f"{pct(cq['capacity'], 0)} of the jobs coded capacity, while being misattributed across the rest (making up {pct(cq['blank'], 0)} of the jobs with no "
-             f"code and {cq[rest_codes].min() * 100:.0f}-{pct(cq[rest_codes].max(), 0)} of the other drivers). Material is the largest cause on just {n0(cross_all.loc['material', 'material'])} of the {n0(cross_all.loc['material'].sum())} "
-             f"({pct(cross_all.loc['material', 'material'] / cross_all.loc['material'].sum(), 0)}) jobs coded material, outside processing on just {n0(cross_all.loc['outside processing', 'outside processing'])} of the "
-             f"{n0(cross_all.loc['outside processing'].sum())} coded outside processing ({pct(cross_all.loc['outside processing', 'outside processing'] / cross_all.loc['outside processing'].sum(), 0)}) and quality on just {n0(cross_all.loc['quality', 'quality'])} of the "
+             f"code and {cq[rest_codes].min() * 100:.0f}-{pct(cq[rest_codes].max(), 0)} of the other drivers). Material is the largest cause on {just(cross_all.loc['material', 'material'])} of the {n0(cross_all.loc['material'].sum())} "
+             f"({pct(cross_all.loc['material', 'material'] / cross_all.loc['material'].sum(), 0)}) jobs coded material, outside processing on {just(cross_all.loc['outside processing', 'outside processing'])} of the "
+             f"{n0(cross_all.loc['outside processing'].sum())} coded outside processing ({pct(cross_all.loc['outside processing', 'outside processing'] / cross_all.loc['outside processing'].sum(), 0)}) and quality on {just(cross_all.loc['quality', 'quality'])} of the "
              f"{n0(cross_all.loc['quality'].sum())} ({pct(cross_all.loc['quality', 'quality'] / cross_all.loc['quality'].sum(), 0)}) coded quality. Of the {n0(rel.sum())} jobs where released late is the largest attributed driver, "
              f"{n0(rel['capacity'])} are coded capacity, {n0(rel['blank'])} carry no code and {n0(rel['other'])} are coded other. {see(3, 4)}</p>")
     b.append("<p>To increase the accuracy and usefulness of its late-reason codes, the shop should consider process changes to (i) include additional options "
@@ -359,8 +362,8 @@ def report():
     b.append("<p>Replace the late-reason code on the shipment with a buffer status record kept by production control: each job's time buffer in thirds, and a reason "
              "captured when the job turns red, from this list: promise inside the standard lead time; queue at a named work center; material short at the first cut; "
              "outside processing late; quality; hold by reason; not attributed. Review the record weekly in place of the late-reason Pareto.</p>")
-    b.append("<p>Require the rush flag and a named approver on every promise inside the standard lead time ([[R:quoting]] sizes the quote). Extend the kit check to stock sheet "
-             "items ([[R:quoting]] measures kit completeness).</p>")
+    b.append("<p>Require the rush flag and a named approver on every promise inside the standard lead time (Section 4 sizes the quote). Extend the kit check to stock sheet "
+             "items (Section 4 measures kit completeness).</p>")
 
     b.append("<h2 id='method'>Method and data</h2>")
     b.append(f"<p>Coverage: {n0(len(LY))} late jobs and {n0(y['total'])} lost days in {YEAR}; {n0(len(LR))} and {n0(r['total'])} in {REST}. A job's lost days are its "
@@ -398,8 +401,8 @@ def report():
 COUNTERMEASURES = [
     ("Replace the late-reason code with a buffer status record: time buffer in thirds, reason captured when a job turns red, weekly review", "Production control manager",
      "March 2026"),
-    ("Require the rush flag and a named approver on every promise inside the standard lead time ([[R:quoting]] sizes the quote)", "Customer service manager", "February 2026"),
-    ("Extend the kit check to stock sheet items ([[R:quoting]] measures kit completeness)", "Purchasing manager", "March 2026"),
+    ("Require the rush flag and a named approver on every promise inside the standard lead time (Section 4 sizes the quote)", "Customer service manager", "February 2026"),
+    ("Extend the kit check to stock sheet items (Section 4 measures kit completeness)", "Purchasing manager", "March 2026"),
 ]
 
 
