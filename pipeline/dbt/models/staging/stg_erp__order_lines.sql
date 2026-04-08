@@ -13,5 +13,6 @@ select
     cast(unit_price as double) as unit_price,
     cast(rush_flag as boolean) as rush_flag,
     quote_line_id,
+    cast(quoted_lead_time_days as integer) as quoted_lead_time_days,
     line_status
 from {{ source('erp', 'erp__order_lines') }}

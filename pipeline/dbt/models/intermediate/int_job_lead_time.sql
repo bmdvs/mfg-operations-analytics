@@ -1,4 +1,5 @@
--- One row per job: quoted lead time class, promise, ship, lead time in working days and lateness.
+-- One row per job: routing class and its standard lead time, the lead time quoted on the order line, promise, ship, lead time in working days
+-- and lateness.
 -- Lead time runs from the release date at 10:00 to the ship date at 15:00 on the working-day clock.
 with outside as (
     select distinct job_id from {{ ref('stg_erp__job_operations') }} where work_center = 'outside_processing'
@@ -6,7 +7,7 @@ with outside as (
 line as (
     -- a new-part line is the first order against a new-part quote line, placed within 60 days of the quote decision;
     -- later orders against the same quote line are repeat parts
-    select ol.order_line_id, ol.rush_flag, ol.order_date, ol.promised_date, ol.original_promised_date, ol.promise_revision_count,
+    select ol.order_line_id, ol.rush_flag, ol.order_date, ol.promised_date, ol.original_promised_date, ol.promise_revision_count, ol.quoted_lead_time_days,
         coalesce(ql.new_part, false)
             and row_number() over (partition by ol.quote_line_id order by ol.order_date, ol.order_line_id) = 1
             and ol.order_date - q.decision_date <= 60 as new_part
@@ -20,7 +21,9 @@ base as (
         p.family,
         l.rush_flag, l.original_promised_date, l.promise_revision_count,
         case when o.job_id is not null then 'outside processing' when l.new_part then 'new part' else 'repeat part' end as routing_class,
-        case when o.job_id is not null then 20 when l.new_part then 15 else 10 end as quoted_lead_days,
+        case when o.job_id is not null then 20 when l.new_part then 15 else 10 end as standard_lead_days,
+        -- the lead time quoted on the order line: the standard with the estimators' adders
+        coalesce(l.quoted_lead_time_days, case when o.job_id is not null then 20 when l.new_part then 15 else 10 end) as quoted_lead_days,
         s.on_time,
         cast(j.release_date as timestamp) + interval 10 hour as release_ts,
         cast(j.ship_date as timestamp) + interval 15 hour as ship_ts
