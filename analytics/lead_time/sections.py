@@ -142,8 +142,10 @@ BRAKE_QUEUE = {"year": float(_sd[(_sd["stage"] == "queue") & (_sd["work_center"]
                "rest": float(_sd[(_sd["stage"] == "queue") & (_sd["work_center"] == "press_brake") & (_sd["ship_quarter"] >= 2)]["days"].sum() / (jobs["ship_quarter"] >= 2).sum())}
 
 # working days from the due date to the ship date for every job shipped in the year: negative is early
-AFTER = q(f"""select cs.wd_index - cd.wd_index as days_after, quarter(j.ship_date) as ship_quarter from marts.mart_job_lead_time j
+AFTER = q(f"""select cs.wd_index - cd.wd_index as days_after, quarter(j.ship_date) as ship_quarter, cr.wd_index - co.wd_index > j.quoted_lead_days as requested_past_quote
+              from marts.mart_job_lead_time j join staging.stg_erp__jobs sj using (job_id) join staging.stg_erp__order_lines ol on ol.order_line_id = sj.order_line_id
               join intermediate.int_working_days cs on cs.calendar_date = j.ship_date join intermediate.int_working_days cd on cd.calendar_date = j.due_date
+              left join intermediate.int_working_days cr on cr.calendar_date = ol.requested_date left join intermediate.int_working_days co on co.calendar_date = ol.order_date
               where year(j.ship_date) = {YEAR}""")
 assert len(AFTER) == len(jobs) and int((AFTER["days_after"] > 0).sum()) == int((~jobs["on_time"]).sum())
 EARLY, LATE_CAP = -6, 30
@@ -156,6 +158,8 @@ def after_counts(d):
 
 
 AY, AR = after_counts(AFTER), after_counts(AFTER[AFTER["ship_quarter"] >= 2])
+EARLY_SHARE = float(AY[EARLY] / AY.sum())
+assert float(AFTER[AFTER["days_after"] <= EARLY]["requested_past_quote"].fillna(False).mean()) > 0.5      # most of the early jobs: the customer asked for a date past the quote
 
 
 def stage_pivot(period):
@@ -636,7 +640,8 @@ def report():
     b.append(f"<p>A job's due date is the later of the quote and the customer's requested date. {pct(ya['on_time_delivery'], 0)} of jobs shipped by the due date in {YEAR} and {pct(ra['on_time_delivery'], 0)} in {RT}, against the "
              f"shop's {pct(required, 0)} target. The 90th-percentile lead time for all jobs is {d1(ya['lead_time_p90'])} days for {YEAR} and "
              f"{d1(ra['lead_time_p90'])} in {RT}. Late jobs have a median lead time of {d1(ya['lead_time_median_late'])} days against "
-             f"{d1(ya['lead_time_median_on_time'])} for on-time jobs. {see('5a', '8')}</p>")
+             f"{d1(ya['lead_time_median_on_time'])} for on-time jobs. At the other end, {pct(EARLY_SHARE, 0)} of jobs shipped in {YEAR} went out 6 or more working days before their due date, most of them on lines where "
+             f"the customer asked for a date past the quote; the shop releases each job when it is ordered and ships it when it is complete. {see('5a', '8')}</p>")
     b.append(chart(f"Working Days Shipped After the Due Date, {YEAR} and {RT}", fig_after_due()))
 
     b.append("<h2 id='f6'>6. Where late jobs spend their time</h2>")
