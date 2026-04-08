@@ -31,7 +31,7 @@ def table_order(body, held):
 
 
 def arrange(body, toc):
-    """Five sections: the job flow, work in process, lead time and late jobs, the last two with their parts under unnumbered headings, then quoting and early warning;
+    """Six sections: the job flow, work in process, lead time and late jobs, the last two with their parts under unnumbered headings, then quoting and early warning;
     the appendix tables follow that order."""
     start = body.index("<h2 id='f1'>")
     end = body.index("<h2 id='appendix'>")
@@ -46,10 +46,13 @@ def arrange(body, toc):
             continue
         for k, m in enumerate(members, 1):
             out.append((f"<h3 id='f{n}_{k}'>{old[m][0]}</h3>" if old[m][0] else "") + old[m][1])      # a part with no title opens the section
-    n = len(ORDER) + 1
-    text, tables = quoting_section.build()
-    out.append(f"<h2 id='f{n}'>{n}. {quoting_section.TITLE}</h2>" + text.replace("id='f4_", f"id='f{n}_"))
-    new_toc.append((f"f{n}", f"{n}. {quoting_section.TITLE}"))
+    tables = ""
+    for title, build in ((quoting_section.QUOTING, quoting_section.quoting), (quoting_section.WARNING, quoting_section.early_warning)):
+        n = len(new_toc) + 1
+        text, appendix = build(n, start=100 * n)
+        out.append(f"<h2 id='f{n}'>{n}. {title}</h2>" + text)
+        new_toc.append((f"f{n}", f"{n}. {title}"))
+        tables += appendix
     body = body[:start] + "\n".join(out) + body[end:]
     k = body.index("<div class='glossary'>")
     body = body[:k] + tables + body[k:]

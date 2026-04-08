@@ -32,7 +32,7 @@ def _lead_time():
     median, quote, rest = re.search(r"shipped in ([\d.]+) working days vs\. an average quoted lead time of ([\d.]+); in Q2-Q4, it was ([\d.]+) vs\.",
                                     section_text(LEAD, "f3_2")).groups()
     causes = re.search(r"In 2025, jobs waiting at work centers .*? respectively\.", section_text(LEAD, "f4_3")).group(0)
-    quoting = re.search(r"Quoting from the brake backlog at release, .*? of revenue\.", section_text(LEAD, "f5")).group(0)
+    quoting = re.search(r"The shop's quote misses the lead time .*? from \S+ to \S+ days\.", section_text(LEAD, "f5")).group(0)
     return (f"Queue at the brakes is {share} of lead time and the stage that separates late jobs from on-time jobs ({late} days against {on_time}); the median job "
             f"ships in {median} working days against an average quoted lead time of {quote}, {rest} in Q2-Q4. " + causes + " " + quoting)
 
