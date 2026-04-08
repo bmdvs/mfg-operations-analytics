@@ -207,6 +207,69 @@ def fig_changes():
     return save(f, "changes_that_work", "")
 
 
+KIND = {SETUP: "Permanent capacity at the brakes", CHANGER: "Permanent capacity at the brakes", CELL: "Permanent capacity at the brakes",
+        SAT_BOTH: "Seasonal capacity at the brakes", SAT_ONE: "Seasonal capacity at the brakes", WELD: "Capacity elsewhere", TOWER: "Capacity elsewhere"}
+KIND_COLOR = {"Permanent capacity at the brakes": BRAND_BLUE, "Seasonal capacity at the brakes": LIGHT_BLUE, "Capacity elsewhere": GREEN, "Release and dispatch rule": AMBER}
+NO_EFFECT, WORSE_FILL = "#D9D9D9", RED
+
+
+def fig_summary_effects():
+    """Every single scenario's change in on-time delivery for the year, sorted, filled by the kind of change where it works."""
+    names = sorted(A.RELEASE + A.CAPACITY, key=lambda s: chg(s, "on_time_delivery"))
+    f, ax = fig(h=5.0, grid="x")
+    y = np.arange(len(names))
+    for yi, s in zip(y, names):
+        v = chg(s, "on_time_delivery") * 100
+        verdict = A.VERDICT[s]
+        color = NO_EFFECT if verdict == "No effect" else WORSE_FILL if verdict == "Makes it worse" else KIND_COLOR[KIND.get(s, "Release and dispatch rule")]
+        ax.barh(yi, v, 0.66, color=color)
+        ax.annotate(sg(v), (v, yi), textcoords="offset points", xytext=(4 if v >= 0 else -4, 0), va="center", ha="left" if v >= 0 else "right", fontsize=8.5)
+    ax.axvline(0, color="#333333", lw=1)
+    ax.set_yticks(y)
+    ax.set_yticklabels(names, fontsize=9)
+    lo, hi = ax.get_xlim()
+    ax.set_xlim(lo - 1.2, hi + 1.2)
+    ax.set_xlabel(f"Change in on-time delivery, {YEAR} (points)")
+    f.legend([Patch(color=c) for c in KIND_COLOR.values()] + [Patch(color=NO_EFFECT), Patch(color=WORSE_FILL)], list(KIND_COLOR) + ["No effect", "Makes it worse"], frameon=False,
+             fontsize=8.5, ncol=3, loc="lower center")
+    f.tight_layout(rect=(0, 0.1, 1, 1))
+    return save(f, "summary_effects", "")
+
+
+def fig_summary_steps(package, cell, weld):
+    """On-time delivery from current practice to the package and the package with the robotic cell, each with its cost and return; the weld cell second shift beside them."""
+    f, axes = fig(h=4.0, ncols=2, gridspec_kw=dict(width_ratios=[3.1, 1], wspace=0.28))
+    ax = axes[0]
+    base, pk, pc_ = (A.mean(s, "on_time_delivery") * 100 for s in (CURRENT, PACKAGE, P_CELL))
+    steps = [("Current practice", base, None, GREY),
+             ("Operating package" + chr(10) + f"{usd(package['one_time'])};" + chr(10) + f"pays back in {package['payback']:.1f} years", pk, pk - base, BRAND_BLUE),
+             ("Package with the robotic cell" + chr(10) + f"{musd(cell['one_time'])}; breaks even at" + chr(10) + f"{n0(cell['hours'])} brake hours sold a year", pc_, pc_ - pk, GREEN)]
+    floor = 70.0
+    for k, (_, v, step, color) in enumerate(steps):
+        prev = steps[k - 1][1] if k else floor
+        if k:
+            ax.bar(k, prev - floor, 0.62, bottom=floor, color="#E6E6E6")
+        ax.bar(k, v - (prev if k else floor), 0.62, bottom=prev if k else floor, color=color)
+        ax.annotate(f"{v:.1f}%" + ("" if step is None else chr(10) + f"{sg(step)} points"), (k, v), textcoords="offset points", xytext=(0, 3), ha="center", fontsize=9)
+    ax.set_xticks(range(len(steps)))
+    ax.set_xticklabels([s[0] for s in steps], fontsize=8.5)
+    ax.set_ylim(floor, 96)
+    ax.set_ylabel("On-time delivery (%)")
+    ax.set_title(f"{YEAR}", fontsize=10)
+    ax = axes[1]
+    b0, b1 = A.mean(CURRENT, "on_time_delivery", "rest") * 100, A.mean(WELD, "on_time_delivery", "rest") * 100
+    ax.bar(0, b0 - floor, 0.5, bottom=floor, color="#E6E6E6")
+    ax.bar(0, b1 - b0, 0.5, bottom=b0, color=KIND_COLOR["Capacity elsewhere"])
+    ax.annotate(f"{b1:.1f}%" + chr(10) + f"{sg(b1 - b0)} point in {RT}", (0, b1), textcoords="offset points", xytext=(0, 3), ha="center", fontsize=9)
+    ax.set_xticks([0])
+    ax.set_xticklabels(["Weld cell second shift" + chr(10) + f"about {usd(round(weld['weld'], -3))}" + chr(10) + "a year"], fontsize=8.5)
+    ax.set_xlim(-0.7, 0.7)
+    ax.set_ylim(floor, 96)
+    ax.set_title(RT, fontsize=10)
+    f.subplots_adjust(left=0.08, right=0.99, top=0.92, bottom=0.2)
+    return save(f, "summary_steps", "")
+
+
 def fig_capital():
     f, ax = fig(h=3.2, grid="x")
     rows = [(CHANGER, P_CHANGER, "Tool changer on B3"), (TOWER, P_TOWER, "Laser tower on L2"), (CELL, P_CELL, "Robotic bending cell")]
@@ -476,20 +539,20 @@ def build():
 
     b = ["<h2 id='summary'>Executive Summary</h2>"]
     _pk, _cell, _weld = A.money(PACKAGE), A.money(P_CELL, PACKAGE), A.money(WELD)
-    b.append(f"<p>This report tests changes to the shop's release, dispatch and capacity on a discrete event simulation of the floor that replays every job the shop released in "
-             f"{YEAR - 1} and {YEAR}, under its own shift calendars, dispatch rules and recorded downtime, with setup, run, move and material times drawn from its {YEAR} record. Each "
-             f"change runs 30 times against the same jobs. Under current practice the model reproduces {YEAR} within tolerance on all ten measures set before it was run: "
-             f"{pc(model_otd['year'])} on time against {pc(measured_otd['year'])} measured, {pc(model_otd['rest'])} against {pc(measured_otd['rest'])} in {RT}, and a year-end build "
-             f"that peaks at {n0(bd['peak_model'])} jobs against {n0(bd['peak_measured'])} in the same week (<a href='#f4'>Section 4</a>).</p>")
-    b.append("<p>Changes that add brake hours raise on-time delivery; changes to the order or release of work do not. The setup program, planned Saturday brake shifts, a tool "
-             "changer on B3 and a robotic bending cell each work in a year with a build, and a second shift on the robotic weld cell is the one change that moves an ordinary quarter. "
-             "WIP caps, critical ratio and shortest processing time make delivery worse, and earliest due date removes late jobs without removing days late.</p>")
-    b.append(f"<p>The operating package, the setup program with planned Saturdays on both brakes, raises on-time delivery from {pc(model_otd['year'])} to "
-             f"{pc(A.mean(PACKAGE, 'on_time_delivery'))} for {usd(_pk['one_time'])} and pays back in {d1(_pk['payback'])} years if {n0(_pk['hours'])} of the brake hours it frees are sold "
-             f"each year. On top of it, the robotic cell adds {d1(chg(P_CELL, 'on_time_delivery', 'year', PACKAGE) * 100)} points and returns {musd(_cell['npv'][0])} if half its freed "
-             f"hours are sold, breaking even at {n0(_cell['hours'])} hours a year; the tool changer does not pay at half sold. The weld cell second shift is a separate decision: "
-             f"{sg(chg(WELD, 'on_time_delivery', 'rest') * 100)} point in an ordinary quarter for about {usd(round(_weld['weld'], -3))} a year.</p>")
-    assert ten["within"].all() and bd["peak_week"] == bd["peak_week_model"]
+    assert ten["within"].all() and bd["peak_week"] == bd["peak_week_model"] and A.money(P_CHANGER, PACKAGE)["npv"][2] < 0
+    tile = lambda v, l: f"<div class='kpi'><div class='v'>{v}</div><div class='l'>{l}</div></div>"
+    b.append(f"<p>A discrete event simulation of the floor replays every job released in {YEAR - 1} and {YEAR} under the shop's own calendars, dispatch rules and recorded downtime, "
+             f"and reproduces {YEAR} within tolerance on all ten measures set before it was run (<a href='#f4'>Section 4</a>).</p>")
+    b.append("<div class='kpis'>" + tile(pc(model_otd["year"]), f"On-time delivery, {YEAR} (shop {pc(measured_otd['year'])})")
+             + tile(pc(model_otd["rest"]), f"On-time delivery, {RT} (shop {pc(measured_otd['rest'])})")
+             + tile(f"{n0(bd['peak_model'])} jobs", f"Year-end build peak (shop {n0(bd['peak_measured'])})") + "</div>")
+    b.append("<p>Changes that add brake hours raise on-time delivery; changes to the order or release of work do not (<a href='#f2'>Section 2</a>).</p>")
+    b.append(titled(fig_summary_effects(), f"Change in On-time Delivery by Scenario, {YEAR}"))
+    b.append(f"<div class='caption'>The weld cell second shift works in {RT} ({sg(chg(WELD, 'on_time_delivery', 'rest') * 100)} point).</div>")
+    b.append("<p>The operating package is the first step; the robotic cell is the second if the shop can sell the brake hours it frees (<a href='#f3'>Section 3</a>).</p>")
+    b.append(titled(fig_summary_steps(_pk, _cell, _weld), f"On-time Delivery From Current Practice, With Cost and Return, {YEAR}"))
+    b.append("<div class='caption'>The tool changer on B3 does not pay back at half its freed hours sold.</div>")
+    b.append("<p>The operating package pairs a permanent change, the setup program, with a seasonal one, planned Saturdays on both brakes from November through February.</p>")
     # 1 ── the scenarios
     b.append("<h2 id='f1'>1. The Scenarios Simulated</h2>")
     b.append(f"<p>{link('capacity', 'The capacity report')} finds the brakes are the constraint: they hold {pc(M['brake_share_of_queue'], 0)} of queue time and lose "
