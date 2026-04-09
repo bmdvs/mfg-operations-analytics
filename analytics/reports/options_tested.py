@@ -275,10 +275,18 @@ def fig_summary_steps(package, cell):
     return save(f, "summary_steps", "")
 
 
+# the rows of the two return charts: a scenario, what it is measured against, and its label
+CHARTED = [(SETUP, CURRENT, "Brake setup program"), (SAT_BOTH, CURRENT, "Planned Saturdays (both brakes)"), (PACKAGE, CURRENT, "Operating package"),
+           (CHANGER, CURRENT, "Tool-changing brake, alone"), (P_CHANGER, PACKAGE, "Tool-changing brake, on top of the package"),
+           (CELL, CURRENT, "Robotic bending cell, alone"), (P_CELL, PACKAGE, "Robotic bending cell, on top of the package")]
+# the rows of the table of what is measured and not priced
+NOT_PRICED = [(SETUP, CURRENT), (SAT_BOTH, CURRENT), (PACKAGE, CURRENT), (WELD, CURRENT), (CELL, CURRENT), (P_CELL, PACKAGE), (CHANGER, CURRENT), (P_CHANGER, PACKAGE)]
+
+
 def fig_npv(money):
-    f, ax = fig(h=3.6, grid="x")
-    y = np.arange(len(RETURN))[::-1]
-    for yi, (sc, ref) in zip(y, RETURN):
+    f, ax = fig(h=4.0, grid="x")
+    y = np.arange(len(CHARTED))[::-1]
+    for yi, (sc, ref, _) in zip(y, CHARTED):
         m = money[sc]
         left = 0.0
         for v, c in ((m["one_time"], RED), (m["added"] * A.ANNUITY, AMBER)):
@@ -294,7 +302,7 @@ def fig_npv(money):
         ax.annotate(musd(m["npv"][0]), (max(right, t[2]), yi), textcoords="offset points", xytext=(6, 0), va="center", fontsize=8.5)
     ax.axvline(0, color="#333333", lw=1)
     ax.set_yticks(y)
-    ax.set_yticklabels([name(sc) for sc, _ in RETURN], fontsize=9)
+    ax.set_yticklabels([lab for _, _, lab in CHARTED], fontsize=9)
     ax.set_xlabel(f"Present value over {A.F['horizon_years']} years at {A.F['discount_rate']:.0%} ($ million)")
     lo, hi = ax.get_xlim()
     ax.set_xlim(lo, hi + (hi - lo) * 0.08)
@@ -305,14 +313,14 @@ def fig_npv(money):
 
 
 def fig_sold(money):
-    f, ax = fig(h=3.8)
+    f, ax = fig(h=4.2)
     x = np.linspace(0, 1, 41)
-    colors = {SETUP: LIGHT_BLUE, PACKAGE: BRAND_BLUE, P_CELL: GREEN, P_CHANGER: AMBER, WELD: GREY, SAT_BOTH: RED}
-    for sc, ref in RETURN:
+    colors = {SETUP: LIGHT_BLUE, PACKAGE: BRAND_BLUE, P_CELL: GREEN, CELL: GREEN, P_CHANGER: AMBER, CHANGER: AMBER, SAT_BOTH: RED}
+    for sc, ref, lab in CHARTED:
         m = money[sc]
         v = np.array([A.npv_at(m, s) for s in x]) / 1e6
         even = m["share"] == m["share"] and 0 < m["share"] < 1
-        ax.plot(x * 100, v[:, 0], color=colors[sc], lw=1.8, label=name(sc) + (f": breaks even at {n0(m['hours'])} hours a year" if even else ""))
+        ax.plot(x * 100, v[:, 0], color=colors[sc], lw=1.8, ls="--" if sc in (CELL, CHANGER) else "-", label=lab + (f": breaks even at {n0(m['hours'])} hours a year" if even else ""))
         ax.fill_between(x * 100, v[:, 1], v[:, 2], color=colors[sc], alpha=0.15, lw=0)
         if even:
             ax.scatter([m["share"] * 100], [0], color=colors[sc], s=30, zorder=5)
@@ -322,7 +330,7 @@ def fig_sold(money):
     ax.set_xlabel("Share of freed brake hours sold (%)")
     ax.set_ylabel("NPV ($ million)")
     f.legend(*ax.get_legend_handles_labels(), frameon=False, fontsize=8.5, ncol=2, loc="lower center")
-    f.tight_layout(rect=(0, 0.14, 1, 1))
+    f.tight_layout(rect=(0, 0.19, 1, 1))
     return save(f, "return_npv_by_share_sold", "")
 
 
@@ -659,26 +667,30 @@ def build():
     # 3 ── return
     b.append("<h2 id='f3'>3. Return on the Changes That Work</h2>")
     mp, mc, mt, mw = money[PACKAGE], money[P_CELL], money[P_CHANGER], money[WELD]
+    ms, mca, mta = money[SETUP], money[CELL], money[CHANGER]
     assert all(money[sc]["net_without"] < 0 for sc, _ in RETURN) and mt["npv"][2] < 0 and mc["npv"][1] > 0
-    b.append(f"<p>Two decisions follow from the results, and they are separate. The operating package addresses the year-end build: it costs {usd(mp['one_time'])} once and "
-             f"{usd(round(mp['added'], -2))} a year, and returns that in {d1(mp['payback'])} years if half the {n0(mp['freed'])} brake hours it frees are sold, for an NPV of "
-             f"{musd(mp['npv'][0])}. On top of it the robotic cell returns {musd(mc['npv'][0])} with a payback of {d1(mc['payback'])} years and breaks even when {pc(mc['share'], 0)} of its "
-             f"freed hours are sold; the tool changer does not reach zero at half sold ({musd(mt['npv'][0])}) and needs {pc(mt['share'], 0)}. The weld cell second shift is the one lever "
-             f"that moves an ordinary quarter, at about {usd(round(mw['weld'], -3))} a year with no return in money. Nothing that costs money pays on cost savings alone.</p>")
-    b.append("<h3 id='f3_1'>What the changes cost and return</h3>")
-    b.append(f"<p>The return on each change is the brake hours it frees, if those hours are sold, plus overtime avoided, less what it costs to run. The operating package frees "
-             f"{n0(mp['freed'])} brake hours a year, worth {usd(round(mp['throughput'], -3))} at half sold, and adds {usd(round(mp['added_overtime'], -2))} of Saturday overtime; the robotic "
-             f"cell frees a further {n0(mc['freed'])} hours ({usd(round(mc['throughput'], -3))}) and costs {usd(round(mc['added'], -3))} a year to run, {usd(round(mc['cell'], -3))} of it "
-             f"its operator; the tool changer frees {n0(mt['freed'])} ({usd(round(mt['throughput'], -3))}). Overtime avoided is under {usd(np.ceil(max(money[sc]['avoided'] for sc, _ in RETURN) / 1000) * 1000)} a year for every change. The simulation "
-             f"replays the {YEAR} orders, so it ships within {n0(max(abs(chg(sc, 'jobs_shipped')) for sc, _ in RETURN))} jobs of current practice under every option; the throughput value "
-             f"is an assumption about sales, not a simulated result, and only brake hours carry it. Operator hours freed without a change in hours paid are not counted as money. Planned "
-             f"Saturdays add hours rather than free them; their return is in on-time delivery, not in this table. Payback is the one-time cost over the net a year, and NPV is the net a "
-             f"year over {A.F['horizon_years']} years at {A.F['discount_rate']:.0%} less the one-time cost, before tax; rates and prices are the shop's. "
-             f"{T.see('measures', 'cost')}</p>")
-    b.append(chart(f"Cost and Return, {YEAR}", t_cost(RETURN)))
+    five = (SETUP, SAT_BOTH, CHANGER, CELL, PACKAGE)
+    assert all(impact(A.diff(s, m), up) == "Positive Impact" for s in five for m, _, _, _, up in PANELS if m != "brake_utilization")
+    assert money[SAT_BOTH]["freed"] == 0 and money[SAT_BOTH]["npv"][2] < 0 and ms["npv"][0] > mp["npv"][0] and mta["npv"][1] < 0 < mta["npv"][2]
+    gain = lambda s: f"{sg(chg(s, 'on_time_delivery') * 100)}"
+    b.append(f"<p>Five changes improved on-time delivery in {YEAR} and moved the delivery mechanisms and outcomes with it: the brake setup program ({gain(SETUP)} points), planned "
+             f"Saturdays on both brakes ({gain(SAT_BOTH)}), the tool-changing brake ({gain(CHANGER)}), the robotic bending cell ({gain(CELL)}), and the operating package, which combines "
+             f"the first two ({gain(PACKAGE)}). Each shortened the brake queue, took jobs off the floor, and cut both late jobs and days late. This section sets what each change costs "
+             f"against what it returns. The return is the brake hours a change frees, valued at half of them sold at a {A.RH['contribution_margin_share']:.0%} margin, plus overtime "
+             f"avoided, less what the change costs to run; NPV is that net a year over {A.F['horizon_years']} years at {A.F['discount_rate']:.0%}, less the one-time cost, before tax. "
+             f"On-time delivery itself is not priced, so a change that adds hours rather than freeing them, such as planned Saturdays, shows a cost and no return.</p>")
+    assert A.SOLD == 0.5
     b.append(titled(fig_npv(money), f"What Makes Up Each Option's NPV, {YEAR}"))
+    b.append(f"<p>The operating package is recommended first: for {usd(mp['one_time'])} once and {usd(round(mp['added'], -2))} a year it raises on-time delivery "
+             f"{d1(chg(PACKAGE, 'on_time_delivery') * 100)} points, pays back in {d1(mp['payback'])} years and returns {musd(mp['npv'][0])}, breaking even if {n0(mp['hours'])} of the "
+             f"{n0(mp['freed'])} brake hours it frees are sold. It returns less than the setup program alone ({musd(ms['npv'][0])}) because its Saturdays add overtime and free no hours, "
+             f"and the package frees {n0(ms['freed'] - mp['freed'])} fewer brake hours than the setup program alone; what they buy is "
+             f"{d1((chg(PACKAGE, 'on_time_delivery') - chg(SETUP, 'on_time_delivery')) * 100)} more points of on-time delivery. The robotic bending cell is the capital option: on top of the "
+             f"package it adds {d1(chg(P_CELL, 'on_time_delivery', 'year', PACKAGE) * 100)} points and returns {musd(mc['npv'][0])} with a {d1(mc['payback'])}-year payback, breaking even "
+             f"at {n0(mc['hours'])} hours sold a year, and on its own it returns {musd(mca['npv'][0])}. The tool-changing brake does not pay on top of the package "
+             f"({musd(mt['npv'][0])}) and only breaks even on its own ({musd(mta['npv'][0])}). {T.see('measures', 'cost')}</p>")
 
-    b.append("<h3 id='f3_2'>When the freed hours are sold</h3>")
+    b.append("<h3 id='f3_1'>When the freed hours are sold</h3>")
     oc, ot_ = ordinary[P_CELL], ordinary[P_CHANGER]
     b.append(f"<p>Whether the capital options pay depends on one figure the simulation cannot supply: how many of the freed brake hours the shop sells. The package breaks even at "
              f"{n0(mp['hours'])} hours sold a year and the robotic cell at {n0(mc['hours'])}, against the {n0(M['brake_hours'])} brake hours the shop ran in {YEAR}; the tool changer needs "
@@ -686,7 +698,7 @@ def build():
              f"{musd(ordinary[PACKAGE]['npv'][0])}; the cell's is {musd(oc['npv'][0])} and the tool changer's {musd(ot_['npv'][0])}.</p>")
     b.append(titled(fig_sold(money), "NPV Against the Share of Freed Brake Hours Sold"))
 
-    b.append("<h3 id='f3_3'>What the money does not capture</h3>")
+    b.append("<h3 id='f3_2'>What the money does not capture</h3>")
     b.append(f"<p>Several effects of these changes are measured but not priced, and some are not measured at all. {T.see('customers')}</p>")
     base90 = A.lifted(CURRENT, 0.90)
 
@@ -712,19 +724,20 @@ def build():
 
     sats = A.mean(SAT_BOTH, "saturday_hours_winter") / 8 / M["operators"]
     sats_now = A.mean(CURRENT, "saturday_hours_winter") / 8 / M["operators"]
-    added_setup = chg(P_CELL, "brake_setup_hours", "year", PACKAGE)
+    added_setup, added_setup_alone = chg(P_CELL, "brake_setup_hours", "year", PACKAGE), chg(CELL, "brake_setup_hours")
+    cell_note = lambda h: (f"Runs only light, repeat parts in lots of 25 or more, so its value depends on that work staying {pc(M['cell_share'], 0)} of brake hours. Adds {n0(h)} setup hours a "
+                           f"year to the manual brakes. Needs in-house programming skills. Gives headroom to quote more work. It is the largest sum at risk and cannot be reversed.")
+    changer_note = "B3 is out of service while it is replaced. The effect is limited to B3's setups. One vendor maintains it."
     consider = {
         SETUP: "Depends on repeat setups going to the operators who know the part, and on a handover standard being kept. It narrows cross-training. It can be stopped at no cost.",
         SAT_BOTH: f"About {d1(sats)} Saturdays per brake operator from November to February, against {d1(sats_now)} today. Sustained weekend work raises fatigue, absence and turnover risk, "
                   f"while a planned shift is easier to staff than one called at short notice. The record has only {WORD[both_saturdays]} Saturdays with both brakes crewed.",
         PACKAGE: "Both of the above.",
         WELD: "One operator alone on the shift, with no programming or quality support on hand. The shop must hire for it and keep the post filled.",
-        P_CELL: f"Runs only light, repeat parts in lots of 25 or more, so its value depends on that work staying {pc(M['cell_share'], 0)} of brake hours. Adds {n0(added_setup)} setup hours a "
-                f"year to the manual brakes. Needs in-house programming skills. Gives headroom to quote more work. It is the largest sum at risk and cannot be reversed.",
-        P_CHANGER: "B3 is out of service while it is replaced. The effect is limited to B3's setups. One vendor maintains it."}
-    assert added_setup > 0
+        CELL: cell_note(added_setup_alone), P_CELL: cell_note(added_setup), CHANGER: changer_note, P_CHANGER: changer_note}
+    assert added_setup > 0 and added_setup_alone > 0
     b.append(chart("Measured but Not Priced, and Other Considerations",
-                   table(pd.DataFrame([[name(sc), unpriced(sc, ref), consider[sc]] for sc, ref in RETURN], columns=["Change", "Measured, not priced", "Considerations"]))))
+                   table(pd.DataFrame([[name(sc), unpriced(sc, ref), consider[sc]] for sc, ref in NOT_PRICED], columns=["Change", "Measured, not priced", "Considerations"]))))
     b.append(f"<p>The package comes first: {usd(mp['one_time'])} and Saturday overtime for {sg(pk[0] * 100)} points in a year with a build, and {n0(mp['hours'])} freed hours sold a year "
              f"covers it. The robotic cell follows if the shop can sell {n0(mc['hours'])} of the {n0(mc['freed'])} brake hours it frees; the tool changer only if it can sell "
              f"{n0(mt['hours'])} of {n0(mt['freed'])}. The weld cell second shift is a separate decision: {usd(round(mw['weld'], -3))} a year for {sg(chg(WELD, 'on_time_delivery', 'rest') * 100)} "
