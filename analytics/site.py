@@ -45,8 +45,10 @@ def _capacity():
 
 
 def _options():
-    lead = sentences(section_text(OPTIONS, "f2"))[0].rstrip(".") + "."
-    package = re.search(r"With the operating package the shop ships .*? in the year\.", section_text(OPTIONS, "f2_2")).group(0)
+    results = section_text(OPTIONS, "f2")
+    lead = re.search(r"Scenarios that added brake capacity improved on-time delivery\.", results).group(0) + " " + re.search(
+        r"Among the release and dispatch rules, only earliest due date improved on-time delivery\.", results).group(0)
+    package = re.search(r"The .Operating Package. combines .*? points to on-time delivery\.", results).group(0)
     money = re.search(r"The operating package addresses the year-end build: .*? and needs \d+%\.", section_text(OPTIONS, "f3")).group(0)
     return f"{lead} {package} {money}"
 
