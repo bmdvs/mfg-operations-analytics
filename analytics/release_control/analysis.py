@@ -28,15 +28,15 @@ NAME = {
     "S8 Setup reduction": "Brake setup program", "S7 Planned Saturday brake shift, November to February": "Add'l Saturdays (one brake)",
     "S7 Planned Saturday brake shift on both brakes, November to February": "Add'l Saturdays (both brakes)", "S5 Second shift on the robotic weld cell": "Second shift: robotic weld",
     "T Tool changer on B3": "Replace press brake B3", "T Laser tower on L2": "Automated sheet tower (L2)", "T Robotic bending cell": "New robotic bending cell",
-    "Package Setup reduction + planned Saturdays on both brakes": PACKAGE, "N Package + tool changer on B3": "Package + tool changer",
-    "N Package + laser tower on L2": "Package + laser tower", "N Package + robotic bending cell": "Package + robotic cell", "Package + earliest due date": "Package + earliest due date"}
+    "Package Setup reduction + planned Saturdays on both brakes": PACKAGE, "N Package + tool changer on B3": "Package + B3 replacement",
+    "N Package + laser tower on L2": "Package + sheet tower", "N Package + robotic bending cell": "Package + robotic bending cell", "Package + earliest due date": "Package + earliest due date"}
 KEY = {v: k for k, v in NAME.items()}
 assert set(ALL["scenario"]) == set(NAME), set(ALL["scenario"]) ^ set(NAME)
 RELEASE = ["WIP cap: 240 jobs", "WIP cap: 210 jobs", "WIP cap: 180 jobs", "Brake constraint-paced release", "Earliest due date", "Due-date ratio", "Shortest processing time at the brakes",
            "Prioritize light work at B1 and B2", "Third color day for black"]
 CAPACITY = ["Brake setup program", "Add'l Saturdays (one brake)", "Add'l Saturdays (both brakes)", "Second shift: robotic weld", "Replace press brake B3", "Automated sheet tower (L2)",
             "New robotic bending cell"]
-COMBOS = ["Package + tool changer", "Package + laser tower", "Package + robotic cell", "Package + earliest due date"]
+COMBOS = ["Package + B3 replacement", "Package + sheet tower", "Package + robotic bending cell", "Package + earliest due date"]
 EVERY = RELEASE + CAPACITY + [PACKAGE] + COMBOS
 PERIOD = {"year": "year", "rest": "Q2 to Q4", "second half": "Q3 to Q4"}
 OUTCOMES = [("on_time_delivery", "On-time delivery (points)", 1, True), ("late_jobs", "Late jobs", 0, False), ("days_late", "Days late", 0, False),
