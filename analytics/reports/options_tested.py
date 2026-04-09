@@ -7,13 +7,13 @@ import re
 import numpy as np
 import pandas as pd
 from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
+from matplotlib.patches import Patch, Rectangle
 
 from analytics.db import q
 from analytics.release_control import analysis as A
 from analytics.reports.combine import REPORTS
 from analytics.reports.layout import RT, Tables, block, chart, link, page, titled
-from analytics.style.style import AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BLUE, RED, fig, save_conformed as save, table
+from analytics.style.style import AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BLUE, RED, fig, save_conformed as save, sig, table
 
 YEAR = A.YEAR
 CURRENT, PACKAGE = A.CURRENT, A.PACKAGE
@@ -174,18 +174,21 @@ def fig_effects():
 
 WORKING = [SETUP, SAT_BOTH, SAT_ONE, WELD, CHANGER, CELL, EDD]
 # the outcomes of the chart of changes that work: measure, panel title, decimals, in points, and whether a rise is good for delivery (None: neither)
-PANELS = [("on_time_delivery", "On-time delivery" + chr(10) + "(points)", 1, True, True), ("wip_mean", "Floor WIP" + chr(10) + "(jobs)", 0, False, False),
-          ("late_jobs", "Late jobs" + chr(10), 0, False, False), ("days_late", "Days late" + chr(10), 0, False, False),
-          ("brake_utilization", "Brake" + chr(10) + "utilization (points)", 1, True, None), ("brake_queue_mean", "Brake queue (days" + chr(10) + "per operation)", 2, False, False)]
+PANELS = [("on_time_delivery", "On-time delivery" + chr(10) + "(points)", 1, True, True), ("brake_utilization", "Brake utilization" + chr(10) + "(points)", 1, True, None),
+          ("brake_queue_mean", "Brake queue time" + chr(10) + "(days)", 2, False, False), ("wip_mean", "Floor WIP" + chr(10) + "(jobs)", 0, False, False),
+          ("late_jobs", "Late jobs" + chr(10), 0, False, False), ("days_late", "Days late" + chr(10), 0, False, False)]
+# the panels under each heading: first and last, by position
+HEADS = [("Delivery Mechanisms", 1, 3), ("Delivery Outcomes", 4, 5)]
 BETTER, WORSE, NEUTRAL = BRAND_BLUE, RED, GREY
 
 
 def fig_changes():
-    f, axes = fig(h=4.3, w=9.2, ncols=len(PANELS), grid="x", sharey=True)
+    f, axes = fig(h=4.6, w=9.2, ncols=len(PANELS), grid=None, sharey=True)
     names = WORKING + [PACKAGE]
     y = [len(names) - k + 0.6 for k in range(len(WORKING))] + [0.0]              # the package set apart at the bottom
     for ax, (m, title, d, points, up_is_good) in zip(axes, PANELS):
-        ax.axvline(0, color="#333333", lw=1)
+        ax.grid(False)
+        ax.axvline(0, color="#888888", lw=1)
         ax.axhline(0.8, color=GREY, lw=0.6, ls=":")
         for yi, s in zip(y, names):
             t = [v * (100 if points else 1) for v in A.diff(s, m)]
@@ -199,12 +202,20 @@ def fig_changes():
         ax.set_title(title, fontsize=7.8)
         ax.tick_params(axis="x", labelsize=6.5)
         ax.locator_params(axis="x", nbins=3)
+        for side in ax.spines.values():
+            side.set_visible(True)
+            side.set_color("black")
+            side.set_linewidth(0.8)
     axes[0].set_yticks(y)
     axes[0].set_yticklabels(names, fontsize=8.2)
     axes[0].set_ylim(-0.7, max(y) + 0.9)
     f.legend([Line2D([], [], color=BETTER, marker="o", lw=1.6), Line2D([], [], color=WORSE, marker="o", lw=1.6), Line2D([], [], color=NEUTRAL, marker="o", lw=1.6)],
-             ["Better for delivery", "Worse for delivery", "Neither", ], frameon=False, fontsize=8.5, ncol=3, loc="lower center")
-    f.tight_layout(rect=(0, 0.06, 1, 1), w_pad=0.6)
+             ["Positive Impact", "Negative Impact", "No effect"], frameon=False, fontsize=8.5, ncol=3, loc="lower center")
+    f.tight_layout(rect=(0, 0.06, 1, 0.9), w_pad=0.6)
+    for text, a, z in HEADS:
+        x0, x1 = float(sig(axes[a].get_position().x0, 4)), float(sig(axes[z].get_position().x1, 4))
+        f.patches.append(Rectangle((x0, 0.915), x1 - x0, 0.055, transform=f.transFigure, facecolor=BRAND_BLUE, edgecolor="none"))
+        f.text((x0 + x1) / 2, 0.9425, text, ha="center", va="center", fontsize=8.6, fontweight="bold", color="white")
     return save(f, "changes_that_work", "")
 
 
@@ -638,7 +649,7 @@ def build():
              f"jobs: {n0(-edd_late[0])} fewer late jobs in {YEAR} with no fewer days late ({sg(edd_days[0], 0)}, {sg(edd_days[1], 0)} to {sg(edd_days[2], 0)}), and "
              f"{n0(chg(EDD, 'days_late', 'rest'))} more days late in {RT}. The laser tower clears the laser queue in the build and does not move delivery ({ptsb(TOWER)}), since the "
              f"work it cuts sooner waits at the brakes. {T.see('year', 'rest', 'tower')}</p>")
-    b.append(titled(fig_changes(), f"What the Changes That Work Do, Change From Current Practice, {YEAR}, With 95% Intervals"))
+    b.append(titled(fig_changes(), f"Scenario Analysis: Improvements vs. Status Quo, {YEAR}, With 95% Intervals"))
     b.append(f"<div class='caption'>The weld cell second shift works in {RT} ({sg(chg(WELD, 'on_time_delivery', 'rest') * 100)} point); for {YEAR} as a whole its interval includes "
              f"zero.</div>")
 
