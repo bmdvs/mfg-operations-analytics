@@ -21,21 +21,21 @@ INP = Inputs()
 
 CURRENT, PACKAGE = "Current practice", "Operating package"
 NAME = {
-    "S0 Current practice": CURRENT, "S1 WIP cap 240": "WIP cap at 240", "S1 WIP cap 210": "WIP cap at 210", "S1 WIP cap 180": "WIP cap at 180",
-    "S2 Constraint-paced release (3 days of brake work)": "Constraint-paced release", "S3 Earliest due date": "Earliest due date", "S3 Critical ratio": "Critical ratio",
+    "S0 Current practice": CURRENT, "S1 WIP cap 240": "WIP cap: 240 jobs", "S1 WIP cap 210": "WIP cap: 210 jobs", "S1 WIP cap 180": "WIP cap: 180 jobs",
+    "S2 Constraint-paced release (3 days of brake work)": "Brake constraint-paced release", "S3 Earliest due date": "Earliest due date", "S3 Critical ratio": "Critical ratio",
     "S3 Shortest processing time, brakes only": "Shortest processing time at the brakes",
-    "S4 Light work first on B1 and B2 when the B3 to B5 queue exceeds 2 days": "Light work ahead of heavy on B1 and B2", "S6 Third weekly color day for black": "Third color day for black",
-    "S8 Setup reduction": "Setup program", "S7 Planned Saturday brake shift, November to February": "Planned Saturdays, as crewed today",
-    "S7 Planned Saturday brake shift on both brakes, November to February": "Planned Saturdays, both brakes crewed", "S5 Second shift on the robotic weld cell": "Weld cell second shift",
-    "T Tool changer on B3": "Tool changer on B3", "T Laser tower on L2": "Laser tower on L2", "T Robotic bending cell": "Robotic bending cell",
+    "S4 Light work first on B1 and B2 when the B3 to B5 queue exceeds 2 days": "Prioritize light work at B1 and B2", "S6 Third weekly color day for black": "Third color day for black",
+    "S8 Setup reduction": "Brake setup program", "S7 Planned Saturday brake shift, November to February": "Add'l Saturdays (one brake)",
+    "S7 Planned Saturday brake shift on both brakes, November to February": "Add'l Saturdays (both brakes)", "S5 Second shift on the robotic weld cell": "Second shift: robotic weld",
+    "T Tool changer on B3": "Replace press brake B3", "T Laser tower on L2": "New laser tower", "T Robotic bending cell": "New bending cell",
     "Package Setup reduction + planned Saturdays on both brakes": PACKAGE, "N Package + tool changer on B3": "Package + tool changer",
     "N Package + laser tower on L2": "Package + laser tower", "N Package + robotic bending cell": "Package + robotic cell", "Package + earliest due date": "Package + earliest due date"}
 KEY = {v: k for k, v in NAME.items()}
 assert set(ALL["scenario"]) == set(NAME), set(ALL["scenario"]) ^ set(NAME)
-RELEASE = ["WIP cap at 240", "WIP cap at 210", "WIP cap at 180", "Constraint-paced release", "Earliest due date", "Critical ratio", "Shortest processing time at the brakes",
-           "Light work ahead of heavy on B1 and B2", "Third color day for black"]
-CAPACITY = ["Setup program", "Planned Saturdays, as crewed today", "Planned Saturdays, both brakes crewed", "Weld cell second shift", "Tool changer on B3", "Laser tower on L2",
-            "Robotic bending cell"]
+RELEASE = ["WIP cap: 240 jobs", "WIP cap: 210 jobs", "WIP cap: 180 jobs", "Brake constraint-paced release", "Earliest due date", "Critical ratio", "Shortest processing time at the brakes",
+           "Prioritize light work at B1 and B2", "Third color day for black"]
+CAPACITY = ["Brake setup program", "Add'l Saturdays (one brake)", "Add'l Saturdays (both brakes)", "Second shift: robotic weld", "Replace press brake B3", "New laser tower",
+            "New bending cell"]
 COMBOS = ["Package + tool changer", "Package + laser tower", "Package + robotic cell", "Package + earliest due date"]
 EVERY = RELEASE + CAPACITY + [PACKAGE] + COMBOS
 PERIOD = {"year": "year", "rest": "Q2 to Q4", "second half": "Q3 to Q4"}
@@ -227,14 +227,14 @@ COSTS = {"setup": (NC["setup_program_one_time"], NC["setup_program_annual"]),
 
 
 def parts(sc):
-    p = set()
-    if sc == "Setup program" or sc.startswith(("Operating package", "Package")):
+    k, p = KEY[sc], set()
+    if "Setup reduction" in k or "Package" in k:
         p.add("setup")
-    if "ool changer" in sc:
+    if "ool changer" in k:
         p.add("changer")
-    if "tower" in sc:
+    if "tower" in k:
         p.add("tower")
-    if "obotic" in sc and "cell" in sc:
+    if "bending cell" in k:
         p.add("cell")
     return p
 
