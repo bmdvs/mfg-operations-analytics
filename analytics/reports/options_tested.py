@@ -138,38 +138,40 @@ def fig_build(w):
     return save(f, "model_year_end_build", "")
 
 
-def fig_effects():
-    f, axes = fig(h=7.4, ncols=2, grid="x", sharey=True)
-    groups = [("Release and dispatch", sorted(A.RELEASE, key=lambda s: -chg(s, "on_time_delivery"))), ("Capacity", sorted(A.CAPACITY, key=lambda s: -chg(s, "on_time_delivery"))),
-              ("Combinations", [PACKAGE, P_CELL, P_CHANGER, P_TOWER])]
-    rows, y, ticks, heads = [], 0, [], []
-    for g, names in groups:
-        heads.append((y, g))
-        y -= 1
-        for s in names:
-            rows.append((y, s))
-            ticks.append((y, s))
-            y -= 1
-        y -= 0.5
+IMPACT = {"Positive Impact": BRAND_BLUE, "No effect": GREY, "Negative Impact": RED}
+IMPACT_NOTE = ("presented using 95% confidence intervals. Positive and negative impacts defined as the full confidence interval sitting above or below 0, and no effect is denoted "
+               "when the interval crosses 0.")
+
+
+def impact(t, up_is_good=True):
+    """Positive or negative where the whole interval lies on one side of zero; no effect where it takes in zero."""
+    return "No effect" if t[1] <= 0 <= t[2] else ("Positive Impact" if (t[0] > 0) == up_is_good else "Negative Impact")
+
+
+def fig_effects(names, file):
+    """The change in on-time delivery of the given scenarios against the status quo, for the year and for the ordinary quarters, largest first."""
+    names = sorted(names, key=lambda s: chg(s, "on_time_delivery"))
+    h = 1.75 + 0.3 * len(names)
+    f, axes = fig(h=h, ncols=2, grid="x", sharey=True)
+    y = np.arange(len(names))
     for ax, (per, lab) in zip(axes, PERIODS):
         ax.axvline(0, color="#333333", lw=1)
-        for yi, s in rows:
+        for yi, s in zip(y, names):
             t = [v * 100 for v in A.diff(s, "on_time_delivery", per)]
-            ax.barh(yi, t[0], 0.62, color=COLOR[A.VERDICT[s]])
+            ax.barh(yi, t[0], 0.62, color=IMPACT[impact(t)])
             ax.plot([t[1], t[2]], [yi, yi], color="#222222", lw=1.2)
             ax.annotate(sg(t[0]), (t[2] if t[0] >= 0 else t[1], yi), textcoords="offset points", xytext=(4 if t[0] >= 0 else -4, 0), va="center",
                         ha="left" if t[0] >= 0 else "right", fontsize=7.5)
         lo, hi = ax.get_xlim()
-        ax.set_xlim(lo - (hi - lo) * 0.1, hi + (hi - lo) * 0.1)
+        ax.set_xlim(lo - (hi - lo) * 0.12, hi + (hi - lo) * 0.12)
         ax.set_title(lab, fontsize=10)
-        ax.set_xlabel("Change in on-time delivery (points)")
-    axes[0].set_yticks([t[0] for t in ticks] + [h[0] for h in heads])
-    axes[0].set_yticklabels([t[1] for t in ticks] + [h[1].upper() for h in heads], fontsize=8.5)
-    for lab_ in axes[0].get_yticklabels()[len(ticks):]:
-        lab_.set_fontweight("bold")
-    f.legend([Patch(color=c) for c in COLOR.values()] + [Line2D([], [], color="#222222", lw=1.2)], list(COLOR) + ["95% interval"], frameon=False, fontsize=9, ncol=4, loc="lower center")
-    f.tight_layout(rect=(0, 0.04, 1, 1))
-    return save(f, "scenario_effects", "")
+    axes[0].set_yticks(y)
+    axes[0].set_yticklabels(names, fontsize=8.5)
+    f.tight_layout(rect=(0, 0.78 / h, 1, 1))
+    middle = float(sig((axes[0].get_position().x0 + axes[1].get_position().x1) / 2, 4))
+    f.text(middle, 0.52 / h, "Change in on-time delivery vs. Status Quo (points)", ha="center", va="center", fontsize=10)
+    f.legend([Patch(color=c) for c in IMPACT.values()], list(IMPACT), frameon=False, fontsize=9, ncol=3, loc="lower center", bbox_to_anchor=(middle, 0.0))
+    return save(f, file, "")
 
 
 WORKING = [SETUP, SAT_BOTH, SAT_ONE, WELD, CHANGER, CELL, EDD]
@@ -179,20 +181,21 @@ PANELS = [("on_time_delivery", "On-time delivery" + chr(10) + "(points)", 1, Tru
           ("late_jobs", "Late jobs" + chr(10), 0, False, False), ("days_late", "Days late" + chr(10), 0, False, False)]
 # the panels under each heading: first and last, by position
 HEADS = [("Delivery Mechanisms", 1, 3), ("Delivery Outcomes", 4, 5)]
-BETTER, WORSE, NEUTRAL = BRAND_BLUE, RED, GREY
 
 
 def fig_changes():
-    f, axes = fig(h=4.6, w=9.2, ncols=len(PANELS), grid=None, sharey=True)
-    names = WORKING + [PACKAGE]
-    y = [len(names) - k + 0.6 for k in range(len(WORKING))] + [0.0]              # the package set apart at the bottom
+    combos = [PACKAGE, P_CELL, P_CHANGER, P_TOWER]
+    names = WORKING + combos
+    h = 5.6
+    f, axes = fig(h=h, w=9.2, ncols=len(PANELS), grid=None, sharey=True)
+    y = [len(names) - k - 0.4 for k in range(len(WORKING))] + [len(combos) - 1.0 - k for k in range(len(combos))]              # the combinations set apart at the bottom
     for ax, (m, title, d, points, up_is_good) in zip(axes, PANELS):
         ax.grid(False)
         ax.axvline(0, color="#888888", lw=1)
-        ax.axhline(0.8, color=GREY, lw=0.6, ls=":")
+        ax.axhline(len(combos) - 0.2, color=GREY, lw=0.6, ls=":")
         for yi, s in zip(y, names):
             t = [v * (100 if points else 1) for v in A.diff(s, m)]
-            color = NEUTRAL if t[1] <= 0 <= t[2] else (BETTER if (t[0] > 0) == up_is_good else WORSE)   # no effect where the interval takes in zero
+            color = IMPACT[impact(t, up_is_good)]
             ax.plot([t[1], t[2]], [yi, yi], color=color, lw=1.6)
             ax.scatter([t[0]], [yi], color=color, s=22, zorder=3)
             lab = sg(t[0], d)
@@ -209,13 +212,13 @@ def fig_changes():
     axes[0].set_yticks(y)
     axes[0].set_yticklabels(names, fontsize=8.2)
     axes[0].set_ylim(-0.7, max(y) + 0.9)
-    f.legend([Line2D([], [], color=BETTER, marker="o", lw=1.6), Line2D([], [], color=WORSE, marker="o", lw=1.6), Line2D([], [], color=NEUTRAL, marker="o", lw=1.6)],
+    f.legend([Line2D([], [], color=c, marker="o", lw=1.6) for c in (IMPACT["Positive Impact"], IMPACT["Negative Impact"], IMPACT["No effect"])],
              ["Positive Impact", "Negative Impact", "No effect"], frameon=False, fontsize=8.5, ncol=3, loc="lower center")
-    f.tight_layout(rect=(0, 0.06, 1, 0.9), w_pad=0.6)
+    f.tight_layout(rect=(0, 0.28 / h, 1, 1 - 0.46 / h), w_pad=0.6)
     for text, a, z in HEADS:
         x0, x1 = float(sig(axes[a].get_position().x0, 4)), float(sig(axes[z].get_position().x1, 4))
-        f.patches.append(Rectangle((x0, 0.915), x1 - x0, 0.055, transform=f.transFigure, facecolor=BRAND_BLUE, edgecolor="none"))
-        f.text((x0 + x1) / 2, 0.9425, text, ha="center", va="center", fontsize=8.6, fontweight="bold", color="white")
+        f.patches.append(Rectangle((x0, 1 - 0.39 / h), x1 - x0, 0.25 / h, transform=f.transFigure, facecolor=BRAND_BLUE, edgecolor="none"))
+        f.text((x0 + x1) / 2, 1 - 0.265 / h, text, ha="center", va="center", fontsize=8.6, fontweight="bold", color="white")
     return save(f, "changes_that_work", "")
 
 
@@ -269,27 +272,6 @@ def fig_summary_steps(package, cell):
     ax.set_ylabel("On-time delivery (%)")
     f.subplots_adjust(left=0.08, right=0.99, top=0.96, bottom=0.25)
     return save(f, "summary_steps", "")
-
-
-def fig_capital():
-    f, ax = fig(h=3.2, grid="x")
-    rows = [(CHANGER, P_CHANGER, CHANGER), (TOWER, P_TOWER, TOWER), (CELL, P_CELL, CELL)]
-    y = np.arange(len(rows))[::-1] * 1.0
-    ax.axvline(0, color="#333333", lw=1)
-    for yi, (alone, top, _) in zip(y, rows):
-        for off, t, c in ((0.17, A.diff(alone, "on_time_delivery"), LIGHT_BLUE), (-0.17, A.diff(top, "on_time_delivery", "year", PACKAGE), BRAND_BLUE)):
-            t = [v * 100 for v in t]
-            ax.plot([t[1], t[2]], [yi + off, yi + off], color=c, lw=2.2)
-            ax.scatter([t[0]], [yi + off], color=c, s=40, zorder=3)
-            ax.annotate(f"{t[0]:+.1f}", (t[2], yi + off), textcoords="offset points", xytext=(5, 0), va="center", fontsize=8.5)
-    ax.set_yticks(y)
-    ax.set_yticklabels([r[2] for r in rows], fontsize=9)
-    ax.set_ylim(-0.6, len(rows) - 0.4)
-    ax.set_xlabel(f"Change in on-time delivery, {YEAR} (points, with 95% interval)")
-    ax.legend([Line2D([], [], color=LIGHT_BLUE, lw=2.2, marker="o"), Line2D([], [], color=BRAND_BLUE, lw=2.2, marker="o")],
-              ["Alone, against current practice", "On top of the operating package, against the package"], frameon=False, fontsize=9, ncol=2)
-    f.tight_layout()
-    return save(f, "capital_options_alone_and_on_package", "")
 
 
 def fig_npv(money):
@@ -563,12 +545,15 @@ def build():
     # 1 ── the scenarios
     b.append("<h2 id='f1'>1. The Scenarios Simulated</h2>")
     b.append(f"<p>{link('capacity', 'The capacity report')} finds that the brakes are the shop's primary constraint: they hold {pc(M['brake_share_of_queue'], 0)} of queue time and lose "
-             f"{n0(M['setups_over_per_week'])} hours a week to setups over standard. Given this, we considered two broad ways to raise on-time delivery: release and dispatch rules, and "
-             f"additional press brake hours. Each scenario changes one thing in the model. {T.see('assume', 'modelled')}</p>")
+             f"{n0(M['setups_over_per_week'])} hours a week to setups over standard. Given this, we considered two broad ways to raise on-time delivery: release and dispatch rules and "
+             f"additional press brake hours. {T.see('assume', 'modelled')}</p>")
     b.append("<p><b>Release and dispatch scenarios</b> change the rules that govern how work enters and moves through the floor. These changes cost nothing to implement. If late jobs come "
              "from too much work on the floor, or from the wrong job going next at the brakes, these should move on-time delivery.</p>")
     b.append("<p><b>Capacity scenarios</b> add hours at the brakes or around them, through operating changes or new equipment. These changes cost labor and/or capital. If late jobs come "
-             "from too few brake hours, only these should move it.</p>")
+             "from too few brake hours, these should move on-time delivery.</p>")
+    b.append(f"<p>Each scenario was run on its own. It changes only the inputs listed for it in the tables below, and everything else in the model stays as the shop operates today, the "
+             f"status quo. Each scenario was run {A.ALL['replication'].nunique()} times, each with different draws of setup, run, move and material times, and its effect is the difference "
+             f"from the status quo over those runs, reported with a 95% confidence interval. The combinations in <a href='#f2'>Section 2</a> were run the same way.</p>")
     # late jobs against on-time jobs by stage, for the year (the flow report's stage table)
     _st = q("select stage, job_class, mean_days from marts.mart_lead_time_by_stage where period = 'year' and job_class in ('on time', 'late')").pivot(index="stage", columns="job_class", values="mean_days")
     _gap = _st["late"] - _st["on time"]
@@ -618,53 +603,49 @@ def build():
     # 2 ── results
     b.append("<h2 id='f2'>2. Simulation Results</h2>")
     works_cap = [s for s in (SETUP, SAT_BOTH, CHANGER, CELL) if A.VERDICT[s] == "Works"]
-    worse = [s for s in A.RELEASE if A.VERDICT[s] == "Makes it worse"]
-    none = [s for s in A.RELEASE + A.CAPACITY if A.VERDICT[s] == "No effect"]
     assert len(works_cap) == 4 and A.VERDICT[EDD] == "Works" and A.VERDICT[WELD] == "Works" and A.VERDICT[SAT_ONE] == "Works" and A.VERDICT[TOWER] == "No effect"
+    assert [s for s in A.RELEASE if A.VERDICT[s] == "Works"] == [EDD] and all(A.VERDICT[s] == "Makes it worse" for s in A.RELEASE[:3] + [RATIO, "Shortest processing time at the brakes"])
     edd_late, edd_days = A.diff(EDD, "late_jobs"), A.diff(EDD, "days_late")
     assert edd_late[2] < 0 and edd_days[1] < 0 < edd_days[2]
     cap180 = A.RELEASE[2]
-    b.append(f"<p>Adding brake hours raises on-time delivery; changing the order or the release of work does not, with one exception. A scenario works when the 95% interval of its change "
-             f"in on-time delivery lies entirely above zero for {YEAR} or for {RT}. Four capacity changes work in the year of the build: the setup program ({ptsb(SETUP)}), planned "
-             f"Saturdays with both brakes crewed ({ptsb(SAT_BOTH)}), the tool changer on B3 ({ptsb(CHANGER)}) and the robotic bending cell ({ptsb(CELL)}). Planned Saturdays as crewed today "
-             f"add {pts(SAT_ONE)}, and the weld cell second shift works in {RT} only ({ptsb(WELD, 'rest')}). Among the release and dispatch rules only earliest due date works "
-             f"({ptsb(EDD)}), and it trades days for jobs: {n0(-edd_late[0])} fewer late jobs in {YEAR} with no fewer days late. The three WIP caps, the due-date ratio and shortest processing time at the brakes "
-             f"make delivery worse, the cap at 180 by {d1(-chg(cap180, 'on_time_delivery') * 100)} points, because a cap moves the wait from the brakes to the release gate "
-             f"({d1(A.mean(cap180, 'release_hold_days'))} days held) without adding an hour of brake time. {T.see('hold')}</p>")
-    b.append(titled(fig_effects(), "Change in On-time Delivery by Scenario, With 95% Intervals"))
+    b.append(f"<p>Each scenario was evaluated based on its impact on on-time delivery rates in either {YEAR} or {RT}. As detailed in {link('lead', 'the flow report')}, this {RT} period "
+             f"excludes the significant capacity constraints and backlog build in Q1, and so presents a view of the scenario's performance in more normalized operating periods.</p>")
+    b.append(f"<p>Among the release and dispatch rules, only earliest due date improved on-time delivery. The other release and dispatch scenarios had a neutral to negative impact. "
+             f"The three WIP caps, the due-date ratio and shortest processing time at the brakes make delivery worse, the cap at 180 by {d1(-chg(cap180, 'on_time_delivery') * 100)} points, "
+             f"because a cap moves the wait from the brakes to the release gate ({d1(A.mean(cap180, 'release_hold_days'))} days held) without adding brake hours. {T.see('hold')}</p>")
+    b.append(titled(fig_effects(A.RELEASE, "effects_release_dispatch"), "Release and Dispatch Scenarios: Change in On-Time Delivery vs. Status Quo"))
+    b.append(f"<div class='caption'>Change in on-time delivery {IMPACT_NOTE}</div>")
 
-    b.append("<h3 id='f2_1'>What each scenario changes</h3>")
-    four = (SETUP, SAT_BOTH, CHANGER, CELL)
-    low = lambda m: min(-chg(s, m) for s in four)
-    high = lambda m: max(-chg(s, m) for s in four)
-    b.append(f"<p>On-time delivery decides whether a scenario works; five other outcomes show how. The changes that add brake hours take jobs off the floor: floor WIP falls by "
-             f"{n0(low('wip_mean'))} to {n0(high('wip_mean'))} jobs under the setup program, planned Saturdays on both brakes, the tool changer and the robotic cell, and by "
-             f"{n0(-chg(PACKAGE, 'wip_mean'))} under the operating package. Late jobs fall by {n0(low('late_jobs'))} to {n0(high('late_jobs'))} and days late by "
-             f"{n0(low('days_late'))} to {n0(high('days_late'))} for those four, and by {n0(-chg(PACKAGE, 'late_jobs'))} and {n0(-chg(PACKAGE, 'days_late'))} under the package. At the "
-             f"brakes, the setup program, the tool changer and the cell lower utilization by {d1(-chg(SETUP, 'brake_utilization') * 100)}, "
-             f"{d1(-chg(CHANGER, 'brake_utilization') * 100)} and {d1(-chg(CELL, 'brake_utilization') * 100)} points and cut queue time per operation by "
-             f"{d2(-chg(SETUP, 'brake_queue_mean'))}, {d2(-chg(CHANGER, 'brake_queue_mean'))} and {d2(-chg(CELL, 'brake_queue_mean'))} days; planned Saturdays on both brakes cut the "
-             f"queue by {d2(-chg(SAT_BOTH, 'brake_queue_mean'))} days with utilization unchanged, since they add hours and remove no work. Planned Saturdays as crewed today and the "
-             f"weld cell second shift move each outcome less ({n0(-chg(SAT_ONE, 'late_jobs'))} and {n0(-chg(WELD, 'late_jobs'))} fewer late jobs). Earliest due date trades days for "
-             f"jobs: {n0(-edd_late[0])} fewer late jobs in {YEAR} with no fewer days late ({sg(edd_days[0], 0)}, {sg(edd_days[1], 0)} to {sg(edd_days[2], 0)}), and "
-             f"{n0(chg(EDD, 'days_late', 'rest'))} more days late in {RT}. The laser tower clears the laser queue in the build and does not move delivery ({ptsb(TOWER)}), since the "
-             f"work it cuts sooner waits at the brakes. {T.see('year', 'rest', 'tower')}</p>")
+    low_cost = {d1(chg(s, "on_time_delivery") * 100) for s in (SETUP, SAT_BOTH)}
+    assert len(low_cost) == 1 and max(chg(s, "on_time_delivery") for s in (WELD, TOWER)) < min(chg(s, "on_time_delivery") for s in (SETUP, SAT_BOTH, SAT_ONE, CHANGER, CELL))
+    b.append(f"<p>Scenarios that added brake capacity improved on-time delivery. The lower cost options, the brake setup program detailed in {link('capacity', 'the capacity report')} and "
+             f"additional Saturday shifts on both brakes, added {low_cost.pop()} points each to on-time delivery. The more capital intensive options, the robotic bending cell and "
+             f"replacing brake B3, also yielded improvements ({d1(chg(CELL, 'on_time_delivery') * 100)} and {d1(chg(CHANGER, 'on_time_delivery') * 100)} points); they're analyzed in "
+             f"more detail in <a href='#f3'>Section 3</a>. The scenarios impacting capacity at the robotic weld and laser cutting centers yielded less improvement in on-time delivery, "
+             f"further validating the brakes as the shop's primary constraint.</p>")
+    b.append(titled(fig_effects(A.CAPACITY, "effects_capacity"), "Capacity Scenarios: Change in On-Time Delivery vs. Status Quo"))
+    b.append(f"<div class='caption'>Change in on-time delivery {IMPACT_NOTE}</div>")
+
+    on_top = {s: chg(s, "on_time_delivery", "year", PACKAGE) for s in (P_CELL, P_CHANGER, P_TOWER)}
+    assert max(on_top, key=on_top.get) == P_CELL
+    b.append(f"<p>Different combinations of scenarios were modelled, and one in particular yielded the best results. The &quot;Operating Package&quot; combines the brake setup program "
+             f"and additional Saturday shifts on both brakes, the two low cost capacity scenarios. This combination added {d1(chg(PACKAGE, 'on_time_delivery') * 100)} points to on-time "
+             f"delivery. On top of the Operating Package, the more capital-intensive scenarios were considered, with the robotic bending cell yielding the most significant further "
+             f"improvement to on-time delivery.</p>")
+    b.append(titled(fig_effects([PACKAGE, P_CELL, P_CHANGER, P_TOWER], "effects_combinations"), "Combination Scenarios: Change in On-Time Delivery vs. Status Quo"))
+    b.append(f"<div class='caption'>Change in on-time delivery {IMPACT_NOTE}</div>")
+
+    b.append("<h3 id='f2_1'>Scenarios with Positive Impact on On-time Delivery</h3>")
+    assert all(impact(A.diff(s, m), up) == "Positive Impact" for s in (SETUP, CHANGER, CELL) for m, _, _, _, up in PANELS)
+    b.append(f"<p>Scenarios that improved on-time delivery rates are shown below alongside the delivery mechanisms and outcomes. Changes that add brake hours (brake setup program, "
+             f"replacing press brake B3, and the new robotic bending cell) saw improvements across the board: decreased brake utilization, lower queue times per operation, reduced "
+             f"floor WIP, and improvements in both number of late jobs and total days late. {T.see('year', 'rest', 'tower')}</p>")
     b.append(titled(fig_changes(), f"Scenario Analysis: Improvements vs. Status Quo, {YEAR}, With 95% Intervals"))
-    b.append(f"<div class='caption'>The weld cell second shift works in {RT} ({sg(chg(WELD, 'on_time_delivery', 'rest') * 100)} point); for {YEAR} as a whole its interval includes "
-             f"zero.</div>")
+    b.append(f"<div class='caption'>Change from the status quo {IMPACT_NOTE} For brake utilization, brake queue time, floor WIP, late jobs and days late, a positive impact is an "
+             f"interval below 0. The second shift on the robotic weld cell has a positive impact on on-time delivery in {RT} ({sg(chg(WELD, 'on_time_delivery', 'rest') * 100)} point); "
+             f"for {YEAR} as a whole its interval crosses 0.</div>")
 
-    b.append("<h3 id='f2_2'>Combining the levers that work</h3>")
     pk, pkr = A.diff(PACKAGE, "on_time_delivery"), A.diff(PACKAGE, "on_time_delivery", "rest")
-    singles = chg(SETUP, "on_time_delivery") + chg(SAT_BOTH, "on_time_delivery")
-    e_on = A.diff(P_EDD, "on_time_delivery", "year", PACKAGE)
-    assert e_on[1] < 0 < e_on[2] and A.diff(P_TOWER, "on_time_delivery", "year", PACKAGE)[1] < 0
-    b.append(f"<p>The levers that work combine, though not fully additively. The setup program and planned Saturdays with both brakes crewed add {sg(chg(SETUP, 'on_time_delivery') * 100)} "
-             f"and {sg(chg(SAT_BOTH, 'on_time_delivery') * 100)} points singly and {pts(PACKAGE)} together, {d1((singles - pk[0]) * 100)} points less than their sum, since both work on "
-             f"the same queue. With the operating package the shop ships {pc(A.mean(PACKAGE, 'on_time_delivery'))} on time for {YEAR} and {pc(A.mean(PACKAGE, 'on_time_delivery', 'rest'))} "
-             f"in {RT}, with {n0(-chg(PACKAGE, 'late_jobs'))} fewer late jobs and {n0(-chg(PACKAGE, 'days_late'))} fewer days late in the year. On top of the package the robotic cell "
-             f"adds {pts(P_CELL, 'year', PACKAGE)} and the tool changer {pts(P_CHANGER, 'year', PACKAGE)}; the laser tower adds nothing ({ptsb(P_TOWER, 'year', PACKAGE)}). Earliest due "
-             f"date on top of the package brings no gain ({ptsb(P_EDD, 'year', PACKAGE)}) and {n0(chg(P_EDD, 'days_late', 'year', PACKAGE))} more days late.</p>")
-    b.append(titled(fig_capital(), f"What Each Capital Option Adds, Alone and on Top of the Operating Package, {YEAR}"))
 
     # 3 ── return
     b.append("<h2 id='f3'>3. Return on the Changes That Work</h2>")
