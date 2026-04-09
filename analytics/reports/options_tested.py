@@ -17,8 +17,8 @@ from analytics.style.style import AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BL
 
 YEAR = A.YEAR
 CURRENT, PACKAGE = A.CURRENT, A.PACKAGE
-SETUP, SAT_ONE, SAT_BOTH, WELD, CHANGER, TOWER, CELL, EDD = ("Setup program", "Planned Saturdays, as crewed today", "Planned Saturdays, both brakes crewed", "Weld cell second shift",
-                                                             "Tool changer on B3", "Laser tower on L2", "Robotic bending cell", "Earliest due date")
+SETUP, SAT_ONE, SAT_BOTH, WELD, CHANGER, TOWER, CELL, EDD = ("Brake setup program", "Add'l Saturdays (one brake)", "Add'l Saturdays (both brakes)", "Second shift: robotic weld",
+                                                             "Replace press brake B3", "New laser tower", "New bending cell", "Earliest due date")
 P_CHANGER, P_TOWER, P_CELL, P_EDD = A.COMBOS
 PERIODS = (("year", f"{YEAR}"), ("rest", RT))
 COLOR = {"Works": BRAND_BLUE, "No effect": GREY, "Makes it worse": RED}
@@ -233,30 +233,35 @@ def fig_summary_effects():
 
 
 def fig_summary_steps(package, cell):
-    """On-time delivery from current practice to the package and the package with the robotic cell, each with its cost and return."""
-    f, ax = fig(h=4.0)
+    """On-time delivery from the status quo to the package and the package with the robotic cell, each with its cost and return under the bar."""
+    f, ax = fig(h=4.6)
     base, pk, pc_ = (A.mean(s, "on_time_delivery") * 100 for s in (CURRENT, PACKAGE, P_CELL))
-    steps = [("Current practice", base, None, GREY),
-             ("Operating package" + chr(10) + f"{usd(package['one_time'])};" + chr(10) + f"pays back in {package['payback']:.1f} years", pk, pk - base, BRAND_BLUE),
-             ("Package with the robotic cell" + chr(10) + f"{musd(cell['one_time'])}; breaks even at" + chr(10) + f"{n0(cell['hours'])} brake hours sold a year", pc_, pc_ - pk, GREEN)]
+    short = lambda x: musd(x) if abs(x) >= 1e6 else f"${x / 1e3:,.0f}K"
+    back = lambda y: f"{y * 12:.0f} months" if y < 1 else f"{y:.1f} years"
+    lines = lambda m: [f"Initial investment: {short(m['one_time'])}", f"Annual cost: {short(m['added'])}", f"Net present value: {short(m['npv'][0])}", f"Payback period: {back(m['payback'])}"]
+    steps = [("Status Quo", [], base, None, GREY), ("Operating Package", lines(package), pk, pk - base, BRAND_BLUE),
+             ("Operating Package + Robotic Bending Cell", lines(cell), pc_, pc_ - pk, GREEN)]
     floor = 70.0
-    for k, (_, v, step, color) in enumerate(steps):
-        prev = steps[k - 1][1] if k else floor
+    for k, (head, under, v, step, color) in enumerate(steps):
+        prev = steps[k - 1][2] if k else floor
         if k:
             ax.bar(k, prev - floor, 0.62, bottom=floor, color="#E6E6E6")
         ax.bar(k, v - (prev if k else floor), 0.62, bottom=prev if k else floor, color=color)
         ax.annotate(f"{v:.1f}%" + ("" if step is None else chr(10) + f"{sg(step)} points"), (k, v), textcoords="offset points", xytext=(0, 3), ha="center", fontsize=9)
+        for n, text in enumerate([head] + under):
+            ax.annotate(text, (k, 0), xycoords=ax.get_xaxis_transform(), textcoords="offset points", xytext=(0, -8 - 12 * n), ha="center", va="top", fontsize=8.5,
+                        fontweight="bold" if n == 0 else None)
     ax.set_xticks(range(len(steps)))
-    ax.set_xticklabels([s[0] for s in steps], fontsize=8.5)
+    ax.set_xticklabels(["" for _ in steps])
     ax.set_ylim(floor, 96)
     ax.set_ylabel("On-time delivery (%)")
-    f.subplots_adjust(left=0.08, right=0.99, top=0.96, bottom=0.2)
+    f.subplots_adjust(left=0.08, right=0.99, top=0.96, bottom=0.25)
     return save(f, "summary_steps", "")
 
 
 def fig_capital():
     f, ax = fig(h=3.2, grid="x")
-    rows = [(CHANGER, P_CHANGER, "Tool changer on B3"), (TOWER, P_TOWER, "Laser tower on L2"), (CELL, P_CELL, "Robotic bending cell")]
+    rows = [(CHANGER, P_CHANGER, CHANGER), (TOWER, P_TOWER, TOWER), (CELL, P_CELL, CELL)]
     y = np.arange(len(rows))[::-1] * 1.0
     ax.axvline(0, color="#333333", lw=1)
     for yi, (alone, top, _) in zip(y, rows):
@@ -456,11 +461,11 @@ def t_assumptions():
          ["Robotic weld utilization and queue per operation", f"{M['weld_utilization']:.3f}; {d2(M['weld_queue'])} days", "the capacity report"],
          ["Share of brake standard hours a robotic cell can run", pc(M["cell_share"], 0), "the marts (light, repeat parts in lots of 25 or more)"],
          ["Revenue shipped and brake machine hours", f"{usd(M['revenue'])}; {n0(M['brake_hours'])}", "the marts"], ["Revenue per brake hour", usd(M["revenue_per_brake_hour"]), "the marts"]]
-    b = [["Setup program", usd(NC["setup_program_one_time"]), usd(NC["setup_program_annual"]), "Tooling carts, setup sheets and engineering time for the top 12 part-operations"],
-         ["Tool changer on B3", usd(A.COSTS["changer"][0]), usd(A.COSTS["changer"][1]), f"Removes {O['press_brake_atc']['tool_change_reduction']:.0%} of tool changing, "
+    b = [[SETUP, usd(NC["setup_program_one_time"]), usd(NC["setup_program_annual"]), "Tooling carts, setup sheets and engineering time for the top 12 part-operations"],
+         [CHANGER, usd(A.COSTS["changer"][0]), usd(A.COSTS["changer"][1]), f"Removes {O['press_brake_atc']['tool_change_reduction']:.0%} of tool changing, "
           f"{O['press_brake_atc']['tool_change_share_of_setup']:.0%} of a setup's hours, on B3"],
-         ["Laser tower on L2", usd(A.COSTS["tower"][0]), usd(A.COSTS["tower"][1]), f"{O['laser_tower']['added_laser_hours_per_week']} unattended laser hours a week after second shift"],
-         ["Robotic bending cell", usd(A.COSTS["cell"][0]), usd(A.COSTS["cell"][1]), f"{O['robotic_bending_cell']['added_crewed_hours_per_week']} brake hours a week; an operator for "
+         [TOWER, usd(A.COSTS["tower"][0]), usd(A.COSTS["tower"][1]), f"{O['laser_tower']['added_laser_hours_per_week']} unattended laser hours a week after second shift"],
+         [CELL, usd(A.COSTS["cell"][0]), usd(A.COSTS["cell"][1]), f"{O['robotic_bending_cell']['added_crewed_hours_per_week']} brake hours a week; an operator for "
           f"{O['robotic_bending_cell']['tending_labor_per_cell_hour']:.0%} of its hours"]]
     c = [["Labor rate, loaded", f"${L['labor_rate']:.0f} an hour"], ["Overtime", f"{1 + L['overtime_premium']:.1f} times the labor rate"], ["Second-shift differential", f"{NC['shift_differential']:.0%}"],
          ["Discount rate and horizon", f"{F['discount_rate']:.0%} over {F['horizon_years']} years, before tax, no residual value"],
@@ -526,23 +531,24 @@ def build():
     assert ten["within"].all() and bd["peak_week"] == bd["peak_week_model"]
     assert _pk["payback"] * 12 < 5 and _cell["npv"][0] > max(_pk["npv"][0], A.money(P_CHANGER, PACKAGE)["npv"][0], A.money(P_TOWER, PACKAGE)["npv"][0])
     kusd = lambda x: f"${x / 1000:,.1f}k".replace(".0k", "k")
-    assert len(ten) == 10
-    b.append(f"<p>A discrete event simulation of the shop floor was built to test a range of scenarios aimed at raising on-time delivery. "
-             f"The model replays every job released from January {YEAR - 1} through the shop's routings, shift calendars, crewing, recorded downtime and dispatch rules, "
-             f"and draws setup, run, move and material times from the shop's {YEAR} record. "
-             "This let us measure the effect of each change on on-time delivery and related measures: floor WIP, late jobs, days late, and brake utilization and queue time.</p>")
+    b.append("<p>A discrete event simulation of the shop floor was built to test a range of scenarios aimed at raising on-time delivery. "
+             f"The model replays every job released from January {YEAR - 1} through the shop's own routings, shift calendars, crewing, recorded downtime, and dispatch rules, "
+             "and draws setup, run, move and material times from the shop's recorded performance. "
+             "This let us measure the impact that each scenario has on on-time delivery and related measures: floor WIP, late jobs, days late, and brake utilization and queue time.</p>")
     b.append(f"<p>The model's accuracy was checked with a baseline run of every job with no changes, replicating the shop as it actually operated. "
-             f"It reproduced all ten measures within tolerance, including {YEAR} on-time delivery of {pc(model_otd['year'])} against {pc(measured_otd['year'])} measured and a year-end peak of "
-             f"{n0(bd['peak_model'])} jobs on the floor against {n0(bd['peak_measured'])} measured. <a href='#f4'>Section 4</a> gives the full validation.</p>")
-    b.append("<p>We ran scenarios across two broad categories: (i) Release and Dispatch, no-cost changes to the order or release of work, and (ii) Capacity, capital-intensive changes that add "
-             "machine hours, permanently or seasonally. As seen below, changes that add brake hours had the largest positive impact on on-time delivery.</p>")
+             f"It reproduced {pc(ten['within'].mean(), 0)} of measures within tolerance, including {YEAR} on-time delivery of {pc(model_otd['year'])} against {pc(measured_otd['year'])} measured and a "
+             f"year-end peak of {n0(bd['peak_model'])} jobs on the floor against {n0(bd['peak_measured'])} measured. <a href='#f4'>Section 4</a> gives the full validation.</p>")
+    b.append("<p>We tested scenarios in two categories: (i) release and dispatch, no-cost changes to the rules governing when work is released and the order in which it is run, and (ii) capacity, "
+             "changes that add machine hours through crewing, setup reduction or new equipment, either permanently or seasonally. As shown below, the changes that add brake hours raised "
+             "on-time delivery the most, while changes to release and dispatch had a neutral or negative impact.</p>")
     b.append(titled(fig_summary_effects(), f"Change in On-time Delivery by Scenario, {YEAR}"))
-    b.append(f"<p>The operating package, a setup reduction program on the brakes plus planned Saturday shifts on both brakes, raises {YEAR} on-time delivery "
+    b.append(f"<p>The operating package, a setup reduction program on the brakes plus Saturday shifts on both brakes, raises {YEAR} on-time delivery "
              f"{chg(PACKAGE, 'on_time_delivery') * 100:.1f} points to {pc(A.mean(PACKAGE, 'on_time_delivery'))} for {kusd(_pk['one_time'])} one-time cost plus {kusd(_pk['added'])} a year, "
              f"and pays back in under five months. Adding a robotic bending cell on top of the operating package raises on-time delivery another "
              f"{(A.mean(P_CELL, 'on_time_delivery') - A.mean(PACKAGE, 'on_time_delivery')) * 100:.1f} points; {musd(_cell['one_time'])} initial investment, returns the most of any option tested, "
-             f"with a net present value of {musd(_cell['npv'][0])} and payback in {_cell['payback']:.1f} years.</p>")
+             f"with a net present value of {musd(_cell['npv'][0])} and payback in {_cell['payback']:.1f} years. <a href='#f2'>Sections 2</a> and <a href='#f3'>3</a> detail results and ROI.</p>")
     b.append(titled(fig_summary_steps(_pk, _cell), f"On-time Delivery From Current Practice, With Cost and Return, {YEAR}"))
+    b.append(f"<div class='caption'>Net present value and payback period assume {A.SOLD:.0%} of the freed brake hours are sold.</div>")
     # 1 ── the scenarios
     b.append("<h2 id='f1'>1. The Scenarios Simulated</h2>")
     b.append(f"<p>{link('capacity', 'The capacity report')} finds the brakes are the constraint: they hold {pc(M['brake_share_of_queue'], 0)} of queue time and lose "
@@ -554,9 +560,9 @@ def build():
     wip_now = float(tol[(tol["period"] == "year") & (tol["measure"] == "wip_mean")]["measured"].iloc[0])
     cap_r, flow_r = "the capacity report", "the flow report"
     release = [
-        ["WIP cap at 240, 210 and 180", "A job is released only when fewer jobs than the cap are on the floor.", "None", f"The floor carried {n0(wip_now)} jobs on average in {YEAR} ({flow_r}); fewer "
+        ["WIP cap: 240, 210, and 180 jobs", "A job is released only when fewer jobs than the cap are on the floor.", "None", f"The floor carried {n0(wip_now)} jobs on average in {YEAR} ({flow_r}); fewer "
          f"jobs on the floor should mean shorter waits.", "Non-rush jobs wait at a release gate, in release order, until a job ships; rush jobs pass."],
-        ["Constraint-paced release", "A job with brake work is released only when the brakes have 3 days of work or less waiting.", "None", f"The brakes hold {pc(M['brake_share_of_queue'], 0)} of "
+        ["Brake constraint-paced release", "A job with brake work is released only when the brakes have 3 days of work or less waiting.", "None", f"The brakes hold {pc(M['brake_share_of_queue'], 0)} of "
          f"queue time ({cap_r}); pacing release to them should keep work from piling up there.", "Jobs with brake work wait at the gate while the brake backlog is over 3 days."],
         [EDD, "Every work center takes the job with the earliest due date next.", "None", f"Late jobs wait longest at the brakes ({flow_r}); taking the most urgent job first should "
          f"ship more of them on time.", "Rush first, then earliest due date, at every work center."],
@@ -564,7 +570,7 @@ def build():
          "Rush first, then the lowest ratio of time to the due date over standard hours remaining."],
         ["Shortest processing time at the brakes", "The brakes take the shortest job next.", "None", "Short jobs clear the queue fastest, which lowers the average wait.",
          "Rush first, then the least standard hours, at the brakes only."],
-        ["Light work ahead of heavy on B1 and B2", "B1 and B2 take light parts ahead of heavy ones when the other brakes are backed up.", "None",
+        ["Prioritize light work at B1 and B2", "B1 and B2 take light parts ahead of heavy ones when the other brakes are backed up.", "None",
          f"Precision and expedited work goes to B1 and B2, which have the shortest brake queues ({cap_r}); light work could use that room.", "When over 2 days of light and heavy work waits, B1 and B2 take light parts before heavy."],
         ["Third color day for black", "The powder line runs black on a third day each week.", "None", f"Powder coat operations wait {d1(M['powder_wait'])} days on average for their color day "
          f"({flow_r}).", "Black is added to the color schedule on Fridays."]]
@@ -574,7 +580,7 @@ def build():
         [SETUP, "Setup standards, carts and sheets for the 12 part-operations with the most setup hours over standard; repeat setups assigned to the operators who know the part; a "
          "handover standard at shift change.", f"{usd(A.COSTS['setup'][0])} once and {usd(A.COSTS['setup'][1])} a year", f"Brake setups run {n0(M['setups_over_per_week'])} hours a week over "
          f"standard ({cap_r}).", "The 12 part-operations set up at standard; the other brake setups shorter by the assignment and handover hours measured."],
-        ["Planned Saturdays, November to February", "A Saturday brake shift every week of the build, in two variants: as crewed today (one brake) and both B1 and B2 crewed.",
+        ["Additional Saturday shifts", "A Saturday brake shift every week of the build, in two variants: as crewed today (one brake) and both B1 and B2 crewed.",
          f"Overtime of the added shifts: {usd(round(sat_cost[SAT_ONE], -2))} a year as crewed today, {usd(round(sat_cost[SAT_BOTH], -2))} with both brakes",
          f"A Saturday shift as worked today supplies {sat_one} brake machine hours, {sat_share}% of the weekly gap in the build; with both brakes crewed about {sat_two}, "
          f"{sat_two_share}% ({cap_r}).",
