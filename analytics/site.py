@@ -49,8 +49,9 @@ def _options():
     lead = re.search(r"Scenarios that added brake capacity improved on-time delivery\.", results).group(0) + " " + re.search(
         r"Among the release and dispatch rules, only earliest due date improved on-time delivery\.", results).group(0)
     package = re.search(r"The .Operating Package. combines .*? points to on-time delivery\.", results).group(0)
-    money = re.search(r"The operating package is recommended first: .*? brake hours it frees are sold\.", section_text(OPTIONS, "f3")).group(0) + " " + re.search(
-        r"The robotic bending cell is the capital option: .*? on its own it returns \$[\d.]+M\.", section_text(OPTIONS, "f3")).group(0)
+    money = re.search(r"The operating package is recommended first ?: .*? and return \$[\d.]+M\.", section_text(OPTIONS, "f3")).group(0) + " " + re.search(
+        r"The robotic bending cell is the recommended capital investment option ?: .*?-year payback\.", section_text(OPTIONS, "f3")).group(0)
+    money = money.replace(" :", ":")
     return f"{lead} {package} {money}"
 
 
