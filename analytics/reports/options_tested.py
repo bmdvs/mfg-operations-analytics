@@ -707,7 +707,7 @@ def build():
     b.append(f"<p>This section lays out the costs and expected return of each change. The return is the brake hours a change frees, valued at half of them sold at a "
              f"{A.RH['contribution_margin_share']:.0%} margin, plus overtime avoided, less what the change costs to run; NPV is that value over {A.F['horizon_years']} years discounted at "
              f"{A.F['discount_rate']:.0%}, less the one-time cost, before tax. On-time delivery itself is not priced, so a change that adds hours rather than freeing them, such as planned "
-             f"Saturdays, shows a cost and no return.</p>")
+             f"Saturdays, shows a cost and no return. {T.see('measures', 'cost')}</p>")
     assert A.SOLD == 0.5
     b.append(titled(fig_npv(money), f"What Makes Up Each Option's NPV, {YEAR}"))
 
@@ -726,7 +726,7 @@ def build():
              f"({musd(ms['npv'][0])}) because its Saturday shifts add overtime costs and free no machine hours, but adds "
              f"{d1((chg(PACKAGE, 'on_time_delivery') - chg(SETUP, 'on_time_delivery')) * 100)} more points of on-time delivery than the setup program alone. "
              f"<b>The robotic bending cell is the recommended capital investment option</b>: on top of the package it adds {d1(chg(P_CELL, 'on_time_delivery', 'year', PACKAGE) * 100)} "
-             f"points and returns {musd(mc['npv'][0])} with a {d1(mc['payback'])}-year payback. {T.see('measures', 'cost')}</p>")
+             f"points and returns {musd(mc['npv'][0])} with a {d1(mc['payback'])}-year payback.</p>")
 
     b.append("<h3 id='f3_1'>Other Considerations</h3>")
     b.append(f"<p>Several effects of these changes are measured but not priced, and some are not measured at all. {T.see('customers')}</p>")
@@ -778,11 +778,9 @@ def build():
     # 4 ── model accuracy and validation
     b.append("<h2 id='f4'>4. Model Accuracy & Validation</h2>")
     b.append("<h3 id='f4_1'>How the model works</h3>")
-    b.append(f"<p>The model takes each job as the shop released it and moves it through its routing, machine by machine, under the shop's shift calendars and dispatch rules. What the "
-             f"record fixes, the model keeps: release dates, routings, standards, due dates and rush flags are those of the actual jobs, and machine downtime is the recorded downtime. "
-             f"What varies from job to job, how long each setup and run takes and how long a job waits for material, a move or outside processing, is drawn from the shop's {YEAR} "
-             f"distributions. The behaviours the record does not state as rules are estimated from it: how fully the brakes are crewed when work is waiting, and when and how the shop "
-             f"works a Saturday or an extended brake shift.</p>")
+    b.append(f"<p>The model takes each job as the shop released it and moves it through its routing, machine by machine, under the shop's shift calendars and dispatch rules. The "
+             f"model uses actual production data for release dates, routings, standards, due dates, rush flags, and machine downtime. What varies from job to job, how long each setup "
+             f"and run takes and how long a job waits for material, a move or outside processing, is drawn from the shop's {YEAR} distributions.</p>")
     ps = M["p_saturday"]
     TAKEN, DRAWN, ESTIMATED = "Taken from the record", f"Drawn from the shop's {YEAR} distributions", "Estimated from the record"
     rows = [
@@ -804,15 +802,16 @@ def build():
 
     b.append("<h3 id='f4_2'>Model accuracy</h3>")
     dq = (wcs["queue_model"] / wcs["queue_measured"] - 1)
-    out_q = wcs[dq.abs() > 0.25]
+    out_q = wcs[dq.abs() > 0.10].set_index("work_center")
     dp = (pct["model"] / pct["measured"] - 1)
     out_p = pct[dp.abs() > 0.10]
-    assert len(out_q) == 1 and len(out_p) == 1 and ten["within"].all() and len(ten) == 10
-    op, oq_ = out_p.iloc[0], out_q.iloc[0]
-    assert oq_["work_center"].startswith("Punch") and op["percentile"] == 10 and op["period"] == "year"
-    b.append(f"<p>The model reproduces the shop within tolerance on all ten measures set before it was run, and builds and clears the year-end backlog as the shop did. Outside those "
-             f"ten, queue time at the punch ({d2(oq_['queue_model'])} days against {d2(oq_['queue_measured'])}) and the 10th-percentile lead time for {YEAR} ({d1(op['model'])} days against "
-             f"{d1(op['measured'])}) are the only figures more than 25% and 10% from measured. {T.see('tolerance', 'shop')}</p>")
+    assert list(out_q.index) == ["Laser (first operation)", "Punch (first operation)"] and len(out_p) == 1 and ten["within"].all() and len(ten) == 10
+    assert (wcs["utilization_model"] / wcs["utilization_measured"] - 1).abs().max() < 0.10 and tol["difference"].abs().max() < 0.10
+    op, punch_q, laser_q = out_p.iloc[0], out_q.loc["Punch (first operation)"], out_q.loc["Laser (first operation)"]
+    assert op["percentile"] == 10 and op["period"] == "year"
+    b.append(f"<p>The model reproduces the shop within tolerance on all ten measures set before it was run. Outside those ten, queue time at the punch ({d2(punch_q['queue_model'])} days "
+             f"against {d2(punch_q['queue_measured'])}) and at the lasers ({d2(laser_q['queue_model'])} against {d2(laser_q['queue_measured'])}) and the 10th-percentile lead time for "
+             f"{YEAR} ({d1(op['model'])} days against {d1(op['measured'])}) are the only figures more than 10% from measured. {T.see('tolerance', 'shop')}</p>")
     b.append(titled(fig_ten(ten), "Model Against Measured, the Ten Measures Set Before the Model Was Run"))
     b.append(f"<p>The brakes and the robotic weld cell, the two work centers that hold a queue, sit within {d1((wcs['utilization_model'] - wcs['utilization_measured']).iloc[:2].abs().max() * 100)} "
              f"points of measured utilization and {abs(dq.iloc[:2]).max() * 100:.0f}% of measured queue time.</p>")
@@ -835,11 +834,7 @@ def build():
              f"{n0(oct_['wip_model'].max())} jobs on the floor in October against {n0(oct_['wip_measured'].min())} to {n0(oct_['wip_measured'].max())}, and ships {YEAR - 1} Q4 at "
              f"{pc(q4['on_time_delivery_model'])} on time against {pc(q4['on_time_delivery'])}; it has converged by the week of November 18.</p>")
     b.append(titled(fig_build(wk), f"Weekly WIP and Brake Queue Time Through the Year-End Build, Measured Against Model, October {YEAR - 1} to June {YEAR}"))
-    b.append(f"<p>Three effects in this report are not exact, and the direction of each is known. The setup program and the tool changer are understated by about 6%, because "
-             f"{pc(M['no_setup_share'])} of brake operations carry their setup inside the run and leave nothing for either to shorten. Planned Saturdays with both brakes crewed are "
-             f"likely overstated: both brakes are worked at the weekday yield of {M['brake_yield']:.3f}, the record has {WORD[both_saturdays]} Saturdays with both brakes crewed, and its one-brake "
-             f"Saturdays yield {M['saturday_yield']:.3f}. Effects in {RT} are slightly generous throughout, because the model ships those quarters at {pc(model_otd['rest'])} against "
-             f"{pc(measured_otd['rest'])} and so has about {n0(A.mean(CURRENT, 'late_jobs', 'rest') - late_rest)} more late jobs there to remove.</p>")
+
 
     b.append("<h2 id='appendix'>Appendix</h2>")
     b.append(T.appendix())
