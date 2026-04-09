@@ -18,8 +18,9 @@ from analytics.style.style import AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BL
 YEAR = A.YEAR
 CURRENT, PACKAGE = A.CURRENT, A.PACKAGE
 SETUP, SAT_ONE, SAT_BOTH, WELD, CHANGER, TOWER, CELL, EDD = ("Brake setup program", "Add'l Saturdays (one brake)", "Add'l Saturdays (both brakes)", "Second shift: robotic weld",
-                                                             "Replace press brake B3", "New laser tower", "New bending cell", "Earliest due date")
+                                                             "Replace press brake B3", "Automated sheet tower (L2)", "New robotic bending cell", "Earliest due date")
 P_CHANGER, P_TOWER, P_CELL, P_EDD = A.COMBOS
+RATIO = "Due-date ratio"
 PERIODS = (("year", f"{YEAR}"), ("rest", RT))
 COLOR = {"Works": BRAND_BLUE, "No effect": GREY, "Makes it worse": RED}
 WORD = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
@@ -391,7 +392,7 @@ def t_levels(per):
 
 
 def t_scenarios(rows):
-    return table(pd.DataFrame([r[:4] for r in rows], columns=["Scenario", "The change", "Cost", "Why it could help"]))
+    return table(pd.DataFrame([r[:4] for r in rows], columns=["Scenario", "The change", "Cost", "Potential impact on on-time delivery"]))
 
 
 def t_hold():
@@ -530,7 +531,6 @@ def build():
     _pk, _cell = A.money(PACKAGE), A.money(P_CELL, PACKAGE)
     assert ten["within"].all() and bd["peak_week"] == bd["peak_week_model"]
     assert _pk["payback"] * 12 < 5 and _cell["npv"][0] > max(_pk["npv"][0], A.money(P_CHANGER, PACKAGE)["npv"][0], A.money(P_TOWER, PACKAGE)["npv"][0])
-    kusd = lambda x: f"${x / 1000:,.1f}k".replace(".0k", "k")
     b.append("<p>A discrete event simulation of the shop floor was built to test a range of scenarios aimed at raising on-time delivery. "
              f"The model replays every job released from January {YEAR - 1} through the shop's own routings, shift calendars, crewing, recorded downtime, and dispatch rules, "
              "and draws setup, run, move and material times from the shop's recorded performance. "
@@ -538,35 +538,41 @@ def build():
     b.append(f"<p>The model's accuracy was checked with a baseline run of every job with no changes, replicating the shop as it actually operated. "
              f"It reproduced {pc(ten['within'].mean(), 0)} of measures within tolerance, including {YEAR} on-time delivery of {pc(model_otd['year'])} against {pc(measured_otd['year'])} measured and a "
              f"year-end peak of {n0(bd['peak_model'])} jobs on the floor against {n0(bd['peak_measured'])} measured. <a href='#f4'>Section 4</a> gives the full validation.</p>")
-    b.append("<p>We tested scenarios in two categories: (i) release and dispatch, no-cost changes to the rules governing when work is released and the order in which it is run, and (ii) capacity, "
-             "changes that add machine hours through crewing, setup reduction or new equipment, either permanently or seasonally. As shown below, the changes that add brake hours raised "
-             "on-time delivery the most, while changes to release and dispatch had a neutral or negative impact.</p>")
+    b.append("<p>We tested scenarios in two categories: (i) release and dispatch rules governing when work is released and the order in which it is run, and (ii) capacity changes that add "
+             "machine hours. As shown below, the changes that add brake hours raised on-time delivery the most, while changes to release and dispatch had a neutral or negative impact.</p>")
     b.append(titled(fig_summary_effects(), f"Change in On-time Delivery by Scenario, {YEAR}"))
-    b.append(f"<p>The operating package, a setup reduction program on the brakes plus Saturday shifts on both brakes, raises {YEAR} on-time delivery "
-             f"{chg(PACKAGE, 'on_time_delivery') * 100:.1f} points to {pc(A.mean(PACKAGE, 'on_time_delivery'))} for {kusd(_pk['one_time'])} one-time cost plus {kusd(_pk['added'])} a year, "
-             f"and pays back in under five months. Adding a robotic bending cell on top of the operating package raises on-time delivery another "
-             f"{(A.mean(P_CELL, 'on_time_delivery') - A.mean(PACKAGE, 'on_time_delivery')) * 100:.1f} points; {musd(_cell['one_time'])} initial investment, returns the most of any option tested, "
-             f"with a net present value of {musd(_cell['npv'][0])} and payback in {_cell['payback']:.1f} years. <a href='#f2'>Sections 2</a> and <a href='#f3'>3</a> detail results and ROI.</p>")
+    b.append(f"<p>We compared the results of the scenarios individually and in specific combinations alongside their cost of implementation, NPV and payback periods. We found that the "
+             f"<b>&quot;Operating Package&quot; (brake setup program + additional Saturday shifts on both brakes)</b> increased {YEAR} on-time delivery by "
+             f"{chg(PACKAGE, 'on_time_delivery') * 100:.1f} points to {pc(A.mean(PACKAGE, 'on_time_delivery'))} without significant capital investment. Adding a robotic bending cell on top of "
+             f"the Operating Package generated the highest return of all capital-intensive options tested, increasing on-time delivery another "
+             f"{(A.mean(P_CELL, 'on_time_delivery') - A.mean(PACKAGE, 'on_time_delivery')) * 100:.1f} points to {pc(A.mean(P_CELL, 'on_time_delivery'))}. "
+             f"<a href='#f2'>Sections 2</a> and <a href='#f3'>3</a> detail these results and ROI.</p>")
     b.append(titled(fig_summary_steps(_pk, _cell), f"On-time Delivery From Current Practice, With Cost and Return, {YEAR}"))
-    b.append(f"<div class='caption'>Net present value and payback period assume {A.SOLD:.0%} of the freed brake hours are sold.</div>")
+    b.append(f"<div class='caption'>Note: net present value and payback period assume {A.SOLD:.0%} of the freed brake hours are sold.</div>")
     # 1 ── the scenarios
     b.append("<h2 id='f1'>1. The Scenarios Simulated</h2>")
-    b.append(f"<p>{link('capacity', 'The capacity report')} finds the brakes are the constraint: they hold {pc(M['brake_share_of_queue'], 0)} of queue time and lose "
-             f"{n0(M['setups_over_per_week'])} hours a week to setups over standard. That allows two ways to raise on-time delivery. The first changes how work enters and moves through "
-             f"the floor, through release and dispatch rules, and costs nothing but the rule. If late jobs come from too much work on the floor, or from the wrong job going next at the "
-             f"brakes, these should move delivery. The second adds hours at the brakes or around them, through operating changes or new equipment, and costs labor or capital. If late "
-             f"jobs come from too few brake hours, only these should move it. Each scenario changes one thing in the model and keeps the {YEAR - 1} to {YEAR} releases. "
-             f"{T.see('assume', 'modelled')}</p>")
+    b.append(f"<p>{link('capacity', 'The capacity report')} finds that the brakes are the shop's primary constraint: they hold {pc(M['brake_share_of_queue'], 0)} of queue time and lose "
+             f"{n0(M['setups_over_per_week'])} hours a week to setups over standard. Given this, we considered two broad ways to raise on-time delivery: release and dispatch rules, and "
+             f"additional press brake hours. Each scenario changes one thing in the model. {T.see('assume', 'modelled')}</p>")
+    b.append("<p><b>Release and dispatch scenarios</b> change the rules that govern how work enters and moves through the floor. These changes cost nothing to implement. If late jobs come "
+             "from too much work on the floor, or from the wrong job going next at the brakes, these should move on-time delivery.</p>")
+    b.append("<p><b>Capacity scenarios</b> add hours at the brakes or around them, through operating changes or new equipment. These changes cost labor and/or capital. If late jobs come "
+             "from too few brake hours, only these should move it.</p>")
+    # late jobs against on-time jobs by stage, for the year (the flow report's stage table)
+    _st = q("select stage, job_class, mean_days from marts.mart_lead_time_by_stage where period = 'year' and job_class in ('on time', 'late')").pivot(index="stage", columns="job_class", values="mean_days")
+    _gap = _st["late"] - _st["on time"]
+    assert _gap.idxmax() == "queue: press brake" and (_gap > 0).mean() > 0.5 and not (_gap > 0).all()
     wip_now = float(tol[(tol["period"] == "year") & (tol["measure"] == "wip_mean")]["measured"].iloc[0])
-    cap_r, flow_r = "the capacity report", "the flow report"
+    cap_r, flow_r = "capacity report", "flow report"
     release = [
         ["WIP cap: 240, 210, and 180 jobs", "A job is released only when fewer jobs than the cap are on the floor.", "None", f"The floor carried {n0(wip_now)} jobs on average in {YEAR} ({flow_r}); fewer "
-         f"jobs on the floor should mean shorter waits.", "Non-rush jobs wait at a release gate, in release order, until a job ships; rush jobs pass."],
+         f"jobs on the floor could mean shorter waits.", "Non-rush jobs wait at a release gate, in release order, until a job ships; rush jobs pass."],
         ["Brake constraint-paced release", "A job with brake work is released only when the brakes have 3 days of work or less waiting.", "None", f"The brakes hold {pc(M['brake_share_of_queue'], 0)} of "
-         f"queue time ({cap_r}); pacing release to them should keep work from piling up there.", "Jobs with brake work wait at the gate while the brake backlog is over 3 days."],
-        [EDD, "Every work center takes the job with the earliest due date next.", "None", f"Late jobs wait longest at the brakes ({flow_r}); taking the most urgent job first should "
+         f"queue time ({cap_r}); pacing release to them could keep work from building there.", "Jobs with brake work wait at the gate while the brake backlog is over 3 days."],
+        [EDD, "Every work center takes the job with the earliest due date next.", "None", f"Late jobs have longer lead times across most stages and most notably at the brakes ({flow_r}); taking the most urgent job first should "
          f"ship more of them on time.", "Rush first, then earliest due date, at every work center."],
-        ["Critical ratio", "Every work center takes the job with the least time left for the work still to do.", "None", "It ranks jobs by urgency and remaining work together.",
+        [RATIO, "Every work center takes rush jobs first, then the job with the lowest ratio of working days to its due date over standard hours of work remaining.", "None",
+         "Earliest due date ignores how much work a job has left. The ratio moves jobs with the most work remaining against their due date to the front.",
          "Rush first, then the lowest ratio of time to the due date over standard hours remaining."],
         ["Shortest processing time at the brakes", "The brakes take the shortest job next.", "None", "Short jobs clear the queue fastest, which lowers the average wait.",
          "Rush first, then the least standard hours, at the brakes only."],
@@ -578,11 +584,11 @@ def build():
     cp = A.O["press_brake_atc"]
     capacity_rows = [
         [SETUP, "Setup standards, carts and sheets for the 12 part-operations with the most setup hours over standard; repeat setups assigned to the operators who know the part; a "
-         "handover standard at shift change.", f"{usd(A.COSTS['setup'][0])} once and {usd(A.COSTS['setup'][1])} a year", f"Brake setups run {n0(M['setups_over_per_week'])} hours a week over "
-         f"standard ({cap_r}).", "The 12 part-operations set up at standard; the other brake setups shorter by the assignment and handover hours measured."],
-        ["Additional Saturday shifts", "A Saturday brake shift every week of the build, in two variants: as crewed today (one brake) and both B1 and B2 crewed.",
-         f"Overtime of the added shifts: {usd(round(sat_cost[SAT_ONE], -2))} a year as crewed today, {usd(round(sat_cost[SAT_BOTH], -2))} with both brakes",
-         f"A Saturday shift as worked today supplies {sat_one} brake machine hours, {sat_share}% of the weekly gap in the build; with both brakes crewed about {sat_two}, "
+         "handover standard at shift change. Detailed in Section 3 of the capacity report.", f"{usd(A.COSTS['setup'][0])} once and {usd(A.COSTS['setup'][1])} a year", f"Brake setups run {n0(M['setups_over_per_week'])} hours a week over "
+         f"standard, the largest single driver of elevated brake utilization.", "The 12 part-operations set up at standard; the other brake setups shorter by the assignment and handover hours measured."],
+        ["Additional Saturday shifts", "A Saturday brake shift every week from November to February (historically the months with the recurring build). Two variants: as crewed today (one brake) and both B1 and B2 crewed.",
+         f"Overtime of the added shifts: {usd(round(sat_cost[SAT_ONE], -2))} a year with one crew, {usd(round(sat_cost[SAT_BOTH], -2))} with both brakes",
+         f"A Saturday shift as worked today supplies {sat_one} brake machine hours, {sat_share}% of the weekly gap in the build; with both brakes crewed "
          f"{sat_two_share}% ({cap_r}).",
          f"A Saturday shift every week from November through February: one brake at the Saturday yield, or B1 and B2 at the weekday yield."],
         [WELD, "A second shift on the robotic weld cell.", f"{usd(round(A.money(WELD)['weld'], -2))} a year of labor", f"The cell runs at {M['weld_utilization']:.2f} of its one shift with "
@@ -611,7 +617,7 @@ def build():
              f"in on-time delivery lies entirely above zero for {YEAR} or for {RT}. Four capacity changes work in the year of the build: the setup program ({ptsb(SETUP)}), planned "
              f"Saturdays with both brakes crewed ({ptsb(SAT_BOTH)}), the tool changer on B3 ({ptsb(CHANGER)}) and the robotic bending cell ({ptsb(CELL)}). Planned Saturdays as crewed today "
              f"add {pts(SAT_ONE)}, and the weld cell second shift works in {RT} only ({ptsb(WELD, 'rest')}). Among the release and dispatch rules only earliest due date works "
-             f"({ptsb(EDD)}), and it trades days for jobs: {n0(-edd_late[0])} fewer late jobs in {YEAR} with no fewer days late. The three WIP caps, critical ratio and shortest processing time at the brakes "
+             f"({ptsb(EDD)}), and it trades days for jobs: {n0(-edd_late[0])} fewer late jobs in {YEAR} with no fewer days late. The three WIP caps, the due-date ratio and shortest processing time at the brakes "
              f"make delivery worse, the cap at 180 by {d1(-chg(cap180, 'on_time_delivery') * 100)} points, because a cap moves the wait from the brakes to the release gate "
              f"({d1(A.mean(cap180, 'release_hold_days'))} days held) without adding an hour of brake time. {T.see('hold')}</p>")
     b.append(titled(fig_effects(), "Change in On-time Delivery by Scenario, With 95% Intervals"))
