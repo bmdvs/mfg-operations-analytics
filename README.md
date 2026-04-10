@@ -1,40 +1,42 @@
 # mfg-operations-analytics
 
-Delivery, flow, capacity and quoting analytics on a custom sheet-metal fabrication job shop, January 2023 to December 2025, computed on the shop's complete ERP and MES record.
+Three client reports on a custom sheet-metal fabrication job shop, built on its complete ERP and MES record for January 2023 to December 2025. Flow and On-time Delivery traces where lead time goes between release and shipment, attributes each late job's lost days to the stage that lost them, and measures how accurately the shop's quote predicts lead time. Capacity, Constraints and Setups identifies the press brakes as the shop's constraint and measures what setups over standard cost them. Discrete Event Simulation: On-time Delivery replays the shop's jobs on a validated model of the floor, tests 16 release, dispatch and capacity changes, and sets the cost, NPV and payback of those that work against their gain in on-time delivery.
 
-![Operations dashboard](docs/readme/dashboard.png)
-
-## What is included
-
-- Eight connected studies, each delivered as a client report: lead-time decomposition, late-job attribution, the constraint and variability, setups against standards, release control on a discrete-event model of the floor, leading indicators, lead-time quoting and quote analytics, technology ROI.
-- One operations dashboard: on-time delivery, lead time, WIP, utilization and queue by work center, setup against standard, overtime, the leading indicators; weekly grain, 13-week view, three-year trend.
 - A data pipeline from raw system exports to analysis-ready marts: DuckDB, dbt with schema tests, one build command that regenerates every table, figure and page byte-identically.
+
+![Job Flow, Release to Shipment](docs/readme/job_flow.png)
+
+![Lead Time Decomposition by Stage, 2025 and Q2-Q4](docs/readme/lead_time_decomposition.png)
+
+![Queue Time per Operation by Work Center, 2025](docs/readme/queue_by_work_center.png)
+
+![Scenario Results: Change in On-time Delivery vs. Status Quo, 2025](docs/readme/scenario_results.png)
+
+![On-time Delivery, Status Quo vs. Recommended Scenarios, 2025](docs/readme/recommended_scenarios.png)
 
 ## Business context
 
 The shop is a custom sheet-metal fabricator: about 120 employees, ISO 9001, one plant, about 2,000 active part numbers, 450 customers, about 5,200 jobs a year in lots from 1 to 500 pieces. Laser cutting, CNC punching, press brake forming, hardware insertion, welding, powder coating and light assembly in house; plating, anodizing and heat treat at outside vendors. Two shifts on the lasers and brakes, one elsewhere, Saturdays when behind.
 
-The shop quotes a fixed lead time by routing class, measures on-time delivery weekly, and records a late reason on each late job. In 2025 it delivered 76.6% on time. The late-reason codes did not explain the misses: a large share (36%) of late reasons were blank, and the coded ones pointed at the operation where the job was found late rather than where it lost the time. A first-quarter decline that year was felt on the floor as a brake-capacity problem, and the shop was weighing a second press brake with automatic tooling against a laser tower and a bending cell.
+The shop quotes a fixed lead time by routing class, measures on-time delivery weekly, and records a late reason on each late job. In 2025 it delivered 80.8% on time. The late-reason codes did not explain the misses: a large share (36%) of late reasons were blank, and the coded ones pointed at the operation where the job was found late rather than where it lost the time. A first-quarter decline that year was felt on the floor as a brake-capacity problem, and the shop was weighing three capital options: replacing a press brake with an automatic tool-changing model, an automated sheet tower on a laser, and a robotic bending cell.
 
-The engagement put the ERP order and quote records beside the MES operation timestamps for three years, every job and every operation, to answer what the reports could not: where lead time goes, which stage each late job lost its days at, which work center sets the lead time and what variability at it costs, which indicators move before delivery slips, what lead time the shop should quote at its current load, and which of the capital options pays back on measured hours. The studies below are the result, in the order they were built.
+The engagement put the ERP order and quote records beside the MES operation timestamps for three years, every job and every operation, to answer what the reports could not: where lead time goes, which stage each late job lost its days at, which work center sets the lead time and what variability at it costs, what lead time the shop should quote at its current load, and which of the capital options pays back on measured hours. The three reports below are the result.
 
-## Studies
+## Reports
 
 | Report | Question | Finding | Deliverable |
 |---|---|---|---|
-| Flow and On-time Delivery | Where does the lead time go, and does the floor's WIP match the quoted lead times? What makes jobs late, and do the shop's late-reason codes say so? What lead time should be quoted in a build, and which measures warn of a decline? | Queue at the brakes is 24% of lead time and the stage that separates late jobs from on-time jobs (5.76 days against 2.50); the median job ships in 11.2 working days against an average quoted lead time of 12.9, 9.2 in Q2-Q4. In 2025, jobs waiting at work centers (i.e., queue constraints) accounted for 42% of the 3,473 lost days, while jobs that were released late accounted for 21%, and jobs that waited on material and outside processing accounted for 7% and 3%, respectively. The shop's quoted lead time was off by 4.8 days on average from 2023 to 2025. The current practice of quoting standard lead times based on the part's routing class, and then adjusting this higher during periods of low capacity, proved to be inaccurate in both directions. | [report](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/lead_time_and_late_jobs.html) |
-| Capacity, Constraints and Setups | Which work centers run hot, and how do their queues respond to load? What do setups cost at the brakes, and where is the overrun? | In 2025, the press brakes ran at 91% average utilization and the robotic weld cell at 82%. Against their 97% uptime, the average production capacity buffer was only 6 points for the press brakes and 15 points for the robotic weld cell, the smallest of all work centers. Brake setups ran 1,847 hours over standard in 2025, 36 a week, 10.4 points of brake utilization. | [report](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/capacity_constraints_and_setups.html) |
-| Discrete Event Simulation: On-time Delivery | Do release and dispatch rules raise on-time delivery, or only added brake hours? What do the changes that work cost and return? | Scenarios that added brake capacity improved on-time delivery. Among the release and dispatch rules, only earliest due date improved on-time delivery. The "Operating Package" combines the brake setup program and additional Saturday shifts on both brakes, the two low cost capacity scenarios. This combination added 7.7 points to on-time delivery. The operating package is recommended first: it raises on-time delivery 7.7 points; the $60,000 initial investment and $15,400 a year pay back in 0.4 years and return $0.69M. The robotic bending cell is the recommended capital investment option: on top of the package it adds 2.2 points and returns $1.52M with a 2.0-year payback. | [report](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/options_tested.html) |
+| Flow and On-time Delivery | Where does lead time go, why are jobs late, and how accurate is the quoted lead time? | Queue at the press brakes is 24% of lead time and where late jobs lose the most time (5.76 days against 2.50 for on-time jobs). Waiting at work centers caused 42% of the 3,473 days lost in 2025 and late release 21%, and 36% of late jobs carry no reason code. The quote misses actual lead time by 4.8 days on average: too long in ordinary months, too short in the year-end build. | [report](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/lead_time_and_late_jobs.html) |
+| Capacity, Constraints and Setups | Which work center sets lead time, and what do brake setups cost? | The press brakes are the constraint: 91% utilized against 97% uptime, a buffer of 6 points, and 53% of queue time. Brake setups ran 1,847 hours over standard in 2025, 36 hours a week or 10.4 points of brake utilization. | [report](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/capacity_constraints_and_setups.html) |
+| Discrete Event Simulation: On-time Delivery | Which changes raise on-time delivery, and what do they cost and return? | Only changes that add brake capacity move on-time delivery materially; release and dispatch rules add at most 1.9 points. The operating package, a brake setup program plus planned Saturdays on both brakes, raises 2025 on-time delivery 7.7 points to 87.9% for $60,000 once, with a 0.4-year payback. A robotic bending cell adds 2.2 points on top, with an NPV of $1.52M and a 2.0-year payback. The model reproduces all ten validation measures within tolerance. | [report](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/options_tested.html) |
 
-**Dashboard.** [docs/dashboard/index.html](https://brimsystems.github.io/mfg-operations-analytics/docs/dashboard/index.html). Index of deliverables: [docs/index.html](https://brimsystems.github.io/mfg-operations-analytics/docs/index.html). The week of 15 December 2025 is the current week; every panel carries a one-line definition in the reports' wording.
+Index of deliverables: [docs/index.html](https://brimsystems.github.io/mfg-operations-analytics/docs/index.html).
 
 ## Methods
 
-Operations analysis: lead-time decomposition and Little's Law; utilization and queue-time curves on the shop's own data; late-job attribution by stage against the stage's own normal; setup and standard variance by lot size and work center; a reproducible discrete-event model of the floor with 19 scenarios, replications and intervals; lead-time quoting from the actual distribution by routing class and load, evaluated out of sample; leading-indicator tests against shuffled and shifted chance series; ROI with payback and break-even analysis on stated assumptions.
+Lead-time decomposition by stage and Little's Law; late-job attribution of lost days by stage against the stage's own normal, checked against the shop's reason codes; utilization and queue-time curves by work center; setup against standard by lot size and work center; quote accuracy by condition at release, with a candidate quote evaluated out of sample; a discrete event model of the floor validated against ten measures set before it was run, testing 16 changes and combinations over 30 runs each with 95% intervals; NPV, payback and break-even on stated assumptions.
 
 Data engineering: raw system exports loaded to DuckDB; a dbt project with schema tests on every mart; one build command that regenerates every table, figure and page byte-identically from the committed inputs; fixed input ordering and per-scenario seeding so that the floor model reproduces to the digit.
-
-Framing: the improvement projects are written as DMAIC projects. Every report describes the findings and what to do, in the form a client receives at the end of an engagement.
 
 ## Data
 
@@ -48,7 +50,7 @@ The record carries what these systems carry in practice: blank and miscoded late
 | Maintenance | data/raw/maintenance/ (1 CSV file) | downtime_events | downtime event | 20261012T153907Z-20250101 |
 | HR | data/raw/hr/ (2 CSV files) | attendance, employees | employee, employee and day | 20261012T153907Z-20250101 |
 
-`pipeline/load` loads the CSV exports under `data/raw` into DuckDB with dlt, one text table per file. The dbt project under `pipeline/dbt` builds the staging models (one per export, typed), the intermediate models (working-day clock, machine time, queue, lead time by stage, WIP, utilization, setups, late-job attribution) and the marts, with tests on keys. The scripts under `analytics/` read the marts and write the three reports and their figures under `docs/`, the dashboard and this file. The shop model under `analytics/release_control/` replays the released jobs for the scenarios of the simulation report; its runs are saved under `results/` and each run repeats exactly from its scenario and replication number.
+`pipeline/load` loads the CSV exports under `data/raw` into DuckDB with dlt, one text table per file. The dbt project under `pipeline/dbt` builds the staging models (one per export, typed), the intermediate models (working-day clock, machine time, queue, lead time by stage, WIP, utilization, setups, late-job attribution) and the marts, with tests on keys. The scripts under `analytics/` read the marts and write the three reports and their figures under `docs/`, and this file. The shop model under `analytics/release_control/` replays the released jobs for the scenarios of the simulation report; its runs are saved under `results/` and each run repeats exactly from its scenario and replication number.
 
 ## How to run
 
