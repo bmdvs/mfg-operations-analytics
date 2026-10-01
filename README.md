@@ -41,6 +41,8 @@ The shop quotes lead times by routing class standards plus capacity adjustments,
 
 This project began by uncovering the root causes of late jobs, as detailed in the Flow and On-time Delivery and Capacity, Constraints, and Setup reports. Then, in the Discrete Event Simulation, options are tested to improve on-time delivery (the three capital options above, plus others) and determines which options represent are the best investment for the shop to make. 
 
+<br> 
+
 ## Data
 
 The data record carries the standard quality issues found in ERP and MES systems in practice: blank and miscoded late reasons, operations closed in batches at the end of a shift, standards not updated after routing changes, and a 2024 year-end build that skews every queue for months after. The analyses work with the record as it stands and say so where it limits a finding.
@@ -54,6 +56,8 @@ The data record carries the standard quality issues found in ERP and MES systems
 | HR | data/raw/hr/ (2 CSV files) | attendance, employees | employee, employee and day | 20261012T153907Z-20250101 |
 
 `pipeline/load` loads the CSV exports under `data/raw` into DuckDB with dlt, one text table per file. The dbt project under `pipeline/dbt` builds the staging models (one per export, typed), the intermediate models (working-day clock, machine time, queue, lead time by stage, WIP, utilization, setups, late-job attribution) and the marts, with tests on keys. The scripts under `analytics/` read the marts and write the three reports and their figures under `docs/`, and this file. The shop model under `analytics/release_control/` replays the released jobs for the scenarios of the simulation report; its runs are saved under `results/` and each run repeats exactly from its scenario and replication number.
+
+<br> 
 
 ## How to run
 
