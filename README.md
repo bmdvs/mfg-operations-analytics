@@ -1,6 +1,6 @@
 # Manufacturing Operations Analytics: Metal Fabrication 
 
-On-time delivery, lead time, and capacity analytics, built on the shop's complete ERP and MES record over the past three years (Jan. '23 to Dec. '25). A data pipeline was built to clean and merge the ERP and MES records. Analytics were then built on the following methodologies:  
+On-time delivery, lead time, and capacity analytics, built on the shop's complete ERP and MES record over the past three years (Jan. '23 to Dec. '25). A data pipeline was built to clean and merge the ERP and MES records. Analytics were then built using the following methodologies:  
 
 **On-time delivery**
 - Root cause analysis: attributes each late job's lost days to a driver (queue constraint, late release, material and outside processing holds, setup overruns), measured against on-time jobs of the same routing class using the shop's data record
