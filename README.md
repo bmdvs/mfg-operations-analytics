@@ -3,9 +3,9 @@
 On-time delivery, lead time, and capacity analytics, built on the shop's complete ERP and MES record over the past three years (Jan. '23 to Dec. '25). A data pipeline was built to clean and merge the ERP and MES records. Analytics were then built on the following methodologies:  
 
 **On-time delivery**
-- Root cause analysis: attributes each late job's lost days to a driver (constraint queue, late release, material, outside processing), measured against on-time jobs of the same routing class 
-- Chance-corrected agreement analysis: tests whether the shop's current late-reason codes adequately map to the root causes above
-- Distribution analysis: measures by how many days jobs ship early or late, revealing slack in the quoted dates as well as the extent of misses 
+- Root cause analysis: attributes each late job's lost days to a driver (constraint queue, late release, material, outside processing), measured against on-time jobs of the same routing class using the shop's data record
+- Chance-corrected agreement analysis: tests whether the shop's current late-reason codes adequately map to the root causes identified above
+- Distribution analysis: measures how many days jobs ship early or late, revealing slack in the quoted dates as well as the extent of misses 
 - Discrete event simulation: tests release, dispatch and capacity changes for their effect on on-time delivery, and analyzes those changes' NPV and ROI
 
 **Lead time**
