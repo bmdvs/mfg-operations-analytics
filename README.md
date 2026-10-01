@@ -19,8 +19,7 @@ On-time delivery, lead time, and capacity analytics, built on the shop's complet
 - Queueing curves: measure machine utilization against queue time to identify the constraints and maximum utilization levels at which queue time climbs steeply 
 - Pareto analysis: shows where queue times concentrate by work center
 - Lagged correlation analysis: separates load-driven from schedule-driven queue times
-- Segmentation analysis: finds the conditions where machine setup times overrun their standards (lot size, shift handover, operator familiarity, part family) and estimates the queue time recovered by removing setup overrun
-- Variance analysis (planned against actual): tests whether outdated standards understate the load
+- Segmentation and variance analysis: finds the conditions where machine setup times overrun their standards (lot size, shift handover, operator familiarity, part family) and estimates the queue time recovered by removing setup overrun
 
 <br> 
 
