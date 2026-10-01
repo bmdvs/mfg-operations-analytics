@@ -4,7 +4,7 @@ On-time delivery, lead time, and capacity analytics, built on the shop's complet
 
 <br> 
 
-Three reports were built: 
+Three reports were created: 
 
 **[Flow and On-Time Delivery](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/lead_time_and_late_jobs.html)** asks: why do jobs ship late, in what stages between release and shipment do late jobs lose time, and how well does the quoted lead time align with actual shipment dates? 
 
