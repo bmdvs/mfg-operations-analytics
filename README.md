@@ -1,6 +1,20 @@
 # Manufacturing Operations Analytics: Metal Fabrication 
 
-On-time delivery, lead time, and capacity analytics, built on the shop's complete ERP and MES record over the past three years (Jan. '23 to Dec. '25). A data pipeline was built to clean and merge the ERP and MES records. Analytics were then built using the following methodologies:  
+On-time delivery, lead time, and capacity analytics, built on the shop's complete ERP and MES record over the past three years (Jan. '23 to Dec. '25). A data pipeline was built to clean and merge the ERP and MES records into data marts, and the analytics were then built on top. 
+
+<br> 
+
+Three reports were built: 
+
+**[Flow and On-Time Delivery](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/lead_time_and_late_jobs.html)** asks: why do jobs ship late, in what stages between release and shipment do late jobs lose time, and how well does the quoted lead time align with actual shipment dates? 
+
+**[Capacity, Constraints and Setups](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/capacity_constraints_and_setups.html)** asks: which machines are the shop's primary constraints, how do machine utilization levels impact queue time, and how much capacity is lost to setups and outdated standards? 
+
+**[Discrete Event Simulation](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/options_tested.html)** asks: which changes to release, dispatch, and capacity raise on-time delivery rates, and of those changes that work, which are the best investments to make?  
+
+<br>
+
+ The analyses in these reports were built using the following methodologies:  
 
 **On-time delivery**
 - Root cause analysis: attributes each late job's lost days to a driver (queue constraint, late release, material and outside processing holds, setup overruns), measured against on-time jobs of the same routing class using the shop's data record
@@ -21,15 +35,6 @@ On-time delivery, lead time, and capacity analytics, built on the shop's complet
 - Lagged correlation analysis: separates load-driven from schedule-driven queue times
 - Segmentation and variance analysis: finds the conditions where machine setup times overrun their standards (lot size, shift handover, operator familiarity, part family) and estimates the queue time recovered by removing setup overrun
 
-<br> 
-
-Three reports were built: 
-
-**[Flow and On-Time Delivery](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/lead_time_and_late_jobs.html)** asks: why do jobs ship late, in what stages between release and shipment do late jobs lose time, and how well does the quoted lead time align with actual shipment dates? 
-
-**[Capacity, Constraints and Setups](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/capacity_constraints_and_setups.html)** asks: which machines are the shop's primary constraints, how do machine utilization levels impact queue time, and how much capacity is lost to setups and outdated standards? 
-
-**[Discrete Event Simulation](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/options_tested.html)** asks: which changes to release, dispatch, and capacity raise on-time delivery rates, and of those changes that work, which are the best investments to make?  
 
 <br> 
 
