@@ -1,46 +1,46 @@
-# mfg-operations-analytics
+# Manufacturing Operations Analytics: Metal Fabrication 
 
-Three client reports on a custom sheet-metal fabrication job shop, built on its complete ERP and MES record for January 2023 to December 2025. Flow and On-time Delivery traces where lead time goes between release and shipment, attributes each late job's lost days to the stage that lost them, and measures how accurately the shop's quote predicts lead time. Capacity, Constraints and Setups identifies the press brakes as the shop's constraint and measures what setups over standard cost them. Discrete Event Simulation: On-time Delivery replays the shop's jobs on a validated model of the floor, tests 16 release, dispatch and capacity changes, and sets the cost, NPV and payback of those that work against their gain in on-time delivery.
+On-time delivery, lead time, and capacity analytics, built on the shop's complete ERP and MES record over the past three years (Jan. '23 to Dec. '25). A data pipeline was built to merge the ERP and MES records. Analytics were then built on the following methodologies:  
 
-- A data pipeline from raw system exports to analysis-ready marts: DuckDB, dbt with schema tests, one build command that regenerates every table, figure and page byte-identically.
+**On-time delivery**
+- Root cause analysis: attributes each late job's lost days to a driver (constraint queue, late release, material, outside processing), measured against on-time jobs of the same routing class 
+- Chance-corrected agreement analysis: tests whether the shop's current late-reason codes adequately identify the root causes above
+- Distribution analysis: measures by how many days jobs ship early or late, revealing slack in the quoted dates as well as the extent of misses 
+- Discrete event simulation: tests release, dispatch and capacity changes for their effect on on-time delivery, and analyzes those changes' NPV and ROI
 
-![Job Flow, Release to Shipment](docs/readme/job_flow.png)
+**Lead time**
+- Lead time decomposition: shows where lead time concentrates, stage by stage, between release and shipment  
+- Forecast error analysis: measures how accurately the quoted lead time predicts actual lead time, and under which conditions it fails
+- Out-of-sample validation: selects new lead time quoting rules that meet their target on data they were not fit to
+- Little's Law analysis: links work in process to lead time, sets how much work the floor can hold within the quoted lead times
 
-![Lead Time Decomposition by Stage, 2025 and Q2-Q4](docs/readme/lead_time_decomposition.png)
+**Capacity**
+- Capacity utilization analysis: shows how close each work center runs to its available hours
+- Queueing curves: measure machine utilization against queue time to identify the constraints and maximum utilization levels at which queue time climbs steeply 
+- Pareto analysis: shows where queue times concentrate by work center
+- Lagged correlation analysis: separates load-driven from schedule-driven queue times
+- Segmentation analysis: finds the conditions where machine setup times overrun their standards (lot size, shift handover, operator familiarity, part family) and estimates the queue time recovered by removing setup overrun
+- Variance analysis (planned against actual): tests whether outdated standards understate the load
 
-![Queue Time per Operation by Work Center, 2025](docs/readme/queue_by_work_center.png)
+Three reports were built: 
 
-![Scenario Results: Change in On-time Delivery vs. Status Quo, 2025](docs/readme/scenario_results.png)
+**[Flow and On-Time Delivery](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/lead_time_and_late_jobs.html)** asks: why do jobs ship late, in what stages between release and shipment do late jobs lose time, and how well does the quoted lead time align with actual shipment dates? 
 
-![On-time Delivery, Status Quo vs. Recommended Scenarios, 2025](docs/readme/recommended_scenarios.png)
+**[Capacity, Constraints and Setups](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/capacity_constraints_and_setups.html)** asks: which machines are the shop's primary constraints, how does machine utilization levels impact queue time, and how much capacity is lost to setups and outdated standards? 
+
+**[Discrete Event Simulation](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/options_tested.html)** asks: which changes to release, dispatch, and capacity raise on-time delivery rates, and of those changes that work, which are the best investments to make?  
 
 ## Business context
 
-The shop is a custom sheet-metal fabricator: about 120 employees, ISO 9001, one plant, about 2,000 active part numbers, 450 customers, about 5,200 jobs a year in lots from 1 to 500 pieces. Laser cutting, CNC punching, press brake forming, hardware insertion, welding, powder coating and light assembly in house; plating, anodizing and heat treat at outside vendors. Two shifts on the lasers and brakes, one elsewhere, Saturdays when behind.
+The shop is a custom sheet-metal fabricator: about $25 million revenue, ISO 9001. It has 25 machines across 10 work centers: laser cutting, CNC punching, press brake forming, hardware insertion, robotic and manual welding, grind and deburr, powder coating, assembly and inspection. It has about 2,000 different active part numbers and runs over 5,000 jobs a year in lots from 1 to 500 pieces.  
 
-The shop quotes a fixed lead time by routing class, measures on-time delivery weekly, and records a late reason on each late job. In 2025 it delivered 80.8% on time. The late-reason codes did not explain the misses: a large share (36%) of late reasons were blank, and the coded ones pointed at the operation where the job was found late rather than where it lost the time. A first-quarter decline that year was felt on the floor as a brake-capacity problem, and the shop was weighing three capital options: replacing a press brake with an automatic tool-changing model, an automated sheet tower on a laser, and a robotic bending cell.
+The shop quotes lead times by routing class standards plus capacity adjustments, measures on-time delivery weekly, and records a late reason on each late job. In 2025 it delivered 80.8% of jobs on time. The late-reason codes did not explain the misses: a large share (36%) of late reasons were blank, and the coded ones pointed at the operation where the job was found late rather than where it lost the time. In Q1 2025, on-time delivery fell to 52.4%, which the shop saw as a press brake capacity problem. It weighed three capital options: replacing a press brake with an automatic tool-changing model, an automated sheet tower on a laser, and a robotic bending cell.
 
-The engagement put the ERP order and quote records beside the MES operation timestamps for three years, every job and every operation, to answer what the reports could not: where lead time goes, which stage each late job lost its days at, which work center sets the lead time and what variability at it costs, what lead time the shop should quote at its current load, and which of the capital options pays back on measured hours. The three reports below are the result.
-
-## Reports
-
-| Report | Question | Finding | Deliverable |
-|---|---|---|---|
-| Flow and On-time Delivery | Where does lead time go, why are jobs late, and how accurate is the quoted lead time? | Queue at the press brakes is 24% of lead time and where late jobs lose the most time (5.76 days against 2.50 for on-time jobs). Waiting at work centers caused 42% of the 3,473 days lost in 2025 and late release 21%, and 36% of late jobs carry no reason code. The quote misses actual lead time by 4.8 days on average: too long in ordinary months, too short in the year-end build. | [report](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/lead_time_and_late_jobs.html) |
-| Capacity, Constraints and Setups | Which work center sets lead time, and what do brake setups cost? | The press brakes are the constraint: 91% utilized against 97% uptime, a buffer of 6 points, and 53% of queue time. Brake setups ran 1,847 hours over standard in 2025, 36 hours a week or 10.4 points of brake utilization. | [report](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/capacity_constraints_and_setups.html) |
-| Discrete Event Simulation: On-time Delivery | Which changes raise on-time delivery, and what do they cost and return? | Only changes that add brake capacity move on-time delivery materially; release and dispatch rules add at most 1.9 points. The operating package, a brake setup program plus planned Saturdays on both brakes, raises 2025 on-time delivery 7.7 points to 87.9% for $60,000 once, with a 0.4-year payback. A robotic bending cell adds 2.2 points on top, with an NPV of $1.52M and a 2.0-year payback. The model reproduces all ten validation measures within tolerance. | [report](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/options_tested.html) |
-
-Index of deliverables: [docs/index.html](https://brimsystems.github.io/mfg-operations-analytics/docs/index.html).
-
-## Methods
-
-Lead-time decomposition by stage and Little's Law; late-job attribution of lost days by stage against the stage's own normal, checked against the shop's reason codes; utilization and queue-time curves by work center; setup against standard by lot size and work center; quote accuracy by condition at release, with a candidate quote evaluated out of sample; a discrete event model of the floor validated against ten measures set before it was run, testing 16 changes and combinations over 30 runs each with 95% intervals; NPV, payback and break-even on stated assumptions.
-
-Data engineering: raw system exports loaded to DuckDB; a dbt project with schema tests on every mart; one build command that regenerates every table, figure and page byte-identically from the committed inputs; fixed input ordering and per-scenario seeding so that the floor model reproduces to the digit.
+This project began by uncovering the root causes of late jobs, as detailed in the Flow and On-time Delivery and Capacity, Constraints, and Setup reports. Then, in the Discrete Event Simulation, options are tested to improve on-time delivery (the three capital options above, plus others) and determines which options represent are the best investment for the shop to make. 
 
 ## Data
 
-The record carries what these systems carry in practice: blank and miscoded late reasons, operations closed in batches at the end of a shift, standards not updated after routing changes, and a 2024 year-end build that shows in every queue. The analyses work with the record as it stands and say so where it limits a finding.
+The data record carries the standard quality issues found in ERP and MES systems in practice: blank and miscoded late reasons, operations closed in batches at the end of a shift, standards not updated after routing changes, and a 2024 year-end build that skews every queue for months after. The analyses work with the record as it stands and say so where it limits a finding.
 
 | System | Export | Tables | Grain | Batch |
 |---|---|---|---|---|
