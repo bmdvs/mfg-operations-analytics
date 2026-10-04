@@ -1,0 +1,22 @@
+select
+    part_id,
+    customer_id,
+    description,
+    family,
+    material,
+    thickness,
+    cast(bend_count as integer) as bend_count,
+    cast(has_weld as boolean) as has_weld,
+    cast(has_hardware as boolean) as has_hardware,
+    finish,
+    powder_color,
+    cast(plate as boolean) as plate,
+    cast(anodize as boolean) as anodize,
+    cast(silk_screen as boolean) as silk_screen,
+    cast(heat_treat as boolean) as heat_treat,
+    cast(tolerance_critical as boolean) as tolerance_critical,
+    cast(repeat_part as boolean) as repeat_part,
+    cast(first_quoted_date as date) as first_quoted_date,
+    revision,
+    cast(active as boolean) as active
+from {{ source('erp', 'erp__parts') }}
