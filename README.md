@@ -6,11 +6,11 @@ On-time delivery, lead time, and capacity analytics, built on the shop's complet
 
 Three reports were created: 
 
-**[Flow and On-Time Delivery](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/lead_time_and_late_jobs.html)** asks: why do jobs ship late, in what stages between release and shipment do late jobs lose time, and how well does the quoted lead time align with actual shipment dates? 
+**[Flow and On-Time Delivery](https://bmdvs.github.io/mfg-operations-analytics/docs/reports/lead_time_and_late_jobs.html)** asks: why do jobs ship late, in what stages between release and shipment do late jobs lose time, and how well does the quoted lead time align with actual shipment dates? 
 
-**[Capacity, Constraints and Setups](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/capacity_constraints_and_setups.html)** asks: which machines are the shop's primary constraints, how do machine utilization levels impact queue time, and how much capacity is lost to setups and outdated standards? 
+**[Capacity, Constraints and Setups](https://bmdvs.github.io/mfg-operations-analytics/docs/reports/capacity_constraints_and_setups.html)** asks: which machines are the shop's primary constraints, how do machine utilization levels impact queue time, and how much capacity is lost to setups and outdated standards? 
 
-**[Discrete Event Simulation](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/options_tested.html)** asks: which changes to release, dispatch, and capacity raise on-time delivery rates, and of those changes that work, which are the best investments to make?  
+**[Discrete Event Simulation](https://bmdvs.github.io/mfg-operations-analytics/docs/reports/options_tested.html)** asks: which changes to release, dispatch, and capacity raise on-time delivery rates, and of those changes that work, which are the best investments to make?  
 
 <br>
 
@@ -89,4 +89,4 @@ python -m analytics.technology_roi.scenarios 30 6 laser_queue
 
 ## Author
 
-Brian Davis. Data engineering and applied analytics/ML for manufacturers. Other work: [github.com/brimsystems](https://github.com/brimsystems?tab=repositories).
+Brian Davis. Data engineering and applied analytics/ML for manufacturers. Other work: [github.com/bmdvs](https://github.com/bmdvs?tab=repositories).

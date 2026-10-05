@@ -14,7 +14,7 @@ from analytics.style.style import DOCS, shell, table
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
-PAGES = "https://brimsystems.github.io/mfg-operations-analytics/"          # where the pages under docs/ are served
+PAGES = "https://bmdvs.github.io/mfg-operations-analytics/"          # where the pages under docs/ are served
 SHOP = "Custom sheet-metal fabrication job shop, about 120 employees, one plant."
 SCOPE = "Eight improvement projects and an operations dashboard on the shop's records from January 2023 to December 2025."
 
@@ -176,7 +176,7 @@ METHODS = [
 ]
 RECORD = ("The record carries what these systems carry in practice: blank and miscoded late reasons, operations closed in batches at the end of a shift, standards not updated after routing "
           "changes, and a 2024 year-end build that shows in every queue. The analyses work with the record as it stands and say so where it limits a finding.")
-AUTHOR = "Brian Davis. Data engineering and applied analytics/ML for manufacturers. Other work: [github.com/brimsystems](https://github.com/brimsystems?tab=repositories)."
+AUTHOR = "Brian Davis. Data engineering and applied analytics/ML for manufacturers. Other work: [github.com/bmdvs](https://github.com/bmdvs?tab=repositories)."
 
 
 # the images at the top of the README, written by analytics.readme_image: file and chart title
