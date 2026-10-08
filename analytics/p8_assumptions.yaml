@@ -1,0 +1,61 @@
+# P8 technology ROI: assumptions. Every value here is an assumption supplied by the shop; the measured inputs come from the marts and the shop model.
+# Money in US dollars; hours are machine or labor hours as stated.
+
+options:
+  press_brake_atc:
+    name: Press brake with automatic tool changing
+    equipment_cost: 650000            # USD. Source: supplied by the shop (budgetary quote, 150-ton class brake with tool changer).
+    installation_and_tooling: 85000   # USD, one time: rigging, foundation, tooling set for the changer, training. Source: supplied by the shop.
+    annual_maintenance: 18000         # USD per year: service contract and changer upkeep. Source: supplied by the shop.
+    tool_change_share_of_setup: 0.45  # Share of a brake setup's hours that is loading and unloading tooling. Source: supplied by the shop (brake supervisor's estimate).
+    tool_change_reduction: 0.85       # Share of the tool-change hours the changer removes. Source: supplied by the shop (machine builder's figure).
+    replaces: B3                      # The machine takes the place of B3; the reduction applies to the setups that run on that machine, with dispatch unchanged. Source: supplied by the shop.
+    added_crewed_hours_per_week: 0    # No brake hours are added. Source: supplied by the shop.
+    sensitivity_every_setup_covered: true   # One further line, labeled as the upper bound and not the base case: every brake setup covered at the same price. Source: supplied by the shop.
+
+  laser_tower:
+    name: Second automated laser sheet tower
+    equipment_cost: 420000            # USD. Source: supplied by the shop (budgetary quote).
+    installation_and_tooling: 40000   # USD, one time: installation, pallets, integration with the laser. Source: supplied by the shop.
+    annual_maintenance: 9000          # USD per year. Source: supplied by the shop.
+    added_laser_hours_per_week: 30    # Machine hours per week of unattended cutting added on the laser fitted (6 hours after second shift, 5 days). Source: supplied by the shop.
+    laser_fitted: L2                  # The laser that receives the tower. Source: supplied by the shop.
+    operator_hours_saved_per_week: 10 # Labor hours per week of sheet loading and unloading removed. Source: supplied by the shop.
+
+  robotic_bending_cell:
+    name: Robotic bending cell
+    equipment_cost: 900000            # USD. Source: supplied by the shop (budgetary quote).
+    installation_and_tooling: 130000  # USD, one time: grippers, tooling, offline programming software, training. Source: supplied by the shop.
+    annual_maintenance: 25000         # USD per year. Source: supplied by the shop.
+    added_crewed_hours_per_week: 70   # Brake hours per week the cell adds (two shifts, five days, at 0.875 availability). Source: supplied by the shop.
+    share_of_part_mix: 0.35           # Share of brake standard hours the cell can run. Source: supplied by the shop (manufacturing engineering's review of the part mix). The rule below selects 30.3% of the brake standard hours released in 2025.
+    eligible_parts: light parts, repeat parts, lots of 25 pieces or more   # The parts the share above stands for. Source: supplied by the shop.
+    tending_labor_per_cell_hour: 0.5  # Operator hours per cell hour, against 1.0 at a manual brake. Source: supplied by the shop.
+
+no_capital_package:                    # The P5 recommendation, costed on the same lines as the capital options.
+  setup_program_one_time: 60000       # USD: tooling carts, setup sheets and engineering time for the top 12 part-operations (P4). Source: supplied by the shop.
+  setup_program_annual: 10000         # USD per year: upkeep of the setup standards. Source: supplied by the shop.
+  weld_second_shift_operators: 1      # Operators added on the robotic weld cell's second shift. Source: supplied by the shop.
+  shift_differential: 0.10            # Second-shift premium on the labor rate. Source: supplied by the shop.
+  planned_saturday_crew: 2            # Operators on a planned Saturday brake shift (B1 and B2), 8 hours each; the same crew as brake_crew_per_shift. Source: supplied by the shop.
+
+labor:
+  labor_rate: 38.0                    # USD per hour, loaded (wages, taxes and benefits), brake, laser and weld operators. Source: supplied by the shop.
+  overtime_premium: 0.5               # Premium on the labor rate for Saturday and extended hours (time and a half). Source: supplied by the shop.
+  hours_per_operator_year: 2000       # Paid hours per operator per year. Source: supplied by the shop.
+  brake_crew_per_shift: 2             # Operators on a Saturday or extended brake shift (B1 and B2); overtime hours are the shifts and extended hours at this crew. Source: supplied by the shop.
+
+finance:
+  discount_rate: 0.10                 # Per year. Source: supplied by the shop.
+  horizon_years: 7                    # Years of benefit counted. Source: supplied by the shop.
+  residual_value_share: 0.0           # Share of equipment cost recovered at the horizon. Source: supplied by the shop.
+  taxes_and_depreciation: excluded    # Payback and NPV are before tax. Source: supplied by the shop.
+
+released_hours:
+  utilization_of_released_hours: 0.5  # Share of released constraint hours that becomes shipped work; the rest is taken as overtime avoided or left idle. Source: supplied by the shop.
+  contribution_margin_share: 0.40     # Share of revenue left after material and outside processing, applied to the revenue per brake hour measured for 2025. Source: supplied by the shop.
+  laser_hours_carry_throughput_value: false   # Only hours released at the constraint (the brakes) carry throughput value. Source: supplied by the shop.
+
+delivery:
+  value_of_an_on_time_point: null             # Not monetized: on-time delivery is reported in points beside the money. Source: supplied by the shop.
+  value_of_a_day_of_90th_percentile: null     # Not monetized: reported in days beside the money. Source: supplied by the shop.

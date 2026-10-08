@@ -1,0 +1,451 @@
+customer_id,customer_name,industry,terms,required_otd_pct,key_account
+C10006,Lakeside Conveyor Co.,industrial_machinery,NET 30,95.0,True
+C10011,Harbor Medical Ltd.,medical_equipment,NET 30,95.0,True
+C10019,Northfield Electric Ltd.,electrical_equipment,NET 30,95.0,True
+C10024,Sterling Farm Systems Co.,agriculture,NET 30,95.0,True
+C10033,Pinnacle Transit Products Ltd.,transportation,NET 45,95.0,True
+C10041,Pinnacle Switchgear LLC,electrical_equipment,NET 30,95.0,True
+C10042,Pioneer Medical Co.,medical_equipment,NET 60,95.0,True
+C10053,Heritage Switchgear Inc.,electrical_equipment,NET 30,95.0,True
+C10060,Delta Ventilation Ltd.,hvac,NET 30,95.0,True
+C10067,Atlas Switchgear Inc.,electrical_equipment,NET 30,95.0,True
+C10071,Clearwater Signal Inc.,telecom,NET 30,95.0,True
+C10081,Horizon Trailer Co.,transportation,NET 30,95.0,True
+C10086,Sterling Health Systems Inc.,medical_equipment,NET 45,95.0,True
+C10096,Cedar Controls LLC,electrical_equipment,NET 30,95.0,True
+C10102,Westbrook Networks Co.,telecom,NET 30,95.0,True
+C10107,Heritage Vehicle Systems Inc.,transportation,NET 60,95.0,True
+C10114,Summit Medical LLC,medical_equipment,NET 30,95.0,True
+C10123,Clearwater Electric LLC,electrical_equipment,NET 30,95.0,True
+C10132,Hillcrest Surgical Products Inc.,medical_equipment,NET 30,95.0,True
+C10138,Union Climate Products Corp.,hvac,NET 30,95.0,True
+C10144,Highland Electrical Products Inc.,electrical_equipment,NET 30,95.0,True
+C10151,Lincoln Networks Ltd.,telecom,NET 60,95.0,True
+C10159,Pioneer Switchgear Ltd.,electrical_equipment,NET 30,95.0,True
+C10161,Liberty Signal LLC,telecom,NET 30,95.0,True
+C10173,Crestview Comfort Systems Corp.,hvac,NET 30,95.0,True
+C10175,Beacon Data Systems Ltd.,telecom,NET 30,,False
+C10186,Highland Ventilation Corp.,hvac,NET 30,90.0,False
+C10192,Granite Thermal Co.,hvac,NET 30,90.0,False
+C10200,Riverside Climate Products Inc.,hvac,NET 30,,False
+C10208,Hillcrest Grain Systems Corp.,agriculture,NET 30,,False
+C10215,Beacon Electrical Products LLC,electrical_equipment,NET 30,,False
+C10217,Keystone Machine Works Ltd.,industrial_machinery,NET 45,,False
+C10225,Union Surgical Products LLC,medical_equipment,NET 30,,False
+C10235,Ridgeline Data Systems Co.,telecom,NET 30,,False
+C10242,Beacon Comfort Systems Inc.,hvac,NET 45,90.0,False
+C10248,Ridgeline Comfort Systems Inc.,hvac,NET 30,,False
+C10257,Beacon Trailer LLC,transportation,NET 30,90.0,False
+C10261,Beacon Industrial Inc.,industrial_machinery,NET 60,90.0,False
+C10269,Heritage Medical Inc.,medical_equipment,NET 45,,False
+C10276,Oakmont Climate Products Corp.,hvac,NET 30,,False
+C10286,Westbrook Electrical Products Ltd.,electrical_equipment,NET 45,90.0,False
+C10293,Pinnacle Climate Products Co.,hvac,NET 30,90.0,False
+C10297,Highland Implements Corp.,agriculture,NET 30,,False
+C10304,Liberty Diagnostics Corp.,medical_equipment,NET 30,,False
+C10308,Oakmont Implements Inc.,agriculture,NET 30,90.0,False
+C10321,Granite Comfort Systems Corp.,hvac,NET 45,90.0,False
+C10322,Sterling Electrical Products Inc.,electrical_equipment,NET 30,,False
+C10332,Brookfield Thermal LLC,hvac,NET 30,90.0,False
+C10336,Granite Climate Products Corp.,hvac,NET 30,90.0,False
+C10344,Hillcrest Ag Equipment Inc.,agriculture,NET 30,90.0,False
+C10352,Harbor Medical LLC,medical_equipment,NET 30,,False
+C10361,Meridian Industrial Inc.,industrial_machinery,NET 45,90.0,False
+C10365,Crestview Conveyor Co.,industrial_machinery,NET 30,90.0,False
+C10376,Liberty Comfort Systems Corp.,hvac,NET 30,,False
+C10380,Sterling Comfort Systems LLC,hvac,NET 30,,False
+C10390,Keystone Machine Works Inc.,industrial_machinery,NET 45,90.0,False
+C10397,Vanguard Air Systems Co.,hvac,NET 30,90.0,False
+C10400,Hillcrest Health Systems Ltd.,medical_equipment,NET 30,90.0,False
+C10409,Delta Controls LLC,electrical_equipment,NET 60,90.0,False
+C10418,Horizon Air Systems Inc.,hvac,NET 45,,False
+C10423,Bayview Conveyor LLC,industrial_machinery,NET 30,,False
+C10430,Oakmont Switchgear Corp.,electrical_equipment,NET 60,90.0,False
+C10440,Bayview Machine Works Ltd.,industrial_machinery,NET 30,90.0,False
+C10444,Highland Equipment Inc.,industrial_machinery,NET 30,,False
+C10452,Atlas Air Systems Co.,hvac,NET 45,,False
+C10456,Fairmont Ventilation Corp.,hvac,NET 30,90.0,False
+C10463,Stonebridge Vehicle Systems Ltd.,transportation,NET 30,90.0,False
+C10470,Madison Conveyor LLC,industrial_machinery,NET 30,,False
+C10482,Clearwater Implements Corp.,agriculture,NET 60,,False
+C10483,Franklin Vehicle Systems Corp.,transportation,NET 30,90.0,False
+C10494,Madison Transit Products Co.,transportation,NET 30,,False
+C10501,Vanguard Ag Equipment Corp.,agriculture,NET 30,90.0,False
+C10506,Lakeside Thermal Ltd.,hvac,NET 30,90.0,False
+C10515,Lakeside Life Sciences Corp.,medical_equipment,NET 30,,False
+C10521,Redwood Life Sciences LLC,medical_equipment,NET 30,90.0,False
+C10529,Crestview Electric Inc.,electrical_equipment,NET 30,90.0,False
+C10532,Clearwater Farm Systems Ltd.,agriculture,NET 30,,False
+C10544,Granite Ag Equipment Inc.,agriculture,NET 30,,False
+C10552,Meridian Grain Systems Corp.,agriculture,NET 30,,False
+C10556,Lincoln Power Systems Corp.,electrical_equipment,NET 30,,False
+C10563,Pinnacle Data Systems Co.,telecom,NET 30,90.0,False
+C10573,Silverline Networks Corp.,telecom,NET 30,,False
+C10580,Westbrook Switchgear Inc.,electrical_equipment,NET 30,90.0,False
+C10581,Ironwood Power Systems LLC,electrical_equipment,NET 30,,False
+C10591,Valley Electrical Products Corp.,electrical_equipment,NET 45,90.0,False
+C10595,Fairmont Communications Co.,telecom,NET 45,,False
+C10603,Redwood Ventilation Corp.,hvac,NET 30,,False
+C10615,Ironwood Implements Co.,agriculture,NET 30,,False
+C10616,Highland Automation Corp.,industrial_machinery,NET 60,90.0,False
+C10629,Brookfield Switchgear Co.,electrical_equipment,NET 30,,False
+C10636,Westbrook Comfort Systems LLC,hvac,NET 30,90.0,False
+C10640,Redwood Automation LLC,industrial_machinery,NET 60,,False
+C10647,Franklin Equipment Corp.,industrial_machinery,NET 30,,False
+C10655,Apex Ventilation Co.,hvac,NET 30,90.0,False
+C10659,Harbor Health Systems Corp.,medical_equipment,NET 45,90.0,False
+C10669,Lakeside Electrical Products Ltd.,electrical_equipment,NET 60,90.0,False
+C10675,Pinnacle Transit Products Inc.,transportation,NET 60,,False
+C10684,Atlas Health Systems Co.,medical_equipment,NET 60,90.0,False
+C10686,Lincoln Signal Co.,telecom,NET 30,90.0,False
+C10694,Pinnacle Medical LLC,medical_equipment,NET 30,,False
+C10701,Silverline Surgical Products Inc.,medical_equipment,NET 30,,False
+C10707,Silverline Grain Systems Co.,agriculture,NET 45,,False
+C10714,Union Implements Inc.,agriculture,NET 45,,False
+C10721,Pioneer Controls LLC,electrical_equipment,NET 30,,False
+C10728,Horizon Climate Products Corp.,hvac,NET 45,,False
+C10738,Maple Comfort Systems Inc.,hvac,NET 45,90.0,False
+C10745,Northfield Electric LLC,electrical_equipment,NET 30,90.0,False
+C10751,Franklin Ventilation LLC,hvac,NET 30,,False
+C10762,Silverline Electrical Products Inc.,electrical_equipment,NET 60,90.0,False
+C10767,Delta Diagnostics Ltd.,medical_equipment,NET 30,,False
+C10776,Franklin Implements Inc.,agriculture,NET 30,,False
+C10779,Beacon Climate Products LLC,hvac,NET 60,90.0,False
+C10784,Liberty Conveyor Inc.,industrial_machinery,NET 30,,False
+C10795,Apex Electric Ltd.,electrical_equipment,NET 45,90.0,False
+C10801,Hillcrest Equipment Corp.,industrial_machinery,NET 30,,False
+C10810,Eastgate Industrial LLC,industrial_machinery,NET 30,90.0,False
+C10814,Oakmont Thermal Inc.,hvac,NET 30,90.0,False
+C10823,Apex Life Sciences LLC,medical_equipment,NET 30,,False
+C10826,Horizon Diagnostics Ltd.,medical_equipment,NET 30,90.0,False
+C10837,Prairie Trailer Inc.,transportation,NET 30,,False
+C10844,Riverside Controls Corp.,electrical_equipment,NET 30,,False
+C10853,Lincoln Ag Equipment Co.,agriculture,NET 30,,False
+C10859,Sterling Air Systems LLC,hvac,NET 45,,False
+C10864,Pinnacle Air Systems Corp.,hvac,NET 30,90.0,False
+C10871,Delta Thermal Inc.,hvac,NET 30,,False
+C10878,Silverline Medical Corp.,medical_equipment,NET 60,,False
+C10887,Fairmont Conveyor Co.,industrial_machinery,NET 30,,False
+C10890,Atlas Health Systems Inc.,medical_equipment,NET 30,,False
+C10900,Crestview Ag Equipment Ltd.,agriculture,NET 30,90.0,False
+C10909,Eastgate Ventilation LLC,hvac,NET 45,,False
+C10914,Oakmont Industrial Inc.,industrial_machinery,NET 30,90.0,False
+C10920,Northfield Transit Products LLC,transportation,NET 30,,False
+C10926,Clearwater Signal LLC,telecom,NET 45,,False
+C10937,Maple Data Systems Co.,telecom,NET 60,90.0,False
+C10938,Fairmont Transit Products Ltd.,transportation,NET 30,90.0,False
+C10950,Riverside Surgical Products Corp.,medical_equipment,NET 30,90.0,False
+C10954,Granite Air Systems Corp.,hvac,NET 30,90.0,False
+C10965,Stonebridge Electrical Products Ltd.,electrical_equipment,NET 60,,False
+C10970,Prairie Grain Systems Corp.,agriculture,NET 30,,False
+C10976,Apex Electrical Products Corp.,electrical_equipment,NET 30,,False
+C10982,Pinnacle Vehicle Systems Ltd.,transportation,NET 30,90.0,False
+C10993,Atlas Industrial Co.,industrial_machinery,NET 45,,False
+C10998,Summit Machine Works LLC,industrial_machinery,NET 45,90.0,False
+C11004,Silverline Power Systems LLC,electrical_equipment,NET 30,,False
+C11010,Keystone Electrical Products LLC,electrical_equipment,NET 30,90.0,False
+C11019,Brookfield Thermal Co.,hvac,NET 30,,False
+C11025,Bayview Transit Products Co.,transportation,NET 30,,False
+C11029,Hillcrest Ventilation Inc.,hvac,NET 30,90.0,False
+C11037,Vanguard Power Systems Corp.,electrical_equipment,NET 45,90.0,False
+C11046,Clearwater Networks Corp.,telecom,NET 30,90.0,False
+C11052,Maple Electric Inc.,electrical_equipment,NET 45,90.0,False
+C11062,Ironwood Networks Ltd.,telecom,NET 30,,False
+C11066,Keystone Implements Inc.,agriculture,NET 60,,False
+C11075,Eastgate Equipment Inc.,industrial_machinery,NET 45,90.0,False
+C11083,Silverline Machine Works Corp.,industrial_machinery,NET 30,,False
+C11086,Maple Switchgear Co.,electrical_equipment,NET 30,,False
+C11092,Hillcrest Life Sciences LLC,medical_equipment,NET 30,90.0,False
+C11103,Horizon Conveyor Inc.,industrial_machinery,NET 45,,False
+C11112,Keystone Thermal Ltd.,hvac,NET 30,,False
+C11114,Westbrook Health Systems LLC,medical_equipment,NET 30,90.0,False
+C11123,Cedar Conveyor LLC,industrial_machinery,NET 30,90.0,False
+C11131,Keystone Electric Ltd.,electrical_equipment,NET 30,,False
+C11136,Granite Grain Systems Inc.,agriculture,NET 30,90.0,False
+C11142,Riverside Electrical Products Inc.,electrical_equipment,NET 45,,False
+C11148,Stonebridge Machine Works Co.,industrial_machinery,NET 30,,False
+C11158,Northfield Ventilation Ltd.,hvac,NET 30,,False
+C11168,Bayview Grain Systems Inc.,agriculture,NET 30,90.0,False
+C11172,Riverside Implements Corp.,agriculture,NET 60,90.0,False
+C11178,Northfield Ventilation Inc.,hvac,NET 30,,False
+C11188,Valley Electrical Products Co.,electrical_equipment,NET 45,,False
+C11190,Riverside Machine Works Ltd.,industrial_machinery,NET 60,90.0,False
+C11197,Fairmont Automation Corp.,industrial_machinery,NET 30,90.0,False
+C11204,Atlas Transit Products Inc.,transportation,NET 30,,False
+C11216,Apex Automation LLC,industrial_machinery,NET 30,90.0,False
+C11221,Vanguard Equipment Ltd.,industrial_machinery,NET 30,,False
+C11225,Westbrook Trailer Inc.,transportation,NET 30,90.0,False
+C11235,Ridgeline Grain Systems LLC,agriculture,NET 45,,False
+C11241,Prairie Comfort Systems LLC,hvac,NET 30,90.0,False
+C11252,Fairmont Grain Systems Inc.,agriculture,NET 45,90.0,False
+C11258,Hillcrest Data Systems LLC,telecom,NET 30,,False
+C11266,Beacon Diagnostics LLC,medical_equipment,NET 30,,False
+C11269,Apex Machine Works Ltd.,industrial_machinery,NET 30,,False
+C11279,Delta Switchgear Inc.,electrical_equipment,NET 30,,False
+C11284,Oakmont Machine Works Ltd.,industrial_machinery,NET 30,90.0,False
+C11289,Pinnacle Trailer Inc.,transportation,NET 60,90.0,False
+C11301,Highland Fleet Products LLC,transportation,NET 45,90.0,False
+C11304,Keystone Surgical Products LLC,medical_equipment,NET 30,90.0,False
+C11315,Apex Implements Ltd.,agriculture,NET 30,,False
+C11320,Granite Signal Ltd.,telecom,NET 30,90.0,False
+C11327,Union Ventilation Inc.,hvac,NET 30,90.0,False
+C11332,Oakmont Networks Co.,telecom,NET 45,,False
+C11339,Madison Machine Works Co.,industrial_machinery,NET 30,,False
+C11349,Cedar Electric Co.,electrical_equipment,NET 60,,False
+C11351,Pioneer Transit Products LLC,transportation,NET 30,,False
+C11364,Cedar Thermal Ltd.,hvac,NET 45,90.0,False
+C11368,Pinnacle Life Sciences Corp.,medical_equipment,NET 30,90.0,False
+C11374,Clearwater Controls LLC,electrical_equipment,NET 45,,False
+C11381,Hillcrest Climate Products LLC,hvac,NET 30,,False
+C11391,Ironwood Trailer Inc.,transportation,NET 30,,False
+C11398,Eastgate Thermal LLC,hvac,NET 45,90.0,False
+C11406,Oakmont Fleet Products Corp.,transportation,NET 30,,False
+C11412,Sterling Automation Ltd.,industrial_machinery,NET 30,,False
+C11419,Granite Climate Products LLC,hvac,NET 45,,False
+C11421,Heritage Automation Ltd.,industrial_machinery,NET 45,90.0,False
+C11430,Valley Life Sciences Corp.,medical_equipment,NET 60,,False
+C11437,Delta Industrial Inc.,industrial_machinery,NET 30,,False
+C11442,Eastgate Farm Systems Ltd.,agriculture,NET 30,,False
+C11451,Ironwood Electric LLC,electrical_equipment,NET 30,,False
+C11457,Highland Climate Products Ltd.,hvac,NET 30,,False
+C11463,Bayview Farm Systems LLC,agriculture,NET 30,,False
+C11472,Silverline Thermal Co.,hvac,NET 30,,False
+C11480,Blue Ridge Vehicle Systems LLC,transportation,NET 30,,False
+C11489,Prairie Controls Inc.,electrical_equipment,NET 30,,False
+C11491,Eastgate Electric Co.,electrical_equipment,NET 30,90.0,False
+C11498,Pinnacle Health Systems Ltd.,medical_equipment,NET 30,,False
+C11511,Lincoln Fleet Products LLC,transportation,NET 30,,False
+C11518,Liberty Industrial Co.,industrial_machinery,NET 30,,False
+C11524,Pinnacle Fleet Products Ltd.,transportation,NET 30,,False
+C11530,Riverside Industrial LLC,industrial_machinery,NET 45,90.0,False
+C11537,Prairie Thermal Ltd.,hvac,NET 30,,False
+C11542,Atlas Electric Co.,electrical_equipment,NET 30,90.0,False
+C11550,Stonebridge Climate Products Corp.,hvac,NET 30,90.0,False
+C11554,Fairmont Farm Systems LLC,agriculture,NET 30,90.0,False
+C11564,Silverline Life Sciences Corp.,medical_equipment,NET 30,90.0,False
+C11572,Atlas Vehicle Systems Ltd.,transportation,NET 30,90.0,False
+C11578,Hillcrest Ventilation Co.,hvac,NET 30,90.0,False
+C11586,Meridian Comfort Systems Ltd.,hvac,NET 30,,False
+C11589,Hillcrest Ventilation Ltd.,hvac,NET 30,90.0,False
+C11596,Pioneer Trailer Corp.,transportation,NET 30,,False
+C11608,Horizon Climate Products Inc.,hvac,NET 45,90.0,False
+C11616,Sterling Conveyor Co.,industrial_machinery,NET 30,90.0,False
+C11619,Stonebridge Medical Co.,medical_equipment,NET 45,,False
+C11626,Ridgeline Farm Systems Corp.,agriculture,NET 30,,False
+C11632,Clearwater Industrial Co.,industrial_machinery,NET 30,,False
+C11641,Northfield Trailer Ltd.,transportation,NET 30,,False
+C11646,Cedar Controls Inc.,electrical_equipment,NET 45,,False
+C11654,Harbor Transit Products Co.,transportation,NET 60,,False
+C11659,Eastgate Transit Products Corp.,transportation,NET 30,90.0,False
+C11668,Summit Thermal Co.,hvac,NET 30,,False
+C11676,Summit Controls Corp.,electrical_equipment,NET 30,90.0,False
+C11685,Crestview Implements Inc.,agriculture,NET 45,,False
+C11693,Summit Medical Co.,medical_equipment,NET 30,90.0,False
+C11697,Maple Data Systems Inc.,telecom,NET 45,90.0,False
+C11705,Pioneer Power Systems Ltd.,electrical_equipment,NET 45,90.0,False
+C11708,Summit Comfort Systems Inc.,hvac,NET 30,,False
+C11718,Beacon Thermal Co.,hvac,NET 45,90.0,False
+C11724,Eastgate Communications LLC,telecom,NET 30,90.0,False
+C11732,Highland Surgical Products Ltd.,medical_equipment,NET 30,,False
+C11742,Redwood Health Systems LLC,medical_equipment,NET 30,,False
+C11743,Maple Automation Co.,industrial_machinery,NET 45,,False
+C11756,Silverline Transit Products Co.,transportation,NET 45,90.0,False
+C11759,Lakeside Health Systems Inc.,medical_equipment,NET 30,,False
+C11764,Valley Trailer Co.,transportation,NET 30,90.0,False
+C11772,Franklin Communications Ltd.,telecom,NET 45,,False
+C11784,Riverside Ag Equipment Inc.,agriculture,NET 30,,False
+C11788,Highland Diagnostics Co.,medical_equipment,NET 30,,False
+C11796,Prairie Equipment Inc.,industrial_machinery,NET 30,,False
+C11799,Silverline Air Systems Ltd.,hvac,NET 45,,False
+C11811,Northfield Vehicle Systems Ltd.,transportation,NET 30,,False
+C11813,Stonebridge Conveyor Ltd.,industrial_machinery,NET 45,90.0,False
+C11825,Westbrook Power Systems Inc.,electrical_equipment,NET 30,,False
+C11830,Northfield Controls Co.,electrical_equipment,NET 45,90.0,False
+C11838,Cedar Life Sciences LLC,medical_equipment,NET 30,,False
+C11842,Highland Power Systems Ltd.,electrical_equipment,NET 30,90.0,False
+C11849,Atlas Trailer Corp.,transportation,NET 30,,False
+C11861,Riverside Electrical Products Co.,electrical_equipment,NET 30,,False
+C11866,Franklin Grain Systems Ltd.,agriculture,NET 30,90.0,False
+C11875,Brookfield Thermal Inc.,hvac,NET 30,90.0,False
+C11881,Atlas Surgical Products Corp.,medical_equipment,NET 30,,False
+C11886,Vanguard Transit Products Ltd.,transportation,NET 45,,False
+C11893,Bayview Fleet Products Ltd.,transportation,NET 45,90.0,False
+C11900,Valley Equipment Co.,industrial_machinery,NET 30,,False
+C11904,Harbor Ventilation Inc.,hvac,NET 30,,False
+C11914,Apex Conveyor Co.,industrial_machinery,NET 45,,False
+C11918,Harbor Trailer Inc.,transportation,NET 45,90.0,False
+C11928,Redwood Farm Systems LLC,agriculture,NET 60,,False
+C11936,Maple Electrical Products Inc.,electrical_equipment,NET 60,90.0,False
+C11945,Blue Ridge Power Systems Co.,electrical_equipment,NET 60,,False
+C11948,Vanguard Controls Co.,electrical_equipment,NET 30,,False
+C11956,Beacon Communications Inc.,telecom,NET 30,,False
+C11964,Prairie Ventilation Inc.,hvac,NET 30,,False
+C11971,Liberty Networks Co.,telecom,NET 45,90.0,False
+C11979,Ridgeline Switchgear Ltd.,electrical_equipment,NET 30,90.0,False
+C11984,Silverline Diagnostics Corp.,medical_equipment,NET 30,,False
+C11992,Oakmont Grain Systems Corp.,agriculture,NET 30,,False
+C11997,Sterling Fleet Products Ltd.,transportation,NET 45,90.0,False
+C12008,Pinnacle Power Systems Ltd.,electrical_equipment,NET 30,90.0,False
+C12009,Brookfield Farm Systems Ltd.,agriculture,NET 30,90.0,False
+C12021,Prairie Health Systems Corp.,medical_equipment,NET 60,90.0,False
+C12028,Riverside Electric Ltd.,electrical_equipment,NET 60,,False
+C12036,Westbrook Farm Systems LLC,agriculture,NET 30,90.0,False
+C12037,Pinnacle Ag Equipment LLC,agriculture,NET 30,90.0,False
+C12047,Hillcrest Air Systems LLC,hvac,NET 45,,False
+C12051,Summit Air Systems Corp.,hvac,NET 30,,False
+C12061,Apex Machine Works Co.,industrial_machinery,NET 30,,False
+C12068,Summit Switchgear Ltd.,electrical_equipment,NET 30,90.0,False
+C12075,Cedar Thermal Inc.,hvac,NET 30,,False
+C12079,Heritage Farm Systems Inc.,agriculture,NET 45,,False
+C12088,Silverline Thermal Ltd.,hvac,NET 30,,False
+C12096,Clearwater Industrial LLC,industrial_machinery,NET 30,,False
+C12104,Brookfield Surgical Products LLC,medical_equipment,NET 30,90.0,False
+C12111,Ridgeline Farm Systems Co.,agriculture,NET 45,90.0,False
+C12118,Granite Data Systems LLC,telecom,NET 30,,False
+C12126,Bayview Medical Corp.,medical_equipment,NET 30,,False
+C12129,Madison Medical Corp.,medical_equipment,NET 30,90.0,False
+C12136,Madison Controls Ltd.,electrical_equipment,NET 30,90.0,False
+C12142,Pinnacle Thermal Co.,hvac,NET 30,,False
+C12149,Meridian Vehicle Systems Inc.,transportation,NET 45,,False
+C12159,Atlas Electrical Products LLC,electrical_equipment,NET 30,,False
+C12168,Bayview Conveyor Inc.,industrial_machinery,NET 30,,False
+C12172,Clearwater Vehicle Systems Ltd.,transportation,NET 45,,False
+C12183,Horizon Electric LLC,electrical_equipment,NET 30,,False
+C12185,Lincoln Implements Ltd.,agriculture,NET 30,90.0,False
+C12191,Delta Ag Equipment Inc.,agriculture,NET 45,90.0,False
+C12204,Harbor Climate Products Co.,hvac,NET 30,90.0,False
+C12209,Keystone Comfort Systems Co.,hvac,NET 30,90.0,False
+C12217,Sterling Trailer Corp.,transportation,NET 30,90.0,False
+C12223,Prairie Implements Corp.,agriculture,NET 45,,False
+C12226,Meridian Machine Works Ltd.,industrial_machinery,NET 30,,False
+C12233,Prairie Implements Inc.,agriculture,NET 30,90.0,False
+C12245,Sterling Controls Corp.,electrical_equipment,NET 30,,False
+C12253,Ironwood Climate Products Ltd.,hvac,NET 30,,False
+C12256,Eastgate Switchgear LLC,electrical_equipment,NET 45,90.0,False
+C12267,Lakeside Ag Equipment Corp.,agriculture,NET 30,90.0,False
+C12271,Beacon Conveyor Inc.,industrial_machinery,NET 30,90.0,False
+C12276,Ironwood Vehicle Systems Inc.,transportation,NET 30,,False
+C12287,Harbor Communications Inc.,telecom,NET 30,90.0,False
+C12294,Atlas Automation Ltd.,industrial_machinery,NET 30,,False
+C12297,Clearwater Equipment Inc.,industrial_machinery,NET 45,,False
+C12304,Westbrook Electrical Products LLC,electrical_equipment,NET 60,90.0,False
+C12316,Clearwater Diagnostics Inc.,medical_equipment,NET 30,,False
+C12319,Pinnacle Machine Works Ltd.,industrial_machinery,NET 30,,False
+C12329,Atlas Medical Ltd.,medical_equipment,NET 30,,False
+C12333,Westbrook Power Systems Corp.,electrical_equipment,NET 30,,False
+C12344,Valley Implements Ltd.,agriculture,NET 30,90.0,False
+C12347,Atlas Equipment Inc.,industrial_machinery,NET 45,90.0,False
+C12356,Harbor Life Sciences Co.,medical_equipment,NET 30,,False
+C12365,Fairmont Switchgear Corp.,electrical_equipment,NET 30,,False
+C12372,Clearwater Life Sciences Inc.,medical_equipment,NET 30,90.0,False
+C12377,Riverside Industrial Corp.,industrial_machinery,NET 45,,False
+C12384,Prairie Climate Products Ltd.,hvac,NET 45,90.0,False
+C12389,Summit Farm Systems Ltd.,agriculture,NET 30,90.0,False
+C12399,Delta Industrial LLC,industrial_machinery,NET 45,,False
+C12404,Heritage Automation Corp.,industrial_machinery,NET 30,,False
+C12412,Summit Machine Works Co.,industrial_machinery,NET 30,90.0,False
+C12419,Horizon Trailer Inc.,transportation,NET 30,,False
+C12427,Horizon Thermal Ltd.,hvac,NET 45,90.0,False
+C12431,Crestview Transit Products Co.,transportation,NET 30,90.0,False
+C12437,Oakmont Ventilation Ltd.,hvac,NET 30,,False
+C12448,Apex Switchgear Inc.,electrical_equipment,NET 30,90.0,False
+C12454,Valley Comfort Systems Ltd.,hvac,NET 30,,False
+C12462,Brookfield Controls Corp.,electrical_equipment,NET 60,,False
+C12464,Ironwood Fleet Products Inc.,transportation,NET 30,90.0,False
+C12473,Ridgeline Comfort Systems Corp.,hvac,NET 45,,False
+C12483,Apex Machine Works LLC,industrial_machinery,NET 45,,False
+C12488,Stonebridge Ventilation LLC,hvac,NET 30,90.0,False
+C12495,Pinnacle Vehicle Systems Corp.,transportation,NET 45,,False
+C12503,Oakmont Comfort Systems Inc.,hvac,NET 30,,False
+C12509,Prairie Diagnostics Ltd.,medical_equipment,NET 30,,False
+C12519,Apex Vehicle Systems LLC,transportation,NET 30,,False
+C12524,Horizon Data Systems Corp.,telecom,NET 60,90.0,False
+C12533,Highland Comfort Systems Ltd.,hvac,NET 30,,False
+C12540,Madison Ventilation Co.,hvac,NET 30,,False
+C12546,Ridgeline Health Systems Co.,medical_equipment,NET 30,90.0,False
+C12548,Redwood Grain Systems Co.,agriculture,NET 60,,False
+C12556,Silverline Electric Inc.,electrical_equipment,NET 30,,False
+C12566,Madison Comfort Systems Inc.,hvac,NET 30,,False
+C12572,Franklin Ag Equipment Ltd.,agriculture,NET 30,90.0,False
+C12578,Riverside Communications Ltd.,telecom,NET 60,90.0,False
+C12583,Lincoln Thermal Inc.,hvac,NET 30,90.0,False
+C12593,Meridian Ventilation Corp.,hvac,NET 60,90.0,False
+C12602,Oakmont Ventilation Co.,hvac,NET 45,,False
+C12604,Delta Controls Corp.,electrical_equipment,NET 30,90.0,False
+C12613,Crestview Trailer Corp.,transportation,NET 30,90.0,False
+C12620,Heritage Controls Ltd.,electrical_equipment,NET 30,,False
+C12626,Union Data Systems Co.,telecom,NET 30,,False
+C12637,Union Ventilation LLC,hvac,NET 45,,False
+C12644,Prairie Comfort Systems Inc.,hvac,NET 30,90.0,False
+C12647,Vanguard Air Systems Inc.,hvac,NET 30,90.0,False
+C12659,Ridgeline Automation Inc.,industrial_machinery,NET 45,90.0,False
+C12664,Brookfield Life Sciences LLC,medical_equipment,NET 30,,False
+C12669,Lakeside Equipment Co.,industrial_machinery,NET 30,,False
+C12674,Stonebridge Power Systems LLC,electrical_equipment,NET 30,90.0,False
+C12681,Franklin Life Sciences Co.,medical_equipment,NET 45,,False
+C12688,Maple Surgical Products Inc.,medical_equipment,NET 30,90.0,False
+C12696,Lakeside Thermal Inc.,hvac,NET 30,90.0,False
+C12703,Liberty Ag Equipment LLC,agriculture,NET 30,,False
+C12709,Franklin Thermal Inc.,hvac,NET 60,90.0,False
+C12717,Eastgate Electrical Products LLC,electrical_equipment,NET 30,90.0,False
+C12725,Clearwater Surgical Products LLC,medical_equipment,NET 30,,False
+C12732,Franklin Life Sciences Inc.,medical_equipment,NET 30,90.0,False
+C12738,Oakmont Diagnostics LLC,medical_equipment,NET 45,90.0,False
+C12746,Highland Machine Works Co.,industrial_machinery,NET 60,,False
+C12751,Ridgeline Life Sciences Ltd.,medical_equipment,NET 30,,False
+C12762,Summit Electrical Products Ltd.,electrical_equipment,NET 60,,False
+C12765,Madison Vehicle Systems Corp.,transportation,NET 45,,False
+C12777,Sterling Fleet Products Inc.,transportation,NET 30,90.0,False
+C12783,Pioneer Controls Co.,electrical_equipment,NET 30,,False
+C12787,Ridgeline Automation LLC,industrial_machinery,NET 30,90.0,False
+C12794,Crestview Ventilation Corp.,hvac,NET 30,90.0,False
+C12803,Keystone Trailer Ltd.,transportation,NET 30,,False
+C12811,Northfield Automation LLC,industrial_machinery,NET 30,,False
+C12820,Clearwater Health Systems LLC,medical_equipment,NET 60,90.0,False
+C12824,Redwood Air Systems Inc.,hvac,NET 45,,False
+C12832,Granite Health Systems LLC,medical_equipment,NET 30,,False
+C12835,Granite Ventilation Corp.,hvac,NET 45,,False
+C12848,Stonebridge Trailer Corp.,transportation,NET 30,90.0,False
+C12849,Heritage Implements Ltd.,agriculture,NET 30,90.0,False
+C12861,Westbrook Trailer LLC,transportation,NET 30,,False
+C12864,Prairie Switchgear LLC,electrical_equipment,NET 30,,False
+C12872,Pioneer Comfort Systems Corp.,hvac,NET 30,,False
+C12883,Clearwater Trailer Corp.,transportation,NET 30,,False
+C12888,Meridian Life Sciences Ltd.,medical_equipment,NET 45,90.0,False
+C12895,Silverline Comfort Systems Inc.,hvac,NET 45,,False
+C12904,Summit Vehicle Systems Inc.,transportation,NET 30,90.0,False
+C12907,Prairie Electric LLC,electrical_equipment,NET 60,90.0,False
+C12912,Ironwood Fleet Products Corp.,transportation,NET 45,90.0,False
+C12925,Summit Transit Products LLC,transportation,NET 45,,False
+C12931,Riverside Electric Inc.,electrical_equipment,NET 30,,False
+C12938,Brookfield Machine Works LLC,industrial_machinery,NET 30,,False
+C12944,Franklin Switchgear Corp.,electrical_equipment,NET 30,90.0,False
+C12953,Franklin Implements LLC,agriculture,NET 30,90.0,False
+C12954,Atlas Switchgear Ltd.,electrical_equipment,NET 30,90.0,False
+C12965,Hillcrest Networks Co.,telecom,NET 30,,False
+C12969,Pioneer Climate Products LLC,hvac,NET 45,90.0,False
+C12981,Meridian Ag Equipment LLC,agriculture,NET 30,,False
+C12987,Summit Medical Corp.,medical_equipment,NET 45,,False
+C12994,Granite Electric LLC,electrical_equipment,NET 60,90.0,False
+C12998,Prairie Networks Co.,telecom,NET 45,,False
+C13006,Granite Transit Products Corp.,transportation,NET 30,90.0,False
+C13014,Pinnacle Machine Works Inc.,industrial_machinery,NET 30,90.0,False
+C13021,Crestview Health Systems Inc.,medical_equipment,NET 30,90.0,False
+C13025,Heritage Conveyor LLC,industrial_machinery,NET 30,90.0,False
+C13033,Crestview Medical Co.,medical_equipment,NET 45,90.0,False
+C13043,Brookfield Equipment Inc.,industrial_machinery,NET 30,,False
+C13049,Pioneer Electric Inc.,electrical_equipment,NET 45,90.0,False
+C13055,Oakmont Conveyor Corp.,industrial_machinery,NET 30,,False
+C13061,Pioneer Fleet Products Ltd.,transportation,NET 30,,False
+C13071,Prairie Electrical Products Inc.,electrical_equipment,NET 30,,False
+C13074,Blue Ridge Thermal Ltd.,hvac,NET 30,,False
+C13086,Delta Power Systems Corp.,electrical_equipment,NET 60,,False
+C13088,Horizon Ventilation Ltd.,hvac,NET 45,90.0,False
+C13094,Prairie Electric Ltd.,electrical_equipment,NET 45,,False
+C13106,Bayview Electric Inc.,electrical_equipment,NET 45,90.0,False
+C13110,Lakeside Diagnostics Corp.,medical_equipment,NET 45,,False
+C13119,Harbor Diagnostics Corp.,medical_equipment,NET 30,,False
+C13128,Pioneer Automation Ltd.,industrial_machinery,NET 30,,False
+C13129,Bayview Equipment Co.,industrial_machinery,NET 45,,False
+C13141,Oakmont Climate Products Inc.,hvac,NET 30,,False
+C13149,Harbor Farm Systems Ltd.,agriculture,NET 30,90.0,False

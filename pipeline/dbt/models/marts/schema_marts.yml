@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: mart_dashboard_weekly
+    columns:
+      - name: week_start
+        data_tests: [unique, not_null]
+      - name: export_batch_id
+        data_tests: [not_null]
+      - name: jobs_shipped
+        data_tests: [not_null]
+      - name: lost_days
+        data_tests: [not_null]
+  - name: mart_dashboard_quotes_weekly
+    columns:
+      - name: week_start
+        data_tests: [unique, not_null]
+      - name: export_batch_id
+        data_tests: [not_null]
+  - name: mart_p7_quote_table
+    columns:
+      - name: quote_table_key
+        data_tests: [unique, not_null]
+      - name: quote_days
+        data_tests: [not_null]
