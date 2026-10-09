@@ -6,7 +6,7 @@ import pandas as pd
 from analytics.style.style import DOCS, report_shell, table
 
 REPORTS = {
-    "lead": ("lead_time_and_late_jobs", "Lead time and late jobs", "the lead time report"),
+    "lead": ("lead_time_and_late_jobs", "Flow and On-time Delivery", "the flow report"),
     "brakes": ("brakes_capacity_and_setups", "The brakes: capacity, utilization and setups", "the brakes report"),
     "options": ("options_tested", "Options tested: release rules, scheduling, shifts and equipment", "the options report"),
     "quoting": ("quoting_and_early_warning", "Quoting and early warning from load", "the quoting report"),
@@ -75,7 +75,7 @@ def references(body):
     return re.sub(r"\[\[([RN]):(\w+)\]\]", one, body)
 
 
-def write(key, first, second, titles, lead=None, same_target=False, header=True, arrange=None):
+def write(key, first, second, titles, lead=None, same_target=False, header=True, arrange=None, heading=None, closing=True):
     stem, title, _ = REPORTS[key]
     a, b = first.report(), second.report()
     A, B = split(a["body"]), split(b["body"])
@@ -96,10 +96,10 @@ def write(key, first, second, titles, lead=None, same_target=False, header=True,
     scope1 = scope2 = ""
     if not header:                       # no header block on the page: each half's scope and sources open its method note
         scope1, scope2 = f"<p>{a['meta']}</p>", f"<p>{b['meta'].replace(SHOP, '', 1)}</p>"
+    ending = ["<h2 id='rec'>Recommendation</h2>", A["rec"], B["rec"], targets, table(rows), follow,
+              "<h2 id='method'>Method and data</h2>", f"<h3>{titles[0]}</h3>", scope1, A["method"], f"<h3>{titles[1]}</h3>", scope2, method2]
     body = "\n".join([
-        A["sections"], B["sections"],
-        "<h2 id='rec'>Recommendation</h2>", A["rec"], B["rec"], targets, table(rows), follow,
-        "<h2 id='method'>Method and data</h2>", f"<h3>{titles[0]}</h3>", scope1, A["method"], f"<h3>{titles[1]}</h3>", scope2, method2,
+        A["sections"], B["sections"], *(ending if closing else []),      # a report can end at its sections, with the appendix after them
         "<h2 id='appendix'>Appendix</h2>", table_anchors(A["appendix"]), table_anchors(B["appendix"]), A["glossary"], B["glossary"]])
     body = chart_titles(body)
     span = {"first": (1, n_sections), "second": (n_sections + 1, n_sections + n_second)}
@@ -110,14 +110,14 @@ def write(key, first, second, titles, lead=None, same_target=False, header=True,
     if arrange:
         body, sections_toc = arrange(body, sections_toc)
     toc = (sections_toc
-           + [("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")])
+           + ([("rec", "Recommendation"), ("method", "Method and data")] if closing else []) + [("appendix", "Appendix")])
     meta = ""
     if header:
         rest = b["meta"].replace(SHOP, "", 1)
         meta = (a["meta"] + ("<br>" + rest if rest and rest != a["meta"] else "")).replace("Q2 to Q4", "Q2-Q4")
     out = DOCS / "reports"
     out.mkdir(parents=True, exist_ok=True)
-    (out / f"{stem}.html").write_text(report_shell(title, "", meta, body, toc), encoding="utf8")
+    (out / f"{stem}.html").write_text(report_shell(heading or title, "", meta, body, toc), encoding="utf8")
     print(f"wrote docs/reports/{stem}.html: sections 1 to {n_sections} and {n_sections + 1} to {n_sections + n_second}; tables of the second half moved up by {last_table}; "
           f"{len(rows)} countermeasures; method sentences stated once: {len(dropped)}")
     return dropped

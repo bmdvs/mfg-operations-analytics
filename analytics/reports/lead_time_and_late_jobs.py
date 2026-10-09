@@ -1,4 +1,4 @@
-"""Lead time and late jobs: the report, from its two halves.
+"""Flow and on-time delivery: the report, from its two halves.
 
 Usage: python -m analytics.reports.lead_time_and_late_jobs
 """
@@ -18,7 +18,7 @@ TABLES = [("5", "1"), ("6", "2"), ("7", "3"), ("1", "4"), ("5a", "5"), ("2a", "6
 def arrange(body, toc):
     """Three sections: work in process, lead time and late jobs, the last two with their parts under unnumbered headings; the appendix tables follow that order."""
     start = body.index("<h2 id='f1'>")
-    end = body.index("<h2 id='rec'>")
+    end = body.index("<h2 id='appendix'>")
     parts = re.split(r"<h2 id='f(\d+)'>\d+\. (.*?)</h2>", body[start:end])
     old = {int(parts[k]): (parts[k + 1], parts[k + 2]) for k in range(1, len(parts), 3)}
     out, new_toc = [], []
@@ -42,12 +42,13 @@ def arrange(body, toc):
     held = {re.match(r"<h3 id='t(\w+)'>", x).group(1): x for x in blocks[1:]}
     assert sorted(held) == sorted(new), sorted(set(held) ^ set(new))
     tables = [re.sub(r"^<h3 id='t\w+'>Table \w+\.", f"<h3 id='t{to}'>Table {to}.", held[frm]) for frm, to in TABLES]
-    body = body[:i] + blocks[0] + "".join(tables) + body[j:]
+    body = body[:i] + blocks[0] + "".join(tables)          # the appendix ends at its last table, with no glossary lines
     return body, new_toc
 
 
 def main():
-    write("lead", first, second, ("Lead time decomposition", "Late jobs"), lead=None, same_target=False, header=False, arrange=arrange)
+    write("lead", first, second, ("Lead time decomposition", "Late jobs"), lead=None, same_target=False, header=False, arrange=arrange,
+          heading="Report: Flow and On-time Delivery", closing=False)
 
 
 if __name__ == "__main__":
