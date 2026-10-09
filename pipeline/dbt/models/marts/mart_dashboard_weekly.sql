@@ -13,7 +13,7 @@ shipped as (
 ),
 codes as (
     select cast(date_trunc('week', ship_date) as date) as week_start, sum((late_reason_code is null)::int) as late_jobs_without_reason_code
-    from {{ ref('mart_p2_late_jobs') }}
+    from {{ ref('mart_late_jobs') }}
     group by 1
 ),
 causes as (
@@ -26,7 +26,7 @@ causes as (
         sum(attributed_days) filter (where cause = 'quality') as lost_days_quality,
         sum(attributed_days) filter (where cause = 'other hold') as lost_days_other_hold,
         sum(attributed_days) filter (where cause = 'not attributable') as lost_days_not_attributable
-    from {{ ref('mart_p2_attribution') }}
+    from {{ ref('mart_late_job_attribution') }}
     group by 1
 ),
 released as (
