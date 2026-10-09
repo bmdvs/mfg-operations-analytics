@@ -11,7 +11,7 @@ import pandas as pd
 from analytics.db import q
 from analytics.release_control.scenarios import OUT, QUARTERS, summarize, versus
 from analytics.release_control.validate import TOLERANCE, measured
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, fig, pct, save, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, fig, pct, save_conformed as save, table
 
 YEAR, REST = 2025, "Q2 to Q4"
 RES = Path(__file__).resolve().parent / "results"

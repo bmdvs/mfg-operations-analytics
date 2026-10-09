@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from analytics.quoting import analysis as A
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, fig, pct, save, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, fig, pct, save_conformed as save, table
 
 YEAR, REST = A.YEAR, "Q2 to Q4"
 PY, PR, PX = f"{YEAR}", f"{YEAR} {REST}", f"{YEAR}, released from {YEAR} Q1"
