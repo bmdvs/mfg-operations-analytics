@@ -75,7 +75,7 @@ def references(body):
     return re.sub(r"\[\[([RN]):(\w+)\]\]", one, body)
 
 
-def write(key, first, second, titles, lead=None, same_target=False, header=True):
+def write(key, first, second, titles, lead=None, same_target=False, header=True, arrange=None):
     stem, title, _ = REPORTS[key]
     a, b = first.report(), second.report()
     A, B = split(a["body"]), split(b["body"])
@@ -106,7 +106,10 @@ def write(key, first, second, titles, lead=None, same_target=False, header=True)
     body = re.sub(r"\[\[S:(\w+)\]\]", lambda m: f"<a href='#f{span[m.group(1)][0]}'>Sections {span[m.group(1)][0]} to {span[m.group(1)][1]}</a>", body)
     body = references(body).replace("Q2 to Q4", "Q2-Q4")
     assert "[[" not in body
-    toc = (list(a["toc"]) + [(f"f{int(i[1:]) + n_sections}", t) for i, t in b["toc"]]
+    sections_toc = list(a["toc"]) + [(f"f{int(i[1:]) + n_sections}", t) for i, t in b["toc"]]
+    if arrange:
+        body, sections_toc = arrange(body, sections_toc)
+    toc = (sections_toc
            + [("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")])
     meta = ""
     if header:
