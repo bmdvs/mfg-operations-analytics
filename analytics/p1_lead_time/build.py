@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from analytics.db import q
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, shell, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, report_shell, table
 
 YEAR = 2025
 REST = "Q2 to Q4"
@@ -385,7 +385,7 @@ def report():
              "20 with outside processing. On time: shipped on or before the promised date as last revised.</div>")
     toc = [("f1", "Lead time against the quote"), ("f2", "Where the days go"), ("f3", "Queue by work center"), ("f4", "WIP"), ("f5", "Year-end build"),
            ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
-    html = shell("Lead time decomposition", "Project 1 report", HEADER_META, "\n".join(b), toc)
+    html = report_shell("Lead time decomposition", "Project 1 report", HEADER_META, "\n".join(b), toc)
     (DOCS / "reports").mkdir(parents=True, exist_ok=True)
     (DOCS / "reports" / "p1_lead_time.html").write_text(html, encoding="utf8")
 

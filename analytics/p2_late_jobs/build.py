@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from analytics.db import q
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, shell, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, report_shell, table
 
 YEAR = 2025
 REST = "Q2 to Q4"
@@ -346,7 +346,7 @@ def report():
     toc = [("f1", "The shop's record"), ("f2", "Lost days by cause"), ("f3", "By work center"), ("f4", "By customer"), ("f5", "Codes against data"),
            ("f6", "Unexplained share"), ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
     (DOCS / "reports").mkdir(parents=True, exist_ok=True)
-    (DOCS / "reports" / "p2_late_jobs.html").write_text(shell("Why jobs are late", "Project 2 report", HEADER_META, "\n".join(b), toc), encoding="utf8")
+    (DOCS / "reports" / "p2_late_jobs.html").write_text(report_shell("Why jobs are late", "Project 2 report", HEADER_META, "\n".join(b), toc), encoding="utf8")
 
 
 # ── A3 ──────────────────────────────────────────────────────────────────────

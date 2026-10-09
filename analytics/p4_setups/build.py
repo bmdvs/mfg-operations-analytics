@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from analytics.p4_setups import analysis as A
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, shell, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, report_shell, table
 
 YEAR, REST = A.YEAR, "Q2 to Q4"
 WC = {"press_brake": "Press brake", "grind_deburr": "Grind and deburr", "inspection_pack": "Inspection and pack", "hardware": "Hardware", "weld": "Weld",
@@ -362,7 +362,7 @@ def report():
     toc = [("f1", "Setups against standard"), ("f2", "Where the overrun sits"), ("f3", "Tenure"), ("f4", "Grouping"), ("f5", "Reduction list and handover"),
            ("f6", "Run standards"), ("f7", "Refreshing standards"), ("rec", "Recommendation"), ("method", "Method and data"), ("appendix", "Appendix")]
     (DOCS / "reports").mkdir(parents=True, exist_ok=True)
-    (DOCS / "reports" / "p4_setups.html").write_text(shell("Setups and standards", "Project 4 report", HEADER_META, "\n".join(b), toc), encoding="utf8")
+    (DOCS / "reports" / "p4_setups.html").write_text(report_shell("Setups and standards", "Project 4 report", HEADER_META, "\n".join(b), toc), encoding="utf8")
 
 
 COUNTERMEASURES = [
