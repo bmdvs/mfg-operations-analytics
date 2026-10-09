@@ -1,4 +1,4 @@
-"""P2 why jobs are late: report, A3 and figures, read from the marts.
+"""P2 why jobs are late: report and figures, read from the marts.
 
 Usage: python -m analytics.p2_late_jobs.build
 """
@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 
 from analytics.db import q
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, report_shell, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREEN, GREY, LIGHT_BLUE, RED, fig, pct, save, report_shell, table
+from analytics.style.style import recommendation_block
 
 YEAR = 2025
 REST = "Q2 to Q4"
@@ -316,6 +317,8 @@ def report():
     b.append("<p>Require the rush flag and a named approver on every promise inside the standard lead time (P7 sizes the quote). Extend the kit check to stock sheet "
              "items (P6 measures kit completeness).</p>")
 
+    b.append(control())
+
     b.append("<h2 id='method'>Method and data</h2>")
     b.append(f"<p>Coverage: {n0(len(LY))} late jobs and {n0(y['total'])} lost days in {YEAR}; {n0(len(LR))} and {n0(r['total'])} in {REST}. A job's lost days are its "
              f"working days late. Lost days at a stage are the stage days above the median of on-time jobs of the same routing class shipped in the same quarter; "
@@ -349,7 +352,7 @@ def report():
     (DOCS / "reports" / "p2_late_jobs.html").write_text(report_shell("Why jobs are late", "Project 2 report", HEADER_META, "\n".join(b), toc), encoding="utf8")
 
 
-# ── A3 ──────────────────────────────────────────────────────────────────────
+# ── target, countermeasures and follow-up ──────────────────────────────────
 COUNTERMEASURES = [
     ("Replace the late-reason code with a buffer status record: time buffer in thirds, reason captured when a job turns red, weekly review", "Production control manager",
      "March 2026"),
@@ -358,41 +361,15 @@ COUNTERMEASURES = [
 ]
 
 
-def a3():
-    y, r = CA["year"], CA[REST]
-    ys, rs = y["share"], r["share"]
-    left, right = [], []
-    left.append(f"<section><h2>Background and problem</h2><p>{pct(CS['year']['blank'], 0)} of the {n0(len(LY))} late jobs of {YEAR} carry no reason code and "
-                f"\"capacity\" is {pct(CS['year']['share']['capacity'], 0)} of the codes entered ({pct(CS[REST]['blank'], 0)} and "
-                f"{pct(CS[REST]['share']['capacity'], 0)} in {REST}).<br>The entered code agrees with the attributed cause on {pct(AG['year']['agree'])} of coded late jobs "
-                f"against {pct(AG['year']['chance'])} by chance ({pct(AG[REST]['agree'])} against {pct(AG[REST]['chance'])} in {REST}).</p></section>")
-    left.append(f"<section><h2>Current condition</h2>{fig_pareto('p2_a3_paired_pareto', 4.9)}"
-                f"<div class='caption'>Late-reason codes as entered and lost days by attributed cause, {YEAR} and {REST}.</div></section>")
-    left.append("<section><h2>Target</h2><p>A reason recorded on every late job at the moment it turns red.</p></section>")
-    right.append(
-        f"<section><h2>Analysis</h2>{fig_cross()}<div class='caption'>Late jobs of {YEAR} with a code entered, by code and largest attributed cause.</div><ul>"
-        f"<li>Year: constraint queue {pct(ys['constraint queue'], 0)} of {n0(y['total'])} lost days, unexplained {pct(ys['not attributable'], 0)}, released late "
-        f"{pct(ys['released late'], 0)}. {REST}: released late {pct(rs['released late'], 0)} of {n0(r['total'])}, the largest cause on "
-        f"{n0(r['dominant']['released late'])} of {n0(len(LR))} late jobs.</li>"
-        f"<li>{REST} by work center: order entry {pct(WR.loc['order entry', 'share'], 0)}, laser {pct(WR.loc['laser', 'share'], 0)} (material waits at the first cut), "
-        f"robotic weld {pct(WR.loc['robotic_weld', 'share'])}, brakes {pct(WR.loc['press_brake', 'share'], 0)}.</li>"
-        f"<li>The top ten customers hold {pct(CY['cum'].iloc[-1], 0)} of lost days for the year; all are key accounts.</li>"
-        f"<li>{n0(cross.loc['capacity', 'released late'])} jobs coded \"capacity\" were released late; material was coded on {mat_coded} of {len(mat_jobs)} late jobs "
-        f"with a material wait.</li></ul></section>")
-    right.append(f"<section><h2>Countermeasures</h2>{table(pd.DataFrame(COUNTERMEASURES, columns=['Action', 'Owner', 'When']))}</section>")
-    right.append(f"<section><h2>Results</h2><p>Measured baseline for {YEAR}: {n0(len(LY))} late jobs and {n0(y['total'])} lost days ({n0(len(LR))} and {n0(r['total'])} in "
-                 f"{REST}); {pct(ys['not attributable'], 0)} of lost days unexplained ({pct(rs['not attributable'], 0)}); {no_cause['year'][0]} late jobs with no cause "
-                 f"assigned ({pct(no_cause['year'][0] / no_cause['year'][1])}).</p></section>")
-    right.append("<section><h2>Follow-up</h2><p>Weekly buffer status review by production control; the share of late jobs with no reason recorded, "
-                 "reported at each review.</p></section>")
-    (DOCS / "a3").mkdir(parents=True, exist_ok=True)
-    (DOCS / "a3" / "p2_late_jobs.html").write_text(a3_shell("Why jobs are late", "Project 2 A3", HEADER_META, "\n".join(left), "\n".join(right)), encoding="utf8")
+def control():
+    """The target, the countermeasures and the follow-up, for the Recommendation section."""
+    target = ("A reason recorded on every late job at the moment it turns red.")
+    return recommendation_block(target, COUNTERMEASURES)
 
 
 def main():
     report()
-    a3()
-    print("wrote docs/reports/p2_late_jobs.html and docs/a3/p2_late_jobs.html")
+    print("wrote docs/reports/p2_late_jobs.html")
 
 
 if __name__ == "__main__":

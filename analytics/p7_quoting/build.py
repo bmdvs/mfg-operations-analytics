@@ -1,4 +1,4 @@
-"""P7 lead-time quoting and quote analytics: report, A3 and figures, from the marts.
+"""P7 lead-time quoting and quote analytics: report and figures, from the marts.
 
 Usage: python -m analytics.p7_quoting.build
 """
@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 
 from analytics.p7_quoting import analysis as A
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, report_shell, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, fig, pct, save, report_shell, table
+from analytics.style.style import recommendation_block
 
 YEAR, REST = A.YEAR, "Q2 to Q4"
 PY, PR, PX = f"{YEAR}", f"{YEAR} {REST}", f"{YEAR}, released from {YEAR} Q1"
@@ -373,6 +374,8 @@ def report():
              f"trailing twelve quarters, all quarters included, so the high-backlog bands keep their counts. Require the rush flag and a named approver on every "
              f"promise inside the standard lead time (P2). Turn complex RFQs in three days or less. Require a lost reason on every lost quote.</p>")
 
+    b.append(control())
+
     b.append("<h2 id='method'>Method and data</h2>")
     oq = QTAB.set_index(["routing_class", "band"])["jobs_ordinary"]
     b.append(f"<p>A quote is met when the working days from the release day to the ship day are at or under it. The fixed quote is 10 days for repeat parts, 15 for "
@@ -416,46 +419,18 @@ COUNTERMEASURES = [
 ]
 
 
-def a3():
-    ti, to, tr, fq = SC[TABLE_IN], SC[TABLE_OUT], SC[TRAIL], SC[FIXED]
-    left, right = [], []
-    left.append(f"<section><h2>Background and problem</h2><p>The 10-day repeat quote sits at the {nth(fx(PY, 'repeat part', 'percentile_of_quote'))} percentile of "
-                f"{YEAR} repeat lead time ({nth(fx(PR, 'repeat part', 'percentile_of_quote'))} in {REST}); standard promises shipped "
-                f"{pct(fx(PY, 'all', 'standard_promise_on_time'))} on time ({pct(fx(PR, 'all', 'standard_promise_on_time'))}).<br>Rush lines and short promises are "
-                f"{pct(pr(PR, 'rush', 'share_of_jobs') + pr(PR, 'short promise, not rush', 'share_of_jobs'))} of jobs and "
-                f"{pct(pr(PR, 'rush', 'share_of_late_jobs') + pr(PR, 'short promise, not rush', 'share_of_late_jobs'))} of late jobs in {REST}; "
-                f"{pct(TURN['quotes_fast'] / TURN['quotes'])} of quotes are sent within 3 days.</p></section>")
-    left.append(f"<section><h2>Current condition</h2>{t_fixed(short=True)}<div class='caption'>The fixed quote against the lead time of jobs shipped, by routing "
-                f"class.</div></section>")
-    left.append("<section><h2>Target</h2><p>Promised lead times met on 80% of standard promises in every quarter, and quote turnaround of three days or less on 80% "
-                "of RFQs.</p></section>")
-    q2 = [g for g in SC[TRAIL].index if g.startswith(f"released {YEAR} Q2,")]
-    right.append(
-        f"<section><h2>Analysis</h2>{fig_hit('p7_a3_hit_rate_by_release_quarter', 2.7)}<div class='caption'>Share of non-rush jobs meeting each quote by release "
-        f"quarter; the line is 80%.</div><ul>"
-        f"<li>The fixed quote is met on {pct(fq.loc[PY, 'met'])} of non-rush jobs for the year and {pct(fq.loc[PR, 'met'])} in {REST}.</li>"
-        f"<li>A quote by routing class and brake backlog at release, never below the fixed quote, is met out of sample on {pct(to.loc[PY, 'met'])} and "
-        f"{pct(to.loc[PR, 'met'])} and lengthens {pct(to.loc[PY, 'longer'])} and {pct(to.loc[PR, 'longer'])} of promises.</li>"
-        f"<li>For jobs released in {YEAR} Q3 and Q4 the out-of-sample table and the fixed quote are met at the same rate ({pct(to.loc[RQ[3], 'met'])} against "
-        f"{pct(fq.loc[RQ[3], 'met'])}, {pct(to.loc[RQ[4], 'met'])} against {pct(fq.loc[RQ[4], 'met'])}); the gain is on jobs released from Q1 to Q2.</li>"
-        f"<li>Quotes sent within 3 days win {pct(TURN['fast'])} against {pct(TURN['slow'])}; {d1(TURN['adjusted_gap'] * 100)} points "
-        f"({d1(TURN['adjusted_low'] * 100)} to {d1(TURN['adjusted_high'] * 100)}) after adjusting for RFQ complexity.</li></ul></section>")
-    right.append(f"<section><h2>Countermeasures</h2>{table(pd.DataFrame(COUNTERMEASURES, columns=['Action', 'Owner', 'When']))}</section>")
-    right.append(f"<section><h2>Expected results</h2><p>On the record of {YEAR}: the quote table met on {pct(to.loc[PR, 'met'])} of non-rush jobs in {REST} out of "
-                 f"sample ({pct(ti.loc[PR, 'met'])} as fitted) against {pct(fq.loc[PR, 'met'])} for the fixed quote, and {pct(to.loc[RQ[2], 'met'])}, {pct(to.loc[RQ[3], 'met'])} and "
-                 f"{pct(to.loc[RQ[4], 'met'])} for jobs released in Q2, Q3 and Q4, with {pct(to.loc[PR, 'longer'])} of promises "
-                 f"longer. The adjusted win-rate gap between quotes sent within 3 days and later is {d1(TURN['adjusted_gap'] * 100)} points.</p></section>")
-    right.append("<section><h2>Follow-up</h2><p>The quote table refreshed quarterly from the trailing twelve quarters, all quarters included. Hit rate and share of "
-                 "quotes longer than the fixed quote reported monthly.</p></section>")
-    (DOCS / "a3").mkdir(parents=True, exist_ok=True)
-    (DOCS / "a3" / "p7_quoting.html").write_text(a3_shell("Lead-time quoting and quote analytics", "Project 7 A3", HEADER_META, "\n".join(left), "\n".join(right)),
-                                                encoding="utf8")
+def control():
+    """The target, the countermeasures and the follow-up, for the Recommendation section."""
+    target = ("Promised lead times met on 80% of standard promises in every quarter, and quote turnaround of three days or less on 80% "
+              "of RFQs.")
+    follow = ("The quote table refreshed quarterly from the trailing twelve quarters, all quarters included. Hit rate and share of "
+              "quotes longer than the fixed quote reported monthly.")
+    return recommendation_block(target, COUNTERMEASURES, follow)
 
 
 def main():
     report()
-    a3()
-    print("wrote docs/reports/p7_quoting.html and docs/a3/p7_quoting.html")
+    print("wrote docs/reports/p7_quoting.html")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-"""P4 setups and standards: report, A3 and figures.
+"""P4 setups and standards: report and figures.
 
 Usage: python -m analytics.p4_setups.build
 """
@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 
 from analytics.p4_setups import analysis as A
-from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, a3_shell, fig, pct, save, report_shell, table
+from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, DOCS, GREY, LIGHT_BLUE, RED, fig, pct, save, report_shell, table
+from analytics.style.style import recommendation_block
 
 YEAR, REST = A.YEAR, "Q2 to Q4"
 WC = {"press_brake": "Press brake", "grind_deburr": "Grind and deburr", "inspection_pack": "Inspection and pack", "hardware": "Hardware", "weld": "Weld",
@@ -324,6 +325,8 @@ def report():
              f"refresh the {n0(POP['stale_parts'])} stale standards (up) and set the {' and '.join(NEWER)} run standards to measured (down), with the effect on "
              f"standard hours per job going to estimating (P7).</p>")
 
+    b.append(control())
+
     b.append("<h2 id='method'>Method and data</h2>")
     b.append(f"<p>Coverage: {n0(y['setups'])} brake setups and {n0(len(D['s']))} setups at all work centers in {YEAR}; {n0(len(D['r']))} operations for run standards. "
              f"Setup ratio is setup machine hours (the union of setup transactions on the operation) over the setup standard on the job operation; the hours over "
@@ -374,47 +377,22 @@ COUNTERMEASURES = [
 ]
 
 
-def a3():
+def control():
+    """The target, the countermeasures and the follow-up, for the Recommendation section."""
     y = OV.loc["year"]
-    ho, nho = HO.loc["Handed over at a shift boundary"], HO.loc["Not handed over"]
-    small = LOT.loc["under 25"]
-    ga = GRP.loc["all brakes"]
-    cf_naive, cf_start = HCF.iloc[0], HCF.iloc[1]
-    left, right = [], []
-    left.append(f"<section><h2>Background and problem</h2><p>Brake setups ran {n0(y['overrun_hours'])} hours over standard in {YEAR}: {n0(ST['brake_overrun_per_week'])} "
-                f"hours a week and {pct(ST['brake_overrun_per_week'] / MH_WEEK, 0)} of brake machine time.<br>The median setup runs at {d2(y['median_ratio'])} of standard "
-                f"and the 90th percentile at {d2(y['p90_ratio'])}; the ratios are the same in the first quarter and in {REST}.</p></section>")
-    left.append(f"<section><h2>Current condition</h2>{fig_conditions('p4_a3_overrun_by_condition', 4.0)}"
-                f"<div class='caption'>Brake setup hours over standard by condition, {YEAR}, with setup counts and median ratios; the conditions overlap.</div></section>")
+    cf_start = HCF.iloc[1]
     wk = y["setup_hours"] / A.WEEKS
-    left.append(f"<section><h2>Target</h2><p>Brake setup hours under {n0(wk - LEVERS)} a week, from {n0(wk)} in {YEAR}. Measured levers: top {A.TOP_N} "
-                f"part-operations at standard {d1(ST['top_hours_per_week'])} hours a week; repeat setups assigned to an operator who has set the part up "
-                f"{d1(ASG_ANY['hours_released_per_week'])}; shift-handover standard {d1(cf_start['hours_per_week'])}; {d1(LEVERS)} in all.</p></section>")
-    right.append(
-        f"<section><h2>Analysis</h2>{fig_tenure('p4_a3_tenure_decomposition', 2.3)}<div class='caption'>Brake setup ratio of operators with under 12 months over tenured operators as controls are "
-        f"added.</div><ul>"
-        f"<li>Handed-over setups are {pct(ho['share_of_setups'], 0)} of setups and {pct(ho['share_of_overrun'], 0)} of the overrun (median {d2(ho['median_ratio'])} "
-        f"against {d2(nho['median_ratio'])}); the handover itself costs {d1(cf_start['hours_per_week'])} hours a week, the rest is long setups reaching the shift end.</li>"
-        f"<li>Lots under 25 are {pct(small['setups'] / y['setups'], 0)} of setups and {pct(ST['small_lot_overrun_share'], 0)} of the overrun "
-        f"(median {d2(small['median_ratio'])}).</li>"
-        f"<li>New operators run {pct(TM['tenure_effect_pct'].iloc[0], 0)} above tenured before controls and {pct(TM['tenure_effect_pct'].iloc[-1], 0)} after.</li>"
-        f"<li>{pct(ga['share_grouped'], 0)} of setups are grouped on the same tooling set and run at {d2(ga['ratio_grouped'])} against {d2(ga['ratio_not_grouped'])}.</li>"
-        f"<li>The top {A.TOP_N} part-operations release {d1(ST['top_hours_per_week'])} hours a week at standard; the overrun is spread across "
-        f"{n0(ST['brake_part_operations'])} part-operations.</li></ul></section>")
-    right.append(f"<section><h2>Countermeasures</h2>{table(pd.DataFrame(COUNTERMEASURES, columns=['Action', 'Owner', 'When']))}</section>")
-    right.append(f"<section><h2>Results</h2><p>Measured baseline for {YEAR}: {n0(y['setup_hours'])} brake setup hours against {n0(y['standard_hours'])} standard. "
-                 f"Measured potential: {d1(LEVERS)} brake hours a week from the three capacity levers, {pct(LEVERS / MH_WEEK)} of brake machine time. "
-                 f"P8 carries the hours released.</p></section>")
-    right.append("<section><h2>Follow-up</h2><p>Weekly brake setup hours, and setup overrun hours by condition once the standards are corrected, "
-                 "on the operations dashboard.</p></section>")
-    (DOCS / "a3").mkdir(parents=True, exist_ok=True)
-    (DOCS / "a3" / "p4_setups.html").write_text(a3_shell("Setups and standards", "Project 4 A3", HEADER_META, "\n".join(left), "\n".join(right)), encoding="utf8")
+    target = (f"Brake setup hours under {n0(wk - LEVERS)} a week, from {n0(wk)} in {YEAR}. Measured levers: top {A.TOP_N} "
+              f"part-operations at standard {d1(ST['top_hours_per_week'])} hours a week; repeat setups assigned to an operator who has set the part up "
+              f"{d1(ASG_ANY['hours_released_per_week'])}; shift-handover standard {d1(cf_start['hours_per_week'])}; {d1(LEVERS)} in all.")
+    follow = ("Weekly brake setup hours, and setup overrun hours by condition once the standards are corrected, "
+              "on the operations dashboard.")
+    return recommendation_block(target, COUNTERMEASURES, follow)
 
 
 def main():
     report()
-    a3()
-    print("wrote docs/reports/p4_setups.html and docs/a3/p4_setups.html")
+    print("wrote docs/reports/p4_setups.html")
 
 
 if __name__ == "__main__":
