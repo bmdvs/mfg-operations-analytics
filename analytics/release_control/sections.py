@@ -293,7 +293,7 @@ def report():
              f"shipped in the year. The dispatch list with rush and hot-list precedence is as good as any rule tested.</p>")
 
     b.append("<h2 id='f4'>4. Capacity at the constraint is the lever</h2>")
-    b.append(f"<p>The setup reduction ([[R:brakes]]) raises on-time delivery by {by(PY.loc[(S8, 'on_time_delivery')])} for the year, shortens the 90th percentile by "
+    b.append(f"<p>The setup reduction ([[R:capacity]]) raises on-time delivery by {by(PY.loc[(S8, 'on_time_delivery')])} for the year, shortens the 90th percentile by "
              f"{d1(-v(PY, S8, 'lead_time_p90', 'diff'))} days, lowers WIP by {n0(-v(PY, S8, 'wip_mean', 'diff'))} jobs and cuts Saturday shifts from "
              f"{n0(v(PY, S0, 'saturday_shifts'))} to {n0(v(PY, S8, 'saturday_shifts'))} and extended hours from {n0(v(PY, S0, 'extended_hours'))} to "
              f"{n0(v(PY, S8, 'extended_hours'))}. In {REST} it shortens the 90th percentile by {d1(-v(PR, S8, 'lead_time_p90', 'diff'))} days and leaves on-time delivery "
@@ -346,7 +346,7 @@ def report():
     b.append(f"<div class='caption'>Table 2. The packages against current practice and against setup reduction alone, {YEAR} and {REST}.</div>")
 
     b.append("<h2 id='rec'>Recommendation</h2>")
-    b.append(f"<p>Do not cap release, and keep the dispatch list. Take the setup program ([[R:brakes]]), a second shift on the robotic weld cell and planned Saturday brake "
+    b.append(f"<p>Do not cap release, and keep the dispatch list. Take the setup program ([[R:capacity]]), a second shift on the robotic weld cell and planned Saturday brake "
              f"shifts from November through February as the operating package: on-time delivery is expected to rise by {by(PY.loc[(NOCAP, 'on_time_delivery')])} for the "
              f"year and {by(PR.loc[(NOCAP, 'on_time_delivery')])} in {REST}, with the 90th-percentile lead time {d1(-v(PY, NOCAP, 'lead_time_p90', 'diff'))} and "
              f"{d1(-v(PR, NOCAP, 'lead_time_p90', 'diff'))} days shorter. Restate quoted lead times ([[R:quoting]]). [[S:second]] compare this package with the capital options on the same "
@@ -388,7 +388,7 @@ def report():
 
 
 COUNTERMEASURES = [
-    ("Setup program at the brakes: top 12 part-operations, operator assignment, shift handover ([[R:brakes]])", "Brake supervisor, manufacturing engineering", "May 2026"),
+    ("Setup program at the brakes: top 12 part-operations, operator assignment, shift handover ([[R:capacity]])", "Brake supervisor, manufacturing engineering", "May 2026"),
     ("Second shift on the robotic weld cell", "Production manager", "April 2026"),
     ("Planned Saturday brake shift every week, November through February", "Plant manager", "November 2026"),
 ]
