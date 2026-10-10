@@ -9,10 +9,10 @@ YEAR = 2025
 PERIODS = (("year", 1), ("Q2 to Q4", 2))
 HOT = 0.95
 SERIES_START = "2023-01-30"                     # weekly series leave out the first four weeks, when jobs already in process raise the queue
-LIST_CENTERS = ["grind_deburr", "inspection_pack", "hardware", "weld"]
+LIST_CENTERS = ["grind_deburr", "inspection_pack", "hardware"]
 HOUR_BANDS = [0, 6, 8, 10, 12, 14, 16, 24]
 HOUR_LABELS = ["Before 06:00", "06:00 to 08:00", "08:00 to 10:00", "10:00 to 12:00", "12:00 to 14:00", "14:00 to 16:00", "After 16:00"]
-UTIL_BANDS = ["below 0.80", "0.80 to 0.85", "0.85 to 0.90", "0.90 to 0.95", "0.95 and above"]
+UTIL_BANDS = ["below 80%", "80% to 85%", "85% to 90%", "90% to 95%", "at or above 95%"]
 
 
 def load():
@@ -25,7 +25,7 @@ def load():
         ops=q(f"select * from marts.mart_operations where start_year = {YEAR} order by job_id, op_seq"),
         shipped=q(f"select quarter(ship_date) as ship_quarter, count(*) as jobs from marts.mart_job_lead_time where year(ship_date) = {YEAR} group by 1 order by 1"),
         next_day=q(f"select quarter(ship_date) as ship_quarter, sum(queue_net_wd) as days, count(*) as operations from marts.mart_operation_arrivals "
-                   f"where year(ship_date) = {YEAR} and working_days_to_start = 1 and work_center in ('grind_deburr', 'inspection_pack', 'hardware', 'weld') "
+                   f"where year(ship_date) = {YEAR} and working_days_to_start = 1 and work_center in ('grind_deburr', 'inspection_pack', 'hardware') "
                    f"group by 1 order by 1"),
         first=q(f"select o.work_center, count(*) as jobs from intermediate.int_operation_queue o join marts.mart_job_lead_time j using (job_id) "
                 f"where o.is_first_op and year(j.ship_date) = {YEAR} group by 1 order by 1"),
@@ -43,7 +43,40 @@ def load():
                  f"where setup_year = {YEAR} group by 1 order by 1"),
         runs=q(f"select work_center, sum(run_hours) as hours, sum(run_std_hours) as standard from marts.mart_run_standards where start_year = {YEAR} group by 1 order by 1"),
         colors=q("select color, days_per_week, weekdays from marts.mart_powder_color_days order by color"),
+        wip=q(f"select location as work_center, cast(date_trunc('week', calendar_date) as date) as week_start, calendar_date, jobs from marts.mart_wip_daily "
+              f"order by 1, 3"),
+        downtime=q(f"select work_center, cause, sum(hours) as hours from marts.mart_downtime_events where year(start_ts) = {YEAR} group by 1, 2 order by 1, 2"),
     )
+
+
+BAND_EDGES = [0, 0.8, 0.85, 0.9, HOT, 9]
+
+
+def full_weeks(D, work_center):
+    """The full five-day weeks of the whole record that have a queue time."""
+    w = D["uw"]
+    return w[(w["work_center"] == work_center) & (w["weekdays"] == 5) & w["queue_mean"].notna()]
+
+
+def band_means(D, work_center):
+    """Mean weekly queue time by utilization band, full weeks of the whole record."""
+    w = full_weeks(D, work_center)
+    band = pd.cut(w["utilization"], BAND_EDGES, right=False, labels=UTIL_BANDS)
+    g = w.groupby(band, observed=False)["queue_mean"].agg(weeks="size", queue="mean", median="median")
+    return g
+
+
+def band_split(D, work_center, at=0.85):
+    """Mean weekly queue time below a utilization and at or above it, with the mean at or above 95%, full weeks of the whole record."""
+    w = full_weeks(D, work_center)
+    lo, hi, hot = w[w["utilization"] < at], w[w["utilization"] >= at], w[w["utilization"] >= HOT]
+    return dict(below=float(lo["queue_mean"].mean()), weeks_below=len(lo), above=float(hi["queue_mean"].mean()) if len(hi) else np.nan, weeks_above=len(hi),
+                hot=float(hot["queue_mean"].mean()) if len(hot) else np.nan, weeks_hot=len(hot))
+
+
+def weld_weeks_above(D, at=0.85):
+    w = D["uw"][(D["uw"]["work_center"] == "weld") & (D["uw"]["week_year"] == YEAR)]
+    return int((w["utilization"] >= at).sum()), len(w)
 
 
 def weighted_queue(w):
@@ -58,15 +91,29 @@ def pooled_utilization(w):
 def hot_weeks(D):
     """Weeks at or above 0.95 utilization by work center: how many, the queue in them against the other weeks, and their share of machine hours."""
     rows = []
+    # jobs at the work center, queue and run together, on each day of the week
+    days = D["wip"].assign(week_start=pd.to_datetime(D["wip"]["week_start"])).merge(D["uw"][["work_center", "week_start", "utilization"]], on=["work_center", "week_start"])
     for per, fq in PERIODS:
         y = D["uw"][(D["uw"]["week_year"] == YEAR) & (D["uw"]["week_quarter"] >= fq)]
         for wc, w in y.groupby("work_center"):
             hot, other = w[w["utilization"] >= HOT], w[w["utilization"] < HOT]
+            dw = days[(days["work_center"] == wc) & days["week_start"].isin(w["week_start"])]
             rows.append(dict(period=per, work_center=wc, utilization=pooled_utilization(w), weeks=len(w), hot_weeks=len(hot),
                              hot_full_weeks=int((hot["weekdays"] == 5).sum()), queue_hot=weighted_queue(hot), queue_other=weighted_queue(other),
                              utilization_hot=pooled_utilization(hot), utilization_other=pooled_utilization(other),
+                             wip_hot=float(dw.loc[dw["utilization"] >= HOT, "jobs"].mean()) if len(hot) else np.nan,
+                             wip_other=float(dw.loc[dw["utilization"] < HOT, "jobs"].mean()),
                              hours_share_hot=float(hot["machine_hours"].sum() / w["machine_hours"].sum())))
     return pd.DataFrame(rows).sort_values(["period", "utilization"], ascending=[False, False])
+
+
+def hot_weeks_all(D):
+    """The same comparison over every week of the record: weeks at or above 95% utilization against the others, by work center."""
+    rows = []
+    for wc, w in D["uw"].groupby("work_center"):
+        hot, other = w[w["utilization"] >= HOT], w[w["utilization"] < HOT]
+        rows.append(dict(work_center=wc, weeks=len(w), hot_weeks=len(hot), queue_hot=weighted_queue(hot) if len(hot) else np.nan, queue_other=weighted_queue(other)))
+    return pd.DataFrame(rows).set_index("work_center").sort_values("hot_weeks", ascending=False)
 
 
 def dispatch(D):

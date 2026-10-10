@@ -17,26 +17,37 @@ def join_and(items):
 
 
 class Tables:
-    """The appendix tables, numbered in the order the text first refers to them."""
+    """The appendix tables, numbered in the order the text first refers to them; each is linked once, by `see`."""
 
     def __init__(self):
-        self.held, self.order = {}, []
+        self.held, self.order, self.linked = {}, [], set()
 
     def add(self, key, title, html):
         self.held[key] = (title, html)
 
+    def reserve(self, *keys):
+        for k in keys:
+            assert k in self.held, k
+            if k not in self.order:
+                self.order.append(k)
+
     def number(self, key):
+        self.reserve(key)
         return self.order.index(key) + 1
 
+    def plain(self, key):
+        """The table by its number, without a link: for a mention apart from the sentence that links it."""
+        return f"Table {self.number(key)}"
+
     def see(self, *keys):
-        for k in keys:
-            assert k in self.held and k not in self.order, k
-            self.order.append(k)
+        self.reserve(*keys)
+        assert not self.linked & set(keys), keys
+        self.linked |= set(keys)
         links = [f"<a href='#t{self.number(k)}'>{self.number(k)}</a>" for k in keys]
         return f"See Appendix Table{'s' if len(links) > 1 else ''} {join_and(links)} for additional detail."
 
     def appendix(self):
-        assert set(self.order) == set(self.held), set(self.held) - set(self.order)
+        assert set(self.order) == set(self.held) == self.linked, (set(self.held) - set(self.order), set(self.held) - self.linked)
         return "\n".join(f"<h3 id='t{n}'>Table {n}. {self.held[k][0]}</h3>{self.held[k][1]}" for n, k in enumerate(self.order, 1))
 
 

@@ -14,7 +14,7 @@ from analytics.style import style
 TARGET = 0.95
 VIEW = 13
 SHIPPED_SHARE = 0.95
-WC = {"laser": "Laser", "punch": "Punch", "press_brake": "Press brake", "hardware": "Hardware", "weld": "Weld", "robotic_weld": "Robotic weld",
+WC = {"laser": "Laser", "punch": "Punch", "press_brake": "Press brake", "hardware": "Hardware", "weld": "Manual weld", "robotic_weld": "Robotic weld",
       "grind_deburr": "Grind and deburr", "powder_coat": "Powder coat", "assembly": "Assembly", "inspection_pack": "Inspection and pack",
       "outside_processing": "Outside processing", "complete, not shipped": "Complete, not shipped"}
 CAUSES = [("constraint_queue", "Constraint queue"), ("released_late", "Released late"), ("material", "Material"), ("outside_processing", "Outside processing"),

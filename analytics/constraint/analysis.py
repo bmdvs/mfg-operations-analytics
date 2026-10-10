@@ -203,7 +203,7 @@ def setup_variability(D, fits, pos):
 def brake_bins(D):
     """Weekly brake queue by utilization band, full weeks of the whole period."""
     b = D["uw"][(D["uw"]["work_center"] == "press_brake") & (D["uw"]["weekdays"] == 5)]
-    b = b.assign(band=pd.cut(b["utilization"], [0, 0.8, 0.85, 0.9, 0.95, 2], labels=["below 0.80", "0.80 to 0.85", "0.85 to 0.90", "0.90 to 0.95", "0.95 and above"]))
+    b = b.assign(band=pd.cut(b["utilization"], [0, 0.8, 0.85, 0.9, 0.95, 2], labels=["below 80%", "80% to 85%", "85% to 90%", "90% to 95%", "at or above 95%"]))
     return b.groupby("band", observed=True).agg(weeks=("queue_mean", "size"), queue_mean=("queue_mean", "mean"), queue_median=("queue_mean", "median")).reset_index()
 
 
