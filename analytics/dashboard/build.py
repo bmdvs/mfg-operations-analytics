@@ -488,7 +488,7 @@ def panel_quoting():
                     f"{pct(SHIPPED_SHARE, 0)} of its jobs shipped; and win rate by turnaround for quotes sent in the {VIEW} weeks.") +
             b + f"<div class='caption'>Quote hit rates by release week and the share of quotes sent within 3 days by week from {wk(QW.index.min())}; the line is 80%.</div>" +
             definition("A quote is met when the working days from the release day to the ship day are at or under it; rush lines are left out. The fixed quote is 10 days "
-                       "for repeat parts, 15 for new parts and 20 with outside processing. The quote table is the table fitted on 2023 to 2025 (Quoting and early warning from load, Table 2): the "
+                       "for repeat parts, 15 for new parts and 20 with outside processing. The quote table is the table fitted on 2023 to 2025 (Quoting and Early Warning from Load, Table 4): the "
                        "80th-percentile lead time of the routing class and brake backlog band at release, rounded up, never below the fixed quote. Turnaround is weekdays "
                        "from RFQ received to quote sent. Win rate is won over quotes sent, with no decision counted as not won."))
 
