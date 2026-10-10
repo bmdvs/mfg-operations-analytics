@@ -107,6 +107,15 @@ def hot_weeks(D):
     return pd.DataFrame(rows).sort_values(["period", "utilization"], ascending=[False, False])
 
 
+def hot_weeks_all(D):
+    """The same comparison over every week of the record: weeks at or above 95% utilization against the others, by work center."""
+    rows = []
+    for wc, w in D["uw"].groupby("work_center"):
+        hot, other = w[w["utilization"] >= HOT], w[w["utilization"] < HOT]
+        rows.append(dict(work_center=wc, weeks=len(w), hot_weeks=len(hot), queue_hot=weighted_queue(hot) if len(hot) else np.nan, queue_other=weighted_queue(other)))
+    return pd.DataFrame(rows).set_index("work_center").sort_values("hot_weeks", ascending=False)
+
+
 def dispatch(D):
     """Operations at the dispatch-list work centers by the working day they start after arriving, and arrivals by hour, the brakes beside them."""
     a = D["arr"]
