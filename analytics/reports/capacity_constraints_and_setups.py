@@ -129,7 +129,7 @@ def fig_hot_year():
     ax.set_ylabel("Queue time in days")
     f.legend(*ax.get_legend_handles_labels(), frameon=False, fontsize=9, ncol=2, loc="lower center")
     f.tight_layout(rect=(0, 0.06, 1, 1))
-    return save(f, "capacity_queue_in_hot_weeks_year", "Queue Time in Weeks at or Above 95% Utilization and Other Weeks, 2023 to 2025")
+    return save(f, "capacity_queue_in_hot_weeks_year", "Queue Time in Weeks at or Above 95% Utilization vs. Other Weeks, 2023 to 2025")
 
 
 def fig_queue_days():
@@ -194,7 +194,7 @@ def fig_curve(wc):
     top = float(w["queue_mean"].max()) * 1.06
     ax.text(0.015, 0.97, f"Fit on 13-week windows: R² {r['r2']:.2f}, rank correlation {r['rank_correlation']:.2f}\n"
                          f"On the curve: {r['queue_at_0.85']:.1f} days at 85%, {r['queue_at_0.90']:.1f} at 90%\n"
-                         f"{YEAR}: {C.PY.loc[wc, 'queue_measured']:.2f} days measured, {C.PY.loc[wc, 'queue_on_curve']:.2f} on the curve",
+                         f"{YEAR}: {C.PY.loc[wc, 'queue_measured']:.1f} days measured, {C.PY.loc[wc, 'queue_on_curve']:.1f} on the curve",
             transform=ax.transAxes, ha="left", va="top", fontsize=8.5, linespacing=1.5, bbox=dict(facecolor="white", edgecolor="#DDDDDD", boxstyle="round,pad=0.4"))
     ax.set_xlim(xmin, 101)
     ax.set_ylim(0, top)
@@ -204,44 +204,6 @@ def fig_curve(wc):
     f.legend(*ax.get_legend_handles_labels(), frameon=False, fontsize=9, ncol=4, loc="lower center")
     f.tight_layout(rect=(0, 0.06, 1, 1))
     return save(f, f"capacity_queue_curve_{wc}", curve_title(wc))
-
-
-def fig_bands(centers, name, title, nrows, ncols, h, line, ymax=None, xmin=10):
-    """Weekly points and band means for several work centers on shared axes, with a line of figures in each panel."""
-    f, axes = fig(h=h, nrows=nrows, ncols=ncols, sharex=True, sharey=True)
-    top = ymax or max(float(SC.full_weeks(X, wc)["queue_mean"].max()) for wc in centers) * 1.3          # room above the points for the line of figures
-    for ax, wc in zip(np.ravel(axes), centers):
-        weekly_points(ax, wc)
-        stepped(ax, wc, xmin)
-        ax.set_title(f"{WC[wc]} ({machines_of(wc)[1]})", fontsize=9.5 if ncols > 2 else 10.5)
-        ax.text(0.03, 0.96, line(wc), transform=ax.transAxes, ha="left", va="top", fontsize=7.8, linespacing=1.4,
-                bbox=dict(facecolor="white", edgecolor="#DDDDDD", boxstyle="round,pad=0.3"))
-        ax.set_xlim(xmin, 101)
-        ax.set_ylim(0, top)
-        ax.xaxis.set_major_formatter(lambda t, _: f"{t:.0f}%")
-    for ax in (axes[-1] if nrows > 1 else axes):
-        ax.set_xlabel("Utilization")
-    f.supylabel(QUEUE_AXIS, fontsize=11)
-    h_, l_ = np.ravel(axes)[0].get_legend_handles_labels()
-    f.legend(h_, l_, frameon=False, fontsize=9, ncol=3, loc="lower center")
-    f.tight_layout(rect=(0, 0.05 if nrows > 1 else 0.09, 1, 1))
-    return save(f, name, title)
-
-
-def fig_powder():
-    d = POWDER.sort_values("wait_mean")
-    y = np.arange(len(d))
-    v = sig(d["wait_mean"].to_numpy(dtype=float))
-    f, ax = fig(h=3.2, grid="x")
-    ax.barh(y, v, height=0.6, color=BRAND_BLUE)
-    for yi, vi in zip(y, v):
-        ax.text(vi + float(v.max()) * 0.012, yi, f"{vi:.2f}", ha="left", va="center", fontsize=8.5)
-    ax.set_yticks(y)
-    ax.set_yticklabels([f"{k.capitalize()} ({r['weekdays']})" for k, r in d.iterrows()])
-    ax.set_xlim(0, float(v.max()) * 1.1)
-    ax.set_xlabel("Wait for the color day, working days per operation")
-    f.tight_layout()
-    return save(f, "capacity_powder_wait_by_color", f"Powder Color-Day Wait by Color, {YEAR}")
 
 
 def fig_same_day():
@@ -303,43 +265,6 @@ def fig_brakes():
     f.legend(h1 + h2, l1 + l2, frameon=False, fontsize=9, ncol=2, loc="lower center")
     f.tight_layout(rect=(0, 0.06, 1, 1))
     return save(f, "capacity_utilization_and_queue_by_brake", f"Utilization and Queue Time by Brake, {YEAR}")
-
-
-def fig_laser_months():
-    m = LAS["month"]
-    x = np.arange(len(m))
-    f, ax = fig(h=3.6)
-    v = sig(m["queue"].to_numpy(dtype=float))
-    ax.bar(x, v, width=0.62, color=LIGHT_BLUE, label="First-operation queue time, mean")
-    for xi, vi in zip(x, v):
-        ax.text(xi, vi, f"{vi:.2f}", ha="center", va="bottom", fontsize=8)
-    ax.plot(x, sig(m["material_wait"].to_numpy(dtype=float)), color=BRAND_BLUE, linewidth=2.0, marker="o", markersize=5, label="Material wait, mean")
-    ax.set_xticks(x)
-    ax.set_xticklabels([MONTHS[k - 1][:3] for k in m.index])
-    ax.set_ylabel("Working days per operation")
-    ax.set_ylim(0, float(v.max()) * 1.12)
-    f.legend(*ax.get_legend_handles_labels(), frameon=False, fontsize=9, ncol=2, loc="lower center")
-    f.tight_layout(rect=(0, 0.06, 1, 1))
-    return save(f, "capacity_laser_first_operation_by_month", f"First-Operation Queue Time and Material Wait by Month, {YEAR}")
-
-
-def fig_assembly():
-    w = X["uw"][(X["uw"]["work_center"] == "assembly") & (X["uw"]["week_start"] >= SC.SERIES_START)].sort_values("week_start")
-    f, ax = fig(h=3.3)
-    ax.bar(w["week_start"], w["utilization"], width=5, color=LIGHT_BLUE, label="Utilization (left)")
-    ax.axhline(0.95, color=GREY, linewidth=1, linestyle="--")
-    ax.set_ylabel("Utilization")
-    ax.set_ylim(0, 1.3)
-    ax.yaxis.set_major_formatter(lambda t, _: f"{t * 100:.0f}%")
-    ax2 = ax.twinx()
-    ax2.plot(w["week_start"], w["queue_mean"], color=AMBER, linewidth=1.4, label="Queue time (right)")
-    ax2.set_ylabel(QUEUE_AXIS)
-    ax2.spines["top"].set_visible(False)
-    h1, l1 = ax.get_legend_handles_labels()
-    h2, l2 = ax2.get_legend_handles_labels()
-    ax.legend(h1 + h2, l1 + l2, frameon=False, fontsize=9, ncol=2, loc="upper left")
-    f.tight_layout()
-    return save(f, "capacity_assembly_weekly", "Assembly Weekly Utilization and Queue Time")
 
 
 # ── the new appendix tables ─────────────────────────────────────────────────
@@ -499,44 +424,37 @@ def build():
     # 1 ── capacity across the shop
     b.append("<h2 id='f1'>1. Capacity Across the Shop</h2>")
     act = ACTIVITY
-    qu = QUARTERLY
-    top = qu.idxmax(axis=1)
-    swapped = [k for k in qu.index if top[k] != "press_brake"]
-    second = qu.drop(columns="press_brake").idxmax(axis=1)
-    since = next(k for k in qu.index if all(second[j] == "robotic_weld" or top[j] == "robotic_weld" for j in qu.index[list(qu.index).index(k):]))
-    early = qu.loc[[k for k in qu.index if k < since], "robotic_weld"]
-    assert len(swapped) == 1 and top[swapped[0]] == "robotic_weld" and len(early) > 0
-    b.append(f"<p>The shop's floor consists of {n0(act['machines'].sum())} machines across ten work centers. The press brakes run at the highest utilization of any "
-             f"work center, in every quarter since 2023 but one. The robotic weld cell has been second in every quarter from {since}, having run at "
-             f"{P(early.min())} to {P(early.max())} before then, when the lasers and other work centers ran above it; it passed the brakes once, in {swapped[0]} "
-             f"({P(qu.loc[swapped[0], 'robotic_weld'])} against {P(qu.loc[swapped[0], 'press_brake'])}).</p>")
+    assert list(UY["utilization"].sort_values(ascending=False).index[:2]) == LEAD_TWO
+    b.append(f"<p>The shop's floor consists of {n0(act['machines'].sum())} machines across ten work centers. The press brakes consistently run at the highest "
+             f"utilization of any work center, followed by the robotic weld cell.</p>")
     b.append(chart("Average monthly utilization by work center, 2023 to 2025", fig_utilization_trend()))
     gap = round(UY["uptime"] * 100) - round(UY["utilization"] * 100)
     assert gap.idxmin() == "press_brake"
     b.append(f"<p>In {YEAR}, the press brakes ran at {P(UY.loc['press_brake', 'utilization'])} utilization against {P(UY.loc['press_brake', 'uptime'])} uptime, and "
              f"this {gap['press_brake']:.0f}-point gap was the smallest production capacity buffer of any work center. The robotic weld cell ran at "
              f"{P(UY.loc['robotic_weld', 'utilization'])} utilization against {P(UY.loc['robotic_weld', 'uptime'])} uptime, a {gap['robotic_weld']:.0f}-point buffer. "
-             f"Uptime was {P(UY['uptime'].min())} to {P(UY['uptime'].max())} at every work center; for purposes of this report, uptime treats setup as running time, "
-             f"not downtime. {T.see('util')}</p>")
+             f"Running this close to capacity leaves the brakes and the weld cell fewer idle hours to absorb work, compared to the other work stations.</p>")
+    b.append(f"<p>Uptime was {P(UY['uptime'].min())} to {P(UY['uptime'].max())} at every work center; for purposes of this report, uptime treats setup as running "
+             f"time, not downtime. {T.see('util')}</p>")
     b.append(titled(C.fig_util(), "Utilization and Machine Uptime by Work Center"))
     hot_share = (HY["hot_weeks"] / HY["weeks"]).sort_values(ascending=False)
-    assert list(hot_share.index[:2]) == LEAD_TWO
-    b.append(f"<p>Not only do the press brakes and robotic weld cell have the highest average utilization, they also spend more time than any other work station at "
-             f"or near maximum utilization. Shown below is the share of weeks in {YEAR} that each work station spent at or above 95% average utilization. The press "
-             f"brakes and the robotic weld cell were at this level in {P(hot_share['press_brake'])} and {P(hot_share['robotic_weld'])} of weeks throughout the "
-             f"year. {T.see('hot')}</p>")
+    assert list(hot_share.index[:2]) == LEAD_TWO and hot_share.iloc[1] > 1.5 * hot_share.iloc[2]
+    b.append(f"<p>With so little buffer, an ordinary heavy week can take the brakes and the weld cell to maximum utilization: they ran at or above 95% utilization in "
+             f"{P(hot_share['press_brake'])} and {P(hot_share['robotic_weld'])} of weeks in {YEAR}, far more often than any other work center. {T.see('hot')}</p>")
     b.append(chart(f"Share of weeks at or above 95% utilization, {YEAR}", fig_hot_share()))
     hall = HALL[HALL["hot_weeks"] > 0]
     rise = hall["queue_hot"] / hall["queue_other"]
-    assert (rise > 1).all() and rise.idxmin() == "press_brake"
-    bw = X["uw"][(X["uw"]["work_center"] == "press_brake") & (X["uw"]["week_year"] == YEAR) & (X["uw"]["utilization"] < SC.HOT)]
-    b.append(f"<p>Work stations experienced an increase in queue time when operating near maximum utilization, compared to weeks at lower utilization. Notably, the "
-             f"increase in queue time in weeks spent at or above 95% utilization was lowest for the press brakes ({d2(hall.loc['press_brake', 'queue_hot'])} days "
-             f"against {d2(hall.loc['press_brake', 'queue_other'])}, {rise['press_brake']:.1f}x). This is because the other weeks on this station still run at high "
-             f"utilization, at 85% to 95% in {int((bw['utilization'] >= 0.85).sum())} of {len(bw)} such weeks in {YEAR}, and carry the backlog of the weeks before "
-             f"them.</p>")
-    b.append(chart("Queue Time in Weeks at or Above 95% Utilization and Other Weeks, 2023 to 2025", fig_hot_year()))
-    assert QDAYS.index[0] == "press_brake" and QDAYS.loc["robotic_weld", "share_of_queue"] < 0.05
+    assert (rise > 1.3).all() and rise.idxmin() == "press_brake"
+    rest_of = X["uw"][X["uw"]["utilization"] < SC.HOT]
+    other_load = {w: SC.pooled_utilization(rest_of[rest_of["work_center"] == w]) for w in hall.index}
+    assert max(other_load, key=other_load.get) == "press_brake"
+    b.append(f"<p>Weeks at maximum utilization result in higher queue times. Across every work center that reached above 95% utilization in a week, average queue "
+             f"time was sharply higher than in the other weeks. The gap is smallest at the press brakes ({d1(hall.loc['press_brake', 'queue_hot'])} days against "
+             f"{d1(hall.loc['press_brake', 'queue_other'])}, {rise['press_brake']:.1f}x) not because their wait is least sensitive to load but because their other "
+             f"weeks are also heavily loaded, averaging {P(other_load['press_brake'])} utilization from 2023 to 2025, so the comparison is narrower than other work "
+             f"centers.</p>")
+    b.append(chart("Queue Time in Weeks at or Above 95% Utilization vs. Other Weeks, 2023 to 2025", fig_hot_year()))
+    assert QDAYS.index[0] == "press_brake" and QDAYS.loc["robotic_weld", "share_of_queue"] < 0.05 and QDAYS.loc["press_brake", "share_of_queue"] > 0.5
     b.append(f"<p>Throughout {YEAR}, jobs spent {n0(QDAYS['queue_days'].sum())} days waiting at a work center after their first operation. The press brake station "
              f"accounted for {P(QDAYS.loc['press_brake', 'share_of_queue'])} of those days, which is a function of its consistently high utilization, as well as its "
              f"volume of operations. There were nearly {n0(np.ceil(QDAYS.loc['press_brake', 'operations'] / 100) * 100)} brake operations in {YEAR}. The robotic weld "
@@ -544,22 +462,23 @@ def build():
              f"{d2(PY.loc['press_brake', 'queue_measured'])}), accounted for less than 5% of queue days, because it saw only "
              f"{n0(QDAYS.loc['robotic_weld', 'operations'])} operations in {YEAR}.</p>")
     b.append(chart(f"Share of queue days by work center, {YEAR}", fig_queue_days()))
+    b.append("<p>The press brakes are therefore the shop's constraint on three counts: the highest utilization with the least buffer, the most weeks at the ceiling, "
+             "and more than half of all queue days. The robotic weld cell shares the first two and constrains the enclosure work that crosses it. "
+             "<a href='#f2'>Section 2</a> examines how queue time builds at these two work centers and what that makes the levers; the other work centers, which are "
+             "either rarely full or whose waits are set by the dispatch list rather than by load, are covered where they bear on it.</p>")
 
-    # 2 ── load, queue time and WIP
-    b.append("<h2 id='f2'>2. Load, Queue Time and WIP</h2>")
+    # 2 ── load and queue time
+    b.append("<h2 id='f2'>2. Load and Queue Time</h2>")
     fits = C.FITS.set_index("work_center")
     at90 = fits["queue_at_0.90"]
-    bold = lambda t: f"<p><b>{t}</b></p>"
+    b.append(f"<p><a href='#f1'>Section 1</a> showed that queue time rises when a work center is full and that the press brakes and the robotic weld cell are the two "
+             f"that are full most often and carry the waiting that costs the shop days. This section shows how queue time builds at each as load rises, and what that "
+             f"makes the lever. The curve is the queue time expected at each level of utilization for the number of machines at the work center, fitted on rolling "
+             f"13-week windows from 2023 to 2025 and drawn only over the range of utilization the work center has run at in those windows; for the brakes the fit "
+             f"explains {P(FB['r2'])} of the variation in the windowed queue with a rank correlation of {d2(FB['rank_correlation'])}, while a single week's queue "
+             f"carries the backlog of the weeks before it, which is why the fit is made on windows rather than weeks.</p>")
 
-    b.append("<h3 id='f2_1'>Queue time against load</h3>")
-    b.append(f"<p>The curve is the queue time expected at each level of utilization for the number of machines at the work center, fitted on rolling 13-week "
-             f"windows from 2023 to 2025; for the brakes the fit explains {P(FB['r2'])} of the variation in the windowed queue time with a rank correlation of "
-             f"{d2(FB['rank_correlation'])}, while a single week's queue time carries the backlog of the weeks before it. The curve is drawn only over the range of "
-             f"utilization the work center has run at in those windows; it is not extended beyond it. Single weeks at full utilization can show short waits when the "
-             f"backlog behind them is small, which is why the fit is made on windows rather than weeks. Three work centers carry sustained load and follow the "
-             f"curve: the brakes, the robotic weld cell and the lasers. Each is shown below with its weekly record.</p>")
-
-    b.append(bold("Press brake"))
+    b.append("<h3 id='f2_1'>The press brakes</h3>")
     lo = C.BINS.iloc[:2]
     below = float((lo["queue_mean"] * lo["weeks"]).sum() / lo["weeks"].sum())
     step = float(C.BINS.iloc[2]["queue_mean"])
@@ -584,6 +503,7 @@ def build():
              + (f"Over all hours worked, {top_y[0]} carries the highest load of the five for the year; in {REST} B1 and B2 do. " if top_y[0] not in ("B1", "B2") else "")
              + f"On crewed weekday shifts only, B1 and B2 run at {u1(MY.loc['B1', 'utilization_weekday_basis'])} and {u1(MY.loc['B2', 'utilization_weekday_basis'])} "
              f"for the year. {T.see('machines', 'basis')}</p>")
+    b.append(chart(f"Utilization and Queue Time by Brake, {YEAR}", fig_brakes()))
     SV, var = C.SV, C.var
     b.append(f"<p>Halving the spread of brake setup time (each setup time moved halfway to the mean, the curve rescaled for the lower variability of setup and run) "
              f"releases {d1(SV.loc['year', 'hours_per_week_released'])} brake "
@@ -593,9 +513,11 @@ def build():
              f"(coefficient of variation {d2(var('Brake run time'))} against {d2(var('Brake setup time'))} for setup). This is the spread of setup time, not its mean; "
              f"the mean is the subject of <a href='#f3'>Section 3</a>. Second-shift absence is {P(var('Absence, second shift: share'))} against "
              f"{P(var('Absence, first shift: share'))} on first shift. {T.see('var', 'spread')}</p>")
-    b.append(chart(f"Utilization and Queue Time by Brake, {YEAR}", fig_brakes()))
+    b.append(f"<p>The brake queue is set by arrival variability and by load above 85%, so capacity at the constraint is the lever: the setup program of "
+             f"<a href='#f3'>Section 3</a> and planned Saturday brake shifts for the peak, both tested in {link('options')}. Release leveling and dispatch rules do "
+             f"not help this shop, and reducing the spread of setup time is not a lever.</p>")
 
-    b.append(bold("Robotic weld cell"))
+    b.append("<h3 id='f2_2'>The robotic weld cell</h3>")
     ROB = C.ROB
     assert PR["queue_measured"].idxmax() == "robotic_weld" and at90["robotic_weld"] > at90["press_brake"]
     assert PY.loc["robotic_weld", "queue_measured"] > PY.loc["robotic_weld", "queue_on_curve"]
@@ -613,125 +535,34 @@ def build():
              f"cell's queue is load, not standards. {T.see('robot')}</p>")
     b.append("<p>A second shift on the robotic weld cell is the open shift on the secondary constraint; the options report tests and prices it.</p>")
 
-    b.append(bold("Lasers"))
-    nov = C.LAS_NOV
-    six = nov[nov["week_start"] >= "2024-11-11"]
-    three = six.iloc[:3]
-    assert len(six) == 6
-    b.append(f"<p>The lasers run at {P(UY.loc['laser', 'utilization'])} and matter at the year-end peak. Over the six weeks from November 11, 2024 they ran at "
-             f"{P(six['utilization'].min())} to {P(six['utilization'].max())}, and at {P(three['utilization'].min())} to {P(three['utilization'].max())} in the first "
-             f"three, with the first-operation queue rising from {d1(nov.iloc[0]['queue_mean'])} to {d1(nov.iloc[-1]['queue_mean'])} days by mid-December; they "
-             f"reached 95% in {C.LW_N} of {C.LW_ALL} full weeks in three years. The curve fits them over the {P(fits.loc['laser', 'u_min'])} to "
-             f"{P(fits.loc['laser', 'u_max'])} range they run at in ordinary quarters ({d2(PY.loc['laser', 'queue_measured'])} days measured in {YEAR} against "
-             f"{d2(PY.loc['laser', 'queue_on_curve'])} on the curve); above it the record is the build weeks. {T.see('laser_weeks')}</p>")
-    b.append(chart(curve_title("laser"), fig_curve("laser")))
-    mo, lm, lp = LAS["month"], LAS["machines"], LAS["period"]
-    builds = mo.loc[[1, 12]]
-    ordinary = mo.drop([1, 12])
-    assert builds["queue"].min() > ordinary["queue"].max()
-    over = float((lm.loc[S.NEWER, "standard_hours"] - lm.loc[S.NEWER, "run_hours"]).sum())
-    b.append(f"<p>In an ordinary month the first-operation queue time is under a day and a half ({rng(ordinary['queue'].min(), ordinary['queue'].max())} on the monthly "
-             f"mean) and its 90th percentile no more than {d1(ordinary['p90'].max())} days; January ({d2(mo.loc[1, 'queue'])}) and December ({d2(mo.loc[12, 'queue'])}) "
-             f"are the two builds. Material wait is steady through the year: {P(lp['year']['with_wait'])} of first operations wait for material, "
-             f"{rng(mo['material_wait'].min(), mo['material_wait'].max(), d1)} days on the monthly mean across all jobs and "
-             f"{rng(min(lp[REST]['wait_where_any'], lp['year']['wait_where_any']), max(lp[REST]['wait_where_any'], lp['year']['wait_where_any']), d1)} days where "
-             f"there is a wait. The work center's {P(UY.loc['laser', 'utilization'])} hides a split by machine: L1 runs one shift at "
-             f"{P(lm.loc['L1', 'utilization'])}, {newer} run two shifts at {P(lm.loc[S.NEWER[0], 'utilization'])} and {P(lm.loc[S.NEWER[1], 'utilization'])}. "
-             f"{newer} carry {P(lm.loc[S.NEWER, 'share_of_standard'].sum())} of laser standard hours and run them in "
-             f"{d2(lm.loc[S.NEWER, 'run_hours'].sum() / lm.loc[S.NEWER, 'standard_hours'].sum())} of the standard time, so planned laser hours on the two are "
-             f"overstated by {n0(over)} for the year ({n0(lm['standard_hours'].sum())} standard against {n0(lm['run_hours'].sum())} actual across the three "
-             f"machines); <a href='#f4'>Section 4</a> takes this up. {T.see('lasers')}</p>")
-    b.append(chart(f"First-Operation Queue Time and Material Wait by Month, {YEAR}", fig_laser_months()) + note("December counts jobs shipped by the end of the record."))
-
-    b.append("<h3 id='f2_2'>Flat, then a step at full load</h3>")
+    b.append("<h3 id='f2_3'>The other work centers</h3>")
     stepc = ["assembly", "weld", "punch"]
-    split = {w: SC.band_split(X, w) for w in stepc + ["laser"] + SC.LIST_CENTERS}
+    split = {w: SC.band_split(X, w) for w in stepc}
     assert all(split[w]["hot"] > 2 * split[w]["below"] for w in stepc)
-    lo_, hi_ = [split[w]["below"] for w in stepc], [split[w]["hot"] for w in stepc]
-    rc = fits.loc[stepc, "rank_correlation"]
-    b.append(f"<p>At four work centers the wait does not rise with load until the machines are full. Assembly, the manual weld bays and the punch sit at "
-             f"{rng(min(lo_), max(lo_))} days per operation below 85% utilization and {rng(min(hi_), max(hi_))} at or above 95%; the lasers in an ordinary quarter "
-             f"show the same floor, with their step the year-end build above. The fitted curve does not describe this shape, which is a flat floor and a step rather "
-             f"than a smooth rise (rank correlation {rng(rc.min(), rc.max())} on 13-week windows), so the band means are shown instead.</p>")
-    step_title = "Queue Time by Utilization Band: Assembly, Manual Weld, Punch and Laser, 2023 to 2025"
-    b.append(chart(step_title, fig_bands(stepc + ["laser"], "capacity_queue_by_band_step", step_title, 2, 2, 5.8,
-                                         lambda w: f"Below 85%: {split[w]['below']:.2f} days\n95% and above: {split[w]['hot']:.2f} days\n"
-                                                   f"{split[w]['weeks_hot']} weeks at or above 95%")))
-    b.append(bold("Assembly"))
-    ah, ao = ASM["compare"]["hot"], ASM["compare"]["other"]
-    yr, og, pv = ASM["years"], ASM["origin"], ASM["previous"]
-    assert list(pv.index[:2]) == ["powder_coat", "outside_processing"] and og["p90"].idxmax() == "No weld"
-    quiet = max(abs(v) for k, v in ASM["corr"].items() if "robotic weld cell hours" in k or "earlier" in k)
-    assert quiet < 0.2, quiet
-    b.append(f"<p>Assembly runs at {P(UY.loc['assembly', 'utilization'])} for the year but at {P(ah['utilization'])} in its {int(ah['weeks'])} hot weeks. Its two "
-             f"benches ran at {P(yr.loc[YEAR, 'utilization'])} in {YEAR}, up from {P(yr.loc[YEAR - 2, 'utilization'])} in {YEAR - 2} and "
-             f"{P(yr.loc[YEAR - 1, 'utilization'])} in {YEAR - 1}, with {int(yr.loc[YEAR, 'hot_weeks'])} hot weeks against "
-             f"{'none' if yr.loc[YEAR - 2, 'hot_weeks'] == 0 else int(yr.loc[YEAR - 2, 'hot_weeks'])} in {YEAR - 2} and {int(yr.loc[YEAR - 1, 'hot_weeks'])} in "
-             f"{YEAR - 1}. In the hot weeks utilization is {P(ah['utilization'])} and the queue time {d2(ah['queue'])} days per operation against {P(ao['utilization'])} "
-             f"and {d2(ao['queue'])} in the other {int(ao['weeks'])}; {ASM['backlog_weeks']} of the {int(ah['weeks'])} are the first-quarter backlog. The hot weeks "
-             f"are assembly's own: arrivals run {d1(ah['arrivals'])} a week against {d1(ao['arrivals'])} and operations are "
-             f"{P(ah['hours_per_operation'] / ao['hours_per_operation'] - 1)} larger ({d2(ah['hours_per_operation'])} machine hours against "
-             f"{d2(ao['hours_per_operation'])}), while the robotic weld cell's share of arrivals barely moves ({P(ah['robot_share'])} against "
-             f"{P(ao['robot_share'])}) and assembly utilization does not follow the cell's output in the same week or the two before it. Assembly receives "
-             f"{P(pv['powder_coat'])} of its work from the powder line and {P(pv['outside_processing'])} from outside processing, the two stages that "
-             f"release work on their own schedules, and the longest assembly queue times are on jobs with no weld operation at all (90th percentile "
-             f"{d1(og.loc['No weld', 'p90'])} days against {d1(og.loc['Manual weld bays', 'p90'])} and {d1(og.loc['Robotic weld cell', 'p90'])}). "
-             f"{T.see('assembly')}</p>")
-    b.append(chart("Assembly Weekly Utilization and Queue Time", fig_assembly()))
-    b.append(bold("Manual weld"))
-    ww, wof = SC.weld_weeks_above(X)
-    b.append(f"<p>The manual weld bays run at {P(UY.loc['weld', 'utilization'])} and are flat at {d2(split['weld']['below'])} days per operation below 85% "
-             f"utilization; at or above it they wait {d2(split['weld']['above'])} days, a load the six bays reach in {ww} weeks of {wof} in {YEAR}. Below that load "
-             f"their queue is the daily list's (next subsection).</p>")
-    b.append(bold("Punch"))
-    b.append(f"<p>The punch is one machine at {P(UY.loc['punch', 'utilization'])} running about {n0(ACTIVITY.loc['punch', 'ops_per_week'])} operations a week, so a "
-             f"few large jobs fill a week; its {int(HY.loc['punch', 'hot_weeks'])} hot weeks in {YEAR} raised a short wait from {d2(HY.loc['punch', 'queue_other'])} to "
-             f"{d2(HY.loc['punch', 'queue_hot'])} days per operation and carried {P(HY.loc['punch', 'hours_share_hot'])} of its hours. Nothing downstream depends on "
-             f"it, and it is left at that.</p>")
-
-    b.append("<h3 id='f2_3'>Set by the daily list</h3>")
-    listed = PY.loc[SC.LIST_CENTERS, "queue_measured"]
-    share = lambda Tb, c: f"{P(Tb[c].min())} to {P(Tb[c].max())}"
+    lo_ = [split[w]["below"] for w in stepc]
+    ah = ASM["compare"]["hot"]
     early, mid_day, late = HOURS.iloc[:3], HOURS.iloc[3:5], HOURS.iloc[5:]
     same = lambda g: float((g["same_day"] * g["arrivals"]).sum() / g["arrivals"].sum())
-    assert 0.85 <= same(early) < 0.95 and 0.25 <= same(mid_day) < 0.35, (same(early), same(mid_day))
+    assert 0.85 <= same(early) < 0.95 and same(pd.concat([mid_day, late])) < 0.35
     assert set(X["shifts"].set_index("work_center").loc[SC.LIST_CENTERS, "shifts"]) == {1}          # one shift at each, so no crew for a list at 14:00
-    brake_day = BRAKE_HOURS.iloc[1:5]["same_day"]
-    next_queue = float((START_Y["next_queue"] * START_Y["next_share"] * START_Y["operations"]).sum() / (START_Y["next_share"] * START_Y["operations"]).sum())
-    b.append(f"<p>At grind and deburr, inspection and pack and hardware, queue time is flat across the range of utilization the shop has run them at, at "
-             f"{rng(listed.min(), listed.max())} days per operation for the year whatever the week's load. At these three work centers "
-             f"{share(START_Y, 'next_share')} of operations start on the working day "
-             f"after they arrive and wait about {d1(next_queue)} days to do so; {share(START_Y, 'same_share')} start the same day, within half a day; "
-             f"{share(START_Y, 'later_share')} wait longer. The split is the same in {REST} ({share(START_R, 'next_share')} next day). What decides it is the hour of "
-             f"arrival, not the load: work arriving before 10:00 starts the same day nine times in ten, work arriving between 10:00 and 14:00 "
-             f"({P(mid_day['share'].sum())} of arrivals) starts the same day about three times in ten, and the {P(late['share'].sum())} arriving after the "
-             f"shift ends starts the next morning. The brakes show no such break; {P(brake_day.min())} to {P(brake_day.max())} of their arrivals start the "
-             f"same day in every band from 06:00 to 14:00. Across a shipped job, these next-day waits add {d1(NEXT_DAY['year'])} working days of lead time "
-             f"({d1(NEXT_DAY[REST])} in {REST}). {T.see('dispatch')}</p>")
-    list_title = "Queue Time by Utilization Band: Grind and Deburr, Inspection and Pack and Hardware, 2023 to 2025"
-    b.append(chart(list_title, fig_bands(SC.LIST_CENTERS, "capacity_queue_by_band_list", list_title, 1, 3, 3.7,
-                                         lambda w: f"Mean {PY.loc[w, 'queue_measured']:.2f} days\n"
-                                                   + (f"95% and above: {split[w]['hot']:.2f} days" if split[w]["weeks_hot"] else "No weeks at or above 95%"),
-                                         ymax=4, xmin=20)))
+    held = QDAYS["share_of_queue"]
+    assert "punch" not in held.index                 # the punch is a first operation, outside the count of queue days
+    b.append(f"<p>At the remaining work centers load is either rarely binding or not what sets the wait. Assembly, the manual weld bays and the punch sit at "
+             f"{rng(min(lo_), max(lo_))} days per operation below 85% utilization ({T.plain('bins')}) and step up only at full load, which they reach in "
+             f"{int(HY.loc['assembly', 'hot_weeks'])}, {int(HY.loc['weld', 'hot_weeks'])} and {int(HY.loc['punch', 'hot_weeks'])} weeks of {int(HY['weeks'].iloc[0])}; "
+             f"assembly's hot weeks are its own (more arrivals and larger jobs, {ASM['backlog_weeks']} of the {int(ah['weeks'])} in the first-quarter backlog), and "
+             f"assembly and the manual weld bays together hold {P(held['assembly'] + held['weld'])} of queue days (the punch is a first operation and is outside that "
+             f"count). The lasers reach full load only at the year-end build (Flow and On-time Delivery). At grind and deburr, inspection and pack and hardware, "
+             f"{P(held[SC.LIST_CENTERS].sum())} of all queue days, queue time is flat across the range of load and is set instead by the hour of arrival: work "
+             f"arriving before 10:00 starts the same day nine times in ten, work arriving after it mostly waits for the next morning, and these next-day starts add "
+             f"{d1(NEXT_DAY['year'])} working days of lead time to a shipped job ({d1(NEXT_DAY[REST])} in {REST}). A midday refresh of the day's list at these three "
+             f"work centers would let the arrivals between 10:00 and 12:00, {P(HOURS.iloc[3]['share'])} of the total, start the same afternoon. The powder line holds "
+             f"jobs {d2(POWDER_ALL['wait_mean'])} days for the color day; a third day for black was tested in Options Tested and does not move on-time delivery. "
+             f"{T.see('laser_weeks', 'lasers', 'assembly', 'dispatch', 'powder')}</p>")
     b.append(chart(f"Same-Day Start by Hour of Arrival, Dispatch-List Work Centers Against the Brakes, {YEAR}", fig_same_day()))
-    b.append(f"<p>The lever is the list, not capacity. A midday refresh of the day's list at these three work centers lets the arrivals between 10:00 and 12:00, "
-             f"{P(HOURS.iloc[3]['share'])} of the total, start the same afternoon; what arrives after the shift ends can only start the next morning.</p>")
 
-    b.append("<h3 id='f2_4'>Set by the color schedule</h3>")
-    two, once = POWDER[POWDER["days_per_week"] > 1.5], POWDER[POWDER["days_per_week"] <= 1.5]
-    assert list(two.index) == ["black", "white", "gray"] and sorted(once.index) == ["beige", "blue", "red"]
-    b.append(f"<p>The powder line's color-day wait is {d2(POWDER_ALL['wait_mean'])} days per operation and {P(POWDER_ALL['day_or_more'])} of operations wait a day "
-             f"or more. Black, white and gray run two days a week and wait {rng(two['wait_mean'].min(), two['wait_mean'].max())} days; beige, blue and red run once a "
-             f"week, wait {rng(once['wait_mean'].min(), once['wait_mean'].max(), d1)} days, and {share(once, 'day_or_more')} of their operations wait a day or more. The "
-             f"three once-a-week colors are {P(once['share_of_operations'].sum())} of operations and {P(once['share_of_wait'].sum())} of the wait; black is "
-             f"{P(POWDER.loc['black', 'share_of_wait'])} of the wait on volume alone. A third day for black was tested in the options report and does not move "
-             f"on-time delivery. {T.see('powder')}</p>")
-    b.append(chart(f"Powder Color-Day Wait by Color, {YEAR}", fig_powder()))
-
-    b.append(f"<p>The brake queue is set by arrival variability and by load above 85%, so capacity at the constraint is the lever: the setup program of "
-             f"<a href='#f3'>Section 3</a> and planned Saturday brake shifts for the peak, both tested in {link('options')}. Release leveling and dispatch rules do "
-             f"not help this shop, and reducing the spread of setup time is not a lever. At the three list-set work centers the lever is the list; at the powder "
-             f"line it is the color schedule.</p>")
+    b.append("<p>The lever for on-time delivery is brake capacity, with the weld cell's second shift behind it; at the list-set work centers the lever is the list, "
+             "and it costs no capacity.</p>")
 
     # 3 ── setups against standard
     b.append("<h2 id='f3'>3. Setups Against Standard</h2>")
@@ -815,7 +646,7 @@ def build():
 
     b.append("<h2 id='appendix'>Appendix</h2>")
     b.append(T.appendix())
-    toc = [("f1", "1. Capacity Across the Shop"), ("f2", "2. Load, Queue Time and WIP"), ("f3", "3. Setups Against Standard"), ("f4", "4. Run Standards")]
+    toc = [("f1", "1. Capacity Across the Shop"), ("f2", "2. Load and Queue Time"), ("f3", "3. Setups Against Standard"), ("f4", "4. Run Standards")]
     print(f"wrote {page('capacity', chr(10).join(b), toc)}: 4 sections, {len(T.order)} appendix tables")
     return T.order
 
