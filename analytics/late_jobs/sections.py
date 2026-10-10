@@ -210,7 +210,7 @@ def fig_mosaic():
     ax.set_ylabel("Share of the code's late jobs")
     ax.set_xticks(centers)
     ax.set_xticklabels([f"{k.capitalize()}, {pct(width[k], 0)}" for k in cross_all.index], rotation=40, ha="right", fontsize=9)
-    labels = [CAUSE_LABEL[k] if k != "not attributable" else "Not attributed by rule" for k in CAUSES]
+    labels = [CAUSE_LABEL[k] for k in CAUSES]
     bottom_legend(f, [Patch(color=CAUSE_COLOR[k]) for k in CAUSES], labels, ncol=4, space=0.1)
     return save(f, "late_jobs_code_against_cause", "What the shop coded against what the data shows")
 
@@ -266,7 +266,7 @@ def t_na():
 def t_sens():
     rows = []
     for p in (70, 80, 90):
-        rows.append([f"{p}th percentile" + (" (the rule)" if p == 80 else ""), pct(sv("year", p, "constraint queue")[0]), pct(sv("year", p, "not attributable")[0]),
+        rows.append([f"{p}th percentile" + (" (the rule)" if p == 70 else ""), pct(sv("year", p, "constraint queue")[0]), pct(sv("year", p, "not attributable")[0]),
                      pct(sv(REST, p, "constraint queue")[0]), pct(sv(REST, p, "not attributable")[0])])
     return table(pd.DataFrame(rows, columns=["Queue threshold of the constraint rule", f"Queue constraint, {YEAR}", f"Not attributed, {YEAR}",
                                              f"Queue constraint, {REST}", f"Not attributed, {REST}"]))
@@ -311,24 +311,27 @@ def report():
              f"while jobs that were released late accounted for {pct(ys['released late'], 0)}, and jobs that waited on material and outside processing accounted for "
              f"{pct(ys['material'], 0)} and {pct(ys['outside processing'], 0)}, respectively. In {REST}, jobs that were released late accounted for "
              f"{pct(rs['released late'], 0)} of the {n0(r['total'])} lost days, with queue constraint ({pct(rs['constraint queue'], 0)}), material "
-             f"({pct(rs['material'], 0)}) and outside processing ({pct(rs['outside processing'], 0)}) the other main drivers. Jobs were released late when they went "
-             f"to the floor with fewer working days to the promised date than the standard quoted lead time for their routing class; this was the largest driver "
-             f"on {n0(r['dominant']['released late'])} of the {n0(len(LR))} late jobs in {REST}. Each such release should be a decision: flag the job as a rush at "
-             f"release when its days to promise fall below the standard, with a named approver, and count these releases weekly. [[R:quoting]] sizes the lead "
-             f"time the shop can hold at a given load. {see(1, 5, 6)}</p>")
+             f"({pct(rs['material'], 0)}) and outside processing ({pct(rs['outside processing'], 0)}) the other main drivers.</p>")
+    b.append(f"<p>Jobs were released late when they went to the floor with fewer working days to the promised shipment date than the standard quoted lead time for "
+             f"their routing class; this was the largest driver on {n0(r['dominant']['released late'])} of the {n0(len(LR))} ({pct(r['dominant']['released late'] / len(LR), 0)}) late jobs in {REST}. Each such release "
+             f"should be a decision: flag the job as a rush, with a named approver, and count and monitor these releases weekly. {see(1, 5, 6)}</p>")
     queues = [k for k in NAYs.index if k.startswith("queue:") or k == "first-operation queue"]
     b.append(f"<p>{pct(ys['not attributable'], 0)} of lost days in {YEAR} and {pct(rs['not attributable'], 0)} in {REST} have no attribution. Of the "
              f"{n0(NAY.sum())} non-attributed lost days in {YEAR}, {pct(NAYs[queues].sum(), 0)} was from work center queue time above on-time median but below "
              f"the attribution threshold, {pct(NAYs['setup and run'], 0)} from setup and run time above normal with no overrun or rework recorded, and "
              f"{pct(NAYs['move'], 0)} from movement between stages. The remainder have no single discernible driver. {see(9, 10)}</p>")
     b.append(chart("Lost days by attributed driver", fig_causes()))
+    b.append(f"<p>The chart below shows where on the floor the lost days were incurred: each work center's lost days in {YEAR} and in {REST}, split by attributed "
+             f"driver. It excludes the days attributed to jobs released late ({n0(y['days']['released late'])} of the {n0(y['total'])} lost days in {YEAR} and "
+             f"{n0(r['days']['released late'])} of the {n0(r['total'])} in {REST}), since those days are lost at order entry, before the job reaches a work "
+             f"center.</p>")
     b.append(chart("Lost days by work center and attributed driver", fig_work_center()))
 
     b.append("<h2 id='f2'>2. The shop's own records</h2>")
     b.append(f"<p>Late-reason codes are inputted retroactively on late jobs by the customer service team during the weekly delivery review. These codes are pulled "
              f"from a dropdown list with six choices: capacity, material, outside processing, customer change, quality and other. As seen below, a significant "
-             f"portion of late jobs had no late-reason code entered, and this is attributed to the fact these codes are entered in weekly batches, as opposed to "
-             f"shop floor entries at the time the job runs late. {see(2)}</p>")
+             f"portion of late jobs had no late-reason code entered ({pct(CS['year']['blank'], 0)} in {YEAR} and {pct(CS[REST]['blank'], 0)} in {REST}). "
+             f"{see(2)}</p>")
     b.append(chart("Late-reason codes as entered on late jobs", fig_codes()))
     late = cross.loc[:, "released late"]
     b.append(f"<p>To validate the accuracy of these codes, we compared them against the lost days attribution drivers shown above. We first mapped the late-reason codes to the corresponding attribution drivers: queue constraint and setup "
@@ -338,17 +341,18 @@ def report():
              f"system, given it accounts for a significant portion of lost days.</p>")
     cq = cross_all["constraint queue"] / cross_all.sum(axis=1)
     rel = cross_all["released late"]
+    rest_codes = [k for k in CODES if k != "capacity"]
     b.append(f"<p>As shown below, the shop's entered reason-codes do not adequately capture the true drivers of lost days. The entered code agrees with the largest "
-             f"attributed cause on just {pct(AG['year']['agree'])} of coded late jobs against {pct(AG['year']['chance'])} expected by chance "
-             f"({pct(AG[REST]['agree'])} against {pct(AG[REST]['chance'])} in {REST}). Queue constraint is the largest attributed driver on "
-             f"{pct(cq['capacity'], 0)} of the jobs coded capacity, and on {pct(cq['blank'], 0)} of the jobs with no code and {pct(cq['material'], 0)} of those coded "
-             f"material. Material is the largest cause on just {n0(cross_all.loc['material', 'material'])} of the {n0(cross_all.loc['material'].sum())} "
+             f"attributed cause on just {pct(AG['year']['agree'])} of coded late jobs against the {pct(AG['year']['chance'])} expected had the codes been assigned at random "
+             f"({pct(AG[REST]['agree'])} against {pct(AG[REST]['chance'])} in {REST}). Queue constraint is the largest attributed driver on just "
+             f"{pct(cq['capacity'], 0)} of the jobs coded capacity, while being misattributed across the rest (making up {pct(cq['blank'], 0)} of the jobs with no "
+             f"code and {cq[rest_codes].min() * 100:.0f}-{pct(cq[rest_codes].max(), 0)} of the other drivers). Material is the largest cause on just {n0(cross_all.loc['material', 'material'])} of the {n0(cross_all.loc['material'].sum())} "
              f"({pct(cross_all.loc['material', 'material'] / cross_all.loc['material'].sum(), 0)}) jobs coded material, outside processing on just {n0(cross_all.loc['outside processing', 'outside processing'])} of the "
              f"{n0(cross_all.loc['outside processing'].sum())} coded outside processing ({pct(cross_all.loc['outside processing', 'outside processing'] / cross_all.loc['outside processing'].sum(), 0)}) and quality on just {n0(cross_all.loc['quality', 'quality'])} of the "
              f"{n0(cross_all.loc['quality'].sum())} ({pct(cross_all.loc['quality', 'quality'] / cross_all.loc['quality'].sum(), 0)}) coded quality. Of the {n0(rel.sum())} jobs where released late is the largest attributed driver, "
              f"{n0(rel['capacity'])} are coded capacity, {n0(rel['blank'])} carry no code and {n0(rel['other'])} are coded other. {see(3, 4)}</p>")
-    b.append("<p>The shop should consider process changes to include additional options in the late-reason code dropdown menu, as well as to enable shop-floor data "
-             "capture on the reasons for late jobs once they become late.</p>")
+    b.append("<p>To increase the accuracy and usefulness of its late-reason codes, the shop should consider process changes to (i) include additional options "
+             "(specifically late releases) in the late-reason code dropdown menu, and (ii) enable real-time shop-floor data capture on the reasons for late jobs once they're known.</p>")
     b.append(chart("What the shop coded against what the data shows", fig_mosaic()))
 
     b.append("<h2 id='rec'>Recommendation and control</h2>")
@@ -363,7 +367,7 @@ def report():
              f"working days late. Lost days at a stage are the stage days above the median of on-time jobs of the same routing class shipped in the same quarter; "
              f"the powder scheduling wait is not lost time.<br>"
              f"Rules. Released late: the standard lead time of 10, 15 or 20 working days less the promised lead time, capped at days late, allocated first. Queue constraint: an operation with queue above "
-             f"its work center's 80th percentile for the quarter, or first-operation queue above its 80th percentile. Material: material wait at the first operation "
+             f"its work center's 70th percentile for the quarter, or first-operation queue above its 70th percentile. Material: material wait at the first operation "
              f"with a kit shortage or material hold recorded; a material hold at a later operation; or first-operation queue where the sheet issue came after planned "
              f"start and followed a stock receipt of the same item, with the first work center's queue that week below its median. Outside processing: a line received "
              f"after its promised date. Setup overrun: setup above standard by more than 2 hours and by more than twice standard. Quality: a recorded quality hold, "
