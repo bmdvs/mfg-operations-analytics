@@ -66,16 +66,9 @@ def band_means(D, work_center):
     return g
 
 
-def band_split(D, work_center, at=0.85):
-    """Mean weekly queue time below a utilization and at or above it, with the mean at or above 95%, full weeks of the whole record."""
-    w = full_weeks(D, work_center)
-    lo, hi, hot = w[w["utilization"] < at], w[w["utilization"] >= at], w[w["utilization"] >= HOT]
-    return dict(below=float(lo["queue_mean"].mean()), weeks_below=len(lo), above=float(hi["queue_mean"].mean()) if len(hi) else np.nan, weeks_above=len(hi),
-                hot=float(hot["queue_mean"].mean()) if len(hot) else np.nan, weeks_hot=len(hot))
-
-
-def weld_weeks_above(D, at=0.85):
-    w = D["uw"][(D["uw"]["work_center"] == "weld") & (D["uw"]["week_year"] == YEAR)]
+def weeks_above(D, work_center, at):
+    """Weeks of the year at or above a utilization, and the weeks in the year."""
+    w = D["uw"][(D["uw"]["work_center"] == work_center) & (D["uw"]["week_year"] == YEAR)]
     return int((w["utilization"] >= at).sum()), len(w)
 
 
@@ -236,3 +229,60 @@ def lasers(D):
     m["run_ratio"] = m["run_hours"] / m["standard_hours"]
     m["share_of_standard"] = m["standard_hours"] / m["standard_hours"].sum()
     return dict(month=month, period=period, machines=m)
+
+
+BUILD_WEEKS = ("2024-11-11", "2024-12-16")          # the six weeks of the 2024 year-end build
+PEAK_WINDOW = ("2024-09-30", "2025-03-31")
+
+
+def peak(D):
+    """Brake standard hours released each week against crewed brake capacity, the fourth quarter of 2024 and the first of 2025.
+    Capacity is crewed weekday hours net of downtime, in standard hours at the brakes' actual-over-standard ratio for 2024."""
+    w = q(f"select f.week_start, f.weekdays, f.brake_std_hours_released as released, f.brake_saturday_shifts as saturday_shifts, "
+          f"f.brake_extended_hours as extended_hours, u.scheduled_hours, u.downtime_hours, m.weekday_scheduled "
+          f"from marts.mart_weekly_floor f join marts.mart_utilization_weekly u on u.week_start = f.week_start and u.work_center = 'press_brake' "
+          f"join (select week_start, sum(scheduled_hours) as weekday_scheduled from marts.mart_machine_weekly where work_center = 'press_brake' group by 1) m "
+          f"on m.week_start = f.week_start where f.week_start between DATE '{PEAK_WINDOW[0]}' and DATE '{PEAK_WINDOW[1]}' order by 1")
+    r = q("select sum(setup_hours + run_hours) / sum(setup_std + run_std_hours) as ratio from marts.mart_run_standards "
+          "where work_center = 'press_brake' and start_year = 2024").iloc[0, 0]
+    w["week_start"] = pd.to_datetime(w["week_start"])
+    w["capacity"] = (w["weekday_scheduled"] - w["downtime_hours"]) / r
+    w["extra_hours"] = w["scheduled_hours"] - w["weekday_scheduled"]              # Saturday and extended hours worked, in crewed machine hours
+    w["capacity_with_extra"] = w["capacity"] + w["extra_hours"] / r
+    w["build"] = w["week_start"].between(*BUILD_WEEKS)
+    one_shift = w[(w["saturday_shifts"] == 1) & (w["extended_hours"] == 0)]["extra_hours"]
+    assert one_shift.nunique() == 1
+    return w, float(r), float(one_shift.iloc[0])
+
+
+def midday_wait(D):
+    """Working days of next-day queue per shipped job that fall on arrivals between 10:00 and 12:00 at the dispatch-list work centers."""
+    days = q(f"select sum(queue_net_wd) from marts.mart_operation_arrivals where year(ship_date) = {YEAR} and working_days_to_start = 1 "
+             f"and work_center in ('grind_deburr', 'inspection_pack', 'hardware') and arrival_hour >= 10 and arrival_hour < 12").iloc[0, 0]
+    return float(days / D["shipped"]["jobs"].sum())
+
+
+def first_operation_queue_days(D):
+    """Queue days of first operations at the lasers and the punch in the year, which the count of queue days after the first operation leaves out."""
+    w = D["uw"][(D["uw"]["week_year"] == YEAR) & D["uw"]["work_center"].isin(["laser", "punch"]) & D["uw"]["queue_mean"].notna()]
+    return (w["queue_mean"] * w["operations"]).groupby(w["work_center"]).sum()
+
+
+def queue_distribution(D):
+    """Queue time per operation by work center for operations started in the year: median, mean and the 5th, 25th, 75th and 95th percentiles, the lasers
+    and the punch on the queue of their first operations."""
+    later = q(f"select work_center, queue_net_wd as days from marts.mart_operations where start_year = {YEAR} and not is_first_op order by job_id, op_seq")
+    first = q(f"select o.work_center, s.days from intermediate.int_operation_queue o join intermediate.int_job_stage_days s using (job_id, op_seq) "
+              f"where o.is_first_op and s.stage = 'first-operation queue' and year(o.first_start) = {YEAR} order by o.job_id")
+    g = pd.concat([later, first]).groupby("work_center")["days"]
+    d = pd.DataFrame({"operations": g.size(), "median": g.median(), "mean": g.mean(), "p5": g.quantile(0.05), "p25": g.quantile(0.25), "p75": g.quantile(0.75),
+                      "p95": g.quantile(0.95)})
+    return d.sort_values("median", ascending=False)
+
+
+def brake_distribution(D):
+    """Queue time per operation at each brake for operations started in the year: median, mean and the 5th, 25th, 75th and 95th percentiles."""
+    g = q(f"select machine_id, queue_net_wd as days from marts.mart_operations where start_year = {YEAR} and work_center = 'press_brake' and not is_first_op "
+          f"order by job_id, op_seq").groupby("machine_id")["days"]
+    return pd.DataFrame({"operations": g.size(), "median": g.median(), "mean": g.mean(), "p5": g.quantile(0.05), "p25": g.quantile(0.25), "p75": g.quantile(0.75),
+                         "p95": g.quantile(0.95)}).sort_index()

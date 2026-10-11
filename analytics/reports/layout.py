@@ -39,12 +39,31 @@ class Tables:
         """The table by its number, without a link: for a mention apart from the sentence that links it."""
         return f"Table {self.number(key)}"
 
-    def see(self, *keys):
+    def see(self, *keys, again=()):
+        """The sentence that links the tables in `keys`; tables in `again`, linked earlier, are named in it by number alone."""
+        self.reserve(*keys)
+        assert not self.linked & set(keys) and set(again) <= self.linked, (keys, again)
+        self.linked |= set(keys)
+        cited = sorted([(self.number(k), True) for k in keys] + [(self.number(k), False) for k in again])
+        links = [f"<a href='#t{n}'>{n}</a>" if new else str(n) for n, new in cited]
+        return f"See Appendix Table{'s' if len(links) > 1 else ''} {join_and(links)} for additional detail."
+
+    def span(self, *keys):
+        """The sentence for a run of tables, named by its first and last numbers."""
+        self.reserve(*keys)
+        assert not self.linked & set(keys), keys
+        self.linked |= set(keys)
+        n = [self.number(k) for k in keys]
+        assert len(n) > 2 and n == list(range(n[0], n[0] + len(n))), n
+        return f"See Appendix Tables <a href='#t{n[0]}'>{n[0]}</a> to <a href='#t{n[-1]}'>{n[-1]}</a> for additional detail."
+
+    def cite(self, *keys):
+        """The tables in `keys` linked inside a sentence, where `see` would be a sentence of its own."""
         self.reserve(*keys)
         assert not self.linked & set(keys), keys
         self.linked |= set(keys)
         links = [f"<a href='#t{self.number(k)}'>{self.number(k)}</a>" for k in keys]
-        return f"See Appendix Table{'s' if len(links) > 1 else ''} {join_and(links)} for additional detail."
+        return f"Appendix Table{'s' if len(links) > 1 else ''} {join_and(links)}"
 
     def appendix(self):
         assert set(self.order) == set(self.held) == self.linked, (set(self.held) - set(self.order), set(self.held) - self.linked)
