@@ -21,7 +21,7 @@ SHORT = {"S1 WIP cap 240": "WIP cap 240", "S1 WIP cap 210": "WIP cap 210", "S1 W
          "S3 Critical ratio": "Critical ratio", "S3 Shortest processing time, brakes only": "Shortest processing time, brakes",
          "S4 Light work first on B1 and B2 when the B3 to B5 queue exceeds 2 days": "Light work ahead of heavy on B1 and B2",
          "S5 Second shift on the robotic weld cell": "Weld cell second shift", "S6 Third weekly color day for black": "Third color day for black",
-         "S7 Planned Saturday brake shift, November to February": "Planned Saturdays, November to February", S8: "Setup reduction", S0: "Current practice"}
+         "S7 Planned Saturday brake shift, November to February": "Planned Saturdays, November to February", S8: "Setup program", S0: "Current practice"}
 MEAS = {"lead_time_median": ("Median lead time", "{:.1f}"), "lead_time_p90": ("90th-percentile lead time", "{:.1f}"), "on_time_delivery": ("On time", "{:.1%}"),
         "wip_mean": ("Mean WIP", "{:.0f}"), "brake_utilization": ("Brake utilization", "{:.3f}"), "robotic_weld_utilization": ("Robotic weld utilization", "{:.3f}"),
         "saturday_shifts": ("Saturday shifts", "{:.1f}"), "extended_hours": ("Extended hours", "{:.0f}"), "jobs_shipped": ("Jobs shipped", "{:,.0f}")}
@@ -158,26 +158,6 @@ def t_quarters():
 
 
 # ── figures ─────────────────────────────────────────────────────────────────
-def fig_effects(name="release_control_scenario_effects", h=5.0, scen=None):
-    scen = scen or SINGLE
-    f, axes = fig(h=h, ncols=2, grid="x", sharey=True)
-    y = np.arange(len(scen))[::-1]
-    for ax, m, scale, xl in ((axes[0], "on_time_delivery", 100, "On-time delivery (points)"),
-                             (axes[1], "lead_time_p90", 1, "90th-percentile lead time (days)")):
-        for p, off, color, lab in ((PY, 0.17, BRAND_BLUE, f"{YEAR}"), (PR, -0.17, AMBER, REST)):
-            d = [p.loc[(s, m)] for s in scen]
-            x = np.array([r["diff"] for r in d]) * scale
-            lo, hi = np.array([r["diff_low"] for r in d]) * scale, np.array([r["diff_high"] for r in d]) * scale
-            ax.errorbar(x, y + off, xerr=[x - lo, hi - x], fmt="o", color=color, markersize=4, capsize=2, linewidth=1.2, label=lab)
-        ax.axvline(0, color=GREY, linewidth=1)
-        ax.set_xlabel(xl, fontsize=9.5)
-        ax.set_yticks(y)
-        ax.set_yticklabels([SHORT.get(s, s) for s in scen], fontsize=9)
-    axes[0].legend(frameon=False, fontsize=9, loc="lower left")
-    f.tight_layout()
-    return save(f, name, "Change in on-time delivery and 90th-percentile lead time by scenario")
-
-
 def fig_cap():
     caps = ["S1 WIP cap 240", "S1 WIP cap 210", "S1 WIP cap 180"]
     f, ax = fig(h=3.0, w=6.2)
@@ -195,8 +175,8 @@ def fig_cap():
 
 
 # ── tables ──────────────────────────────────────────────────────────────────
-PKG_NAMES = {S8: "Setup reduction alone", CHRONIC: "Chronic package: setup reduction + weld cell second shift",
-             NOCAP: "No-capital package: + planned Saturdays, November to February"}
+PKG_NAMES = {S8: "Setup program alone", CHRONIC: "Setup program and weld cell second shift",
+             NOCAP: "Operating package: + planned Saturdays, November to February"}
 
 
 def t_packages():
@@ -210,12 +190,12 @@ def t_packages():
             rows.append([PKG_NAMES[sc], pct(v(p, sc, "on_time_delivery")), spts(p.loc[(sc, "on_time_delivery")]),
                          "" if sc == S8 else spts(vs.loc["on_time_delivery"]), d1(v(p, sc, "lead_time_p90")), sdays(p.loc[(sc, "lead_time_p90")]),
                          "" if sc == S8 else sdays(vs.loc["lead_time_p90"]), n0(v(p, sc, "wip_mean")), d1(v(p, sc, "saturday_shifts")), n0(v(p, sc, "extended_hours"))])
-        for name, m in (("No-capital package at the load-based quote table", "on_time_delivery_quote_table"),
-                        ("No-capital package at the trailing 13-week rule", "on_time_delivery_load_aware")):
+        for name, m in (("Operating package at the load-based quote table", "on_time_delivery_quote_table"),
+                        ("Operating package at the trailing 13-week rule", "on_time_delivery_load_aware")):
             rows.append([name, pct(v(p, NOCAP, m)), paired(period, NOCAP, m, S0, "on_time_delivery"), "", "", "", "", "", "", ""])
-        out += f"<h3>{label}</h3>" + table(pd.DataFrame(rows, columns=["Package", "On time", "Against current practice (points)", "Against setup reduction (points)",
+        out += f"<h3>{label}</h3>" + table(pd.DataFrame(rows, columns=["Package", "On time", "Against current practice (points)", "Against the setup program (points)",
                                                                        "90th-percentile lead time", "Against current practice (days)",
-                                                                       "Against setup reduction (days)", "Mean WIP", "Saturday shifts", "Extended hours"]))
+                                                                       "Against the setup program (days)", "Mean WIP", "Saturday shifts", "Extended hours"]))
     return out
 
 
@@ -247,7 +227,7 @@ def t_hold():
 def t_promise():
     rows = []
     for period, label, p in (("year", f"{YEAR}", PY), (REST, f"{YEAR} {REST}", PR)):
-        for name, sc in (("Current practice", S0), ("No-capital package", NOCAP)):
+        for name, sc in (("Current practice", S0), ("Operating package", NOCAP)):
             a = p.loc[(sc, "on_time_delivery")]
             for rule, m, lm in (("Load-based quote table", "on_time_delivery_quote_table", "promises_longer_quote_table"),
                                 ("Routing class, trailing 13 weeks", "on_time_delivery_load_aware", "promises_longer_than_fixed_quote")):
