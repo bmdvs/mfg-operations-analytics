@@ -4,6 +4,7 @@ Usage: python -m analytics.reports.capacity_constraints_and_setups
 """
 import numpy as np
 import pandas as pd
+from matplotlib.patches import Patch
 
 from analytics.constraint import analysis as CA
 from analytics.constraint import screen as SC
@@ -237,6 +238,93 @@ def fig_curve(wc):
     return save(f, f"capacity_queue_curve_{wc}", curve_title(wc))
 
 
+SETS = {"press_brake": "Load, sustained", "robotic_weld": "Load, sustained", "assembly": "Load, at full capacity only", "weld": "Load, at full capacity only",
+        "punch": "Load, at full capacity only", "laser": "Load, at full capacity only", "grind_deburr": "Dispatch list", "inspection_pack": "Dispatch list",
+        "hardware": "Dispatch list", "powder_coat": "Color schedule"}
+SET_COLOR = {"Load, sustained": BRAND_BLUE, "Load, at full capacity only": ACCENT, "Dispatch list": AMBER, "Color schedule": GREY}
+FIRST_OPS = SC.first_operation_queue_days(X)
+ALL_QDAYS = pd.concat([QDAYS["queue_days"], FIRST_OPS]).sort_values()
+
+
+def fig_queue_days_by_kind():
+    """Queue days at every work center, each bar in the colour of what sets its wait; shares are of the queue days after the first operation."""
+    d = ALL_QDAYS
+    y = np.arange(len(d))
+    f, ax = fig(h=4.2, grid="x")
+    ax.barh(y, sig(d.to_numpy(dtype=float)), height=0.62, color=[SET_COLOR[SETS[w]] for w in d.index])
+    total = float(QDAYS["queue_days"].sum())
+    for yi, (w, v) in zip(y, d.items()):
+        label = f"{v:,.0f} ({v / total * 100:.0f}%)" if w in QDAYS.index else f"{v:,.0f} (first operation)"
+        ax.text(v + float(d.max()) * 0.012, yi, label, ha="left", va="center", fontsize=8.5)
+    ax.set_yticks(y)
+    ax.set_yticklabels([WC[w] for w in d.index])
+    ax.set_xlim(0, float(d.max()) * 1.2)
+    ax.set_xlabel(f"Queue days, {YEAR}")
+    kinds = list(SET_COLOR)
+    f.legend([Patch(color=SET_COLOR[k]) for k in kinds], kinds, frameon=False, fontsize=9, ncol=4, loc="lower center")
+    f.tight_layout(rect=(0, 0.06, 1, 1))
+    return save(f, "capacity_queue_days_by_kind", f"Queue Days by Work Center and What Sets the Wait, {YEAR}")
+
+
+def fig_levers():
+    """Brake hours a week: the setup overrun, and what each measured lever releases of it."""
+    cf = S.HCF.iloc[1]
+    rows = [("Brake setup overrun", float(S.ST["brake_overrun_per_week"]), LIGHT_BLUE), ("Top 12 part-operations at standard", float(S.ST["top_hours_per_week"]), BRAND_BLUE),
+            ("Repeat setups to a familiar operator", float(S.ASG_ANY["hours_released_per_week"]), BRAND_BLUE),
+            ("Shift-handover standard", float(cf["hours_per_week"]), BRAND_BLUE), ("The three together", float(S.LEVERS), BRAND_BLUE)][::-1]
+    y = np.arange(len(rows))
+    v = sig(np.array([r[1] for r in rows]))
+    f, ax = fig(h=3.0, grid="x")
+    ax.barh(y, v, height=0.6, color=[r[2] for r in rows])
+    for yi, (name, val, _) in zip(y, rows):
+        ax.text(val + float(v.max()) * 0.012, yi, f"{val:.0f}" if name == "Brake setup overrun" else f"{val:.1f}", ha="left", va="center", fontsize=8.5)
+    ax.set_yticks(y)
+    ax.set_yticklabels([r[0] for r in rows])
+    ax.set_xlim(0, float(v.max()) * 1.1)
+    ax.set_xlabel("Brake hours a week")
+    f.tight_layout()
+    return save(f, "capacity_brake_hours_by_lever", f"Brake Hours a Week Released by Setup Lever, {YEAR}")
+
+
+PEAK, PEAK_RATIO, SATURDAY_HOURS = SC.peak(X)
+
+
+def fig_peak():
+    """Brake standard hours released each week against crewed brake capacity, with the Saturday and extended hours worked added."""
+    d = PEAK
+    f, ax = fig(h=3.9)
+    ax.bar(d["week_start"], sig(d["released"].to_numpy(dtype=float)), width=5, color=LIGHT_BLUE, label="Brake standard hours released")
+    ax.plot(d["week_start"], sig(d["capacity"].to_numpy(dtype=float)), color=BRAND_BLUE, linewidth=2.0, label="Crewed brake capacity net of downtime")
+    ax.plot(d["week_start"], sig(d["capacity_with_extra"].to_numpy(dtype=float)), color=AMBER, linewidth=1.8, linestyle="--",
+            label="With Saturday and extended hours worked")
+    b_ = d[d["build"]]
+    ax.axvspan(b_["week_start"].min() - pd.Timedelta(days=3.5), b_["week_start"].max() + pd.Timedelta(days=3.5), color="#EFEFEF", zorder=0)
+    ax.set_ylabel("Standard hours a week")
+    ax.set_ylim(0, float(d["released"].max()) * 1.12)
+    f.legend(*ax.get_legend_handles_labels(), frameon=False, fontsize=9, ncol=3, loc="lower center")
+    f.tight_layout(rect=(0, 0.06, 1, 1))
+    return save(f, "capacity_brake_hours_released", "Brake Hours Released Against Capacity by Week, Q4 2024 to Q1 2025")
+
+
+def t_qdays():
+    total = float(QDAYS["queue_days"].sum())
+    rows = [[WC[w], SETS[w], n0(r["operations"]), n0(r["queue_days"]), pct(r["queue_days"] / total, 0)] for w, r in QDAYS.iterrows()]
+    rows.append(["All", "", n0(QDAYS["operations"].sum()), n0(total), "100%"])
+    a = table(pd.DataFrame(rows, columns=["Work center", "What sets the wait", "Operations after the first", "Queue days", "Share"]))
+    rows = [[WC[w], SETS[w], n0(v)] for w, v in FIRST_OPS.sort_values(ascending=False).items()]
+    return a + block("First operations, outside the count above", table(pd.DataFrame(rows, columns=["Work center", "What sets the wait", "First-operation queue days"])))
+
+
+def t_peak():
+    d = PEAK[PEAK["build"]]
+    rows = [[r.week_start.strftime("%Y-%m-%d"), n0(r.weekdays), n0(r.released), n0(r.capacity), n0(r.released - r.capacity), n0(r.saturday_shifts), n0(r.extended_hours),
+             n0(r.extra_hours)] for r in d.itertuples()]
+    rows.append(["A week, on average", "", n0(d["released"].mean()), n0(d["capacity"].mean()), n0((d["released"] - d["capacity"]).mean()),
+                 n0(d["saturday_shifts"].sum()) + " in all", n0(d["extended_hours"].sum()) + " in all", n0(d["extra_hours"].sum()) + " in all"])
+    return table(pd.DataFrame(rows, columns=["Week starting", "Working weekdays", "Brake standard hours released", "Crewed capacity net of downtime, standard hours",
+                                             "Shortfall", "Saturday brake shifts", "Extended hours", "Saturday and extended machine hours"]))
+
+
 def fig_same_day():
     """Arrivals by hour at the dispatch-list work centers, and the share starting the same working day there and at the brakes."""
     x = np.arange(len(HOURS))
@@ -419,6 +507,8 @@ def build():
     T.add("fits", "Fitted queue time curve by work center", C.t_fits())
     T.add("dispatch", "The dispatch-list work centers: start day, queue time and hour of arrival", t_dispatch())
     T.add("powder", "The powder line by color", t_powder())
+    T.add("qdays", f"Queue days by work center and what sets the wait, {YEAR}", t_qdays())
+    T.add("peak", "Brake standard hours released against crewed brake capacity, the six weeks from November 11, 2024", t_peak())
     T.add("var", f"Variability sources, {YEAR}", C.t_var())
     T.add("spread", "Brake queue time with the spread of setup time halved, and the inputs", C.t_setup())
     T.add("machines", f"Utilization and queue time for the five brakes and the robotic weld cell, {YEAR} and {REST}", C.t_machines())
@@ -549,17 +639,11 @@ def build():
              f"for the year. {T.see('machines', 'basis')}</p>")
     b.append(chart(f"Utilization and Queue Time by Brake, {YEAR}", fig_brakes()))
     SV, var = C.SV, C.var
-    b.append(f"<p>Halving the spread of brake setup time (each setup time moved halfway to the mean, the curve rescaled for the lower variability of setup and run) "
-             f"releases {d1(SV.loc['year', 'hours_per_week_released'])} brake "
-             f"hours a week and cuts the queue time on the curve from {d2(SV.loc['year', 'queue_on_curve'])} to {d2(SV.loc['year', 'queue_with_half_setup_spread'])} days. "
-             f"The variability at the brakes is in arrivals (daily coefficient of variation {d2(var('Arrivals: jobs released per working day'))}, Mondays "
-             f"{d2(var('Arrivals: Monday'))} times the daily mean, the top customer's month-end {d2(var('Arrivals: top customer'))} times) and in run time "
-             f"(coefficient of variation {d2(var('Brake run time'))} against {d2(var('Brake setup time'))} for setup). This is the spread of setup time, not its mean; "
-             f"the mean is the subject of <a href='#f3'>Section 3</a>. Second-shift absence is {P(var('Absence, second shift: share'))} against "
+    b.append(f"<p>The brake queue carries over from week to week because arrivals are uneven and run times vary: daily arrivals have a coefficient of variation of "
+             f"{d2(var('Arrivals: jobs released per working day'))}, Mondays bring {d2(var('Arrivals: Monday'))} times the daily mean and the top customer's "
+             f"month-end {d2(var('Arrivals: top customer'))} times, and run time per operation varies far more than setup time (coefficient of variation "
+             f"{d2(var('Brake run time'))} against {d2(var('Brake setup time'))}). Second-shift absence is {P(var('Absence, second shift: share'))} against "
              f"{P(var('Absence, first shift: share'))} on first shift. {T.see('var', 'spread')}</p>")
-    b.append(f"<p>The brake queue is set by arrival variability and by load above 85%, so capacity at the constraint is the lever: the setup program of "
-             f"<a href='#f3'>Section 3</a> and planned Saturday brake shifts for the peak, both tested in {link('options')}. Release leveling and dispatch rules do "
-             f"not help this shop, and reducing the spread of setup time is not a lever.</p>")
 
     b.append("<h3 id='f2_2'>The robotic weld cell</h3>")
     ROB = C.ROB
@@ -577,39 +661,49 @@ def build():
     b.append(f"<p>Enclosures are {P(rf.loc['enclosure', 'share'])} of its hours, weldments {P(rf.loc['weldment', 'share'])} and chassis "
              f"{P(rf.loc['chassis', 'share'])}. Its setups run at {d2(ROBOT_STD['setup_ratio'])} of standard and its run time at {d2(ROBOT_STD['run_ratio'])}, so the "
              f"cell's queue is load, not standards. {T.see('robot')}</p>")
-    b.append("<p>A second shift on the robotic weld cell is the open shift on the secondary constraint; the options report tests and prices it.</p>")
 
     b.append("<h3 id='f2_3'>The other work centers</h3>")
+    held = QDAYS["share_of_queue"]
     stepc = ["assembly", "weld", "punch"]
-    split = {w: SC.band_split(X, w) for w in stepc}
-    assert all(split[w]["hot"] > 2 * split[w]["below"] for w in stepc)
-    lo_ = [split[w]["below"] for w in stepc]
-    ah = ASM["compare"]["hot"]
+    assert "punch" not in held.index                 # the punch is a first operation, outside the count of queue days
+    rest_share = 1 - held["press_brake"] - held["robotic_weld"]
+    b.append(f"<p>The other work centers hold {P(rest_share)} of queue days between them, and the wait at each is set in one of three ways. At grind and deburr, "
+             f"inspection and pack and hardware ({P(held[SC.LIST_CENTERS].sum())} of queue days) the wait does not change with load; it is set by the daily dispatch "
+             f"list. At assembly, the manual weld bays and the punch ({P(held['assembly'] + held['weld'])} of queue days at the first two; the punch is a first "
+             f"operation and outside that count) the wait is flat until the machines are full and steps up only then ({T.plain('bins')}), which they reach in "
+             f"{int(HY.loc['assembly', 'hot_weeks'])}, {int(HY.loc['weld', 'hot_weeks'])} and {int(HY.loc['punch', 'hot_weeks'])} weeks of {int(HY['weeks'].iloc[0])}; "
+             f"the lasers behave the same way and reach full load only at the year-end build (Flow and On-time Delivery). At the powder line "
+             f"({P(held['powder_coat'])} of queue days) the wait is the color schedule. {T.see('qdays', 'assembly', 'laser_weeks', 'lasers')}</p>")
+    b.append(chart(f"Queue Days by Work Center and What Sets the Wait, {YEAR}", fig_queue_days_by_kind())
+             + note(f"Shares are of the {n0(QDAYS['queue_days'].sum())} queue days after the first operation; the lasers' and the punch's first-operation queue days "
+                    f"are shown beside them and are not in that total."))
     early, mid_day, late = HOURS.iloc[:3], HOURS.iloc[3:5], HOURS.iloc[5:]
     same = lambda g: float((g["same_day"] * g["arrivals"]).sum() / g["arrivals"].sum())
-    assert 0.85 <= same(early) < 0.95 and same(pd.concat([mid_day, late])) < 0.35
+    assert 0.85 <= same(early) < 0.95 and 0.25 <= same(mid_day) < 0.35 and 0.45 <= mid_day["share"].sum() <= 0.55
     assert set(X["shifts"].set_index("work_center").loc[SC.LIST_CENTERS, "shifts"]) == {1}          # one shift at each, so no crew for a list at 14:00
-    held = QDAYS["share_of_queue"]
-    assert "punch" not in held.index                 # the punch is a first operation, outside the count of queue days
-    b.append(f"<p>At the remaining work centers load is either rarely binding or not what sets the wait. Assembly, the manual weld bays and the punch sit at "
-             f"{rng(min(lo_), max(lo_))} days per operation below 85% utilization ({T.plain('bins')}) and step up only at full load, which they reach in "
-             f"{int(HY.loc['assembly', 'hot_weeks'])}, {int(HY.loc['weld', 'hot_weeks'])} and {int(HY.loc['punch', 'hot_weeks'])} weeks of {int(HY['weeks'].iloc[0])}; "
-             f"assembly's hot weeks are its own (more arrivals and larger jobs, {ASM['backlog_weeks']} of the {int(ah['weeks'])} in the first-quarter backlog), and "
-             f"assembly and the manual weld bays together hold {P(held['assembly'] + held['weld'])} of queue days (the punch is a first operation and is outside that "
-             f"count). The lasers reach full load only at the year-end build (Flow and On-time Delivery). At grind and deburr, inspection and pack and hardware, "
-             f"{P(held[SC.LIST_CENTERS].sum())} of all queue days, queue time is flat across the range of load and is set instead by the hour of arrival: work "
-             f"arriving before 10:00 starts the same day nine times in ten, work arriving after it mostly waits for the next morning, and these next-day starts add "
-             f"{d1(NEXT_DAY['year'])} working days of lead time to a shipped job ({d1(NEXT_DAY[REST])} in {REST}). A midday refresh of the day's list at these three "
-             f"work centers would let the arrivals between 10:00 and 12:00, {P(HOURS.iloc[3]['share'])} of the total, start the same afternoon. The powder line holds "
-             f"jobs {d2(POWDER_ALL['wait_mean'])} days for the color day; a third day for black was tested in Options Tested and does not move on-time delivery. "
-             f"{T.see('laser_weeks', 'lasers', 'assembly', 'dispatch', 'powder')}</p>")
+    b.append(f"<p>At the three dispatch-list work centers, whether an operation starts the day it arrives depends on the hour of arrival and not on how busy the work "
+             f"center is. Work arriving before 10:00 starts the same day nine times in ten; work arriving between 10:00 and 14:00, half of all arrivals, starts the "
+             f"same day about three times in ten and otherwise waits for the next morning; the {P(late['share'].sum())} arriving after the shift ends always waits. "
+             f"The brakes show no such break. These next-day starts add {d1(NEXT_DAY['year'])} working days of lead time to a shipped job ({d1(NEXT_DAY[REST])} in "
+             f"{REST}). {T.see('dispatch')}</p>")
     b.append(chart(f"Same-Day Start by Hour of Arrival, Dispatch-List Work Centers Against the Brakes, {YEAR}", fig_same_day()))
+    once = POWDER[POWDER["days_per_week"] <= 1.5]
+    assert sorted(once.index) == ["beige", "blue", "red"]
+    b.append(f"<p>The powder line's wait is {d2(POWDER_ALL['wait_mean'])} days per operation for the color day, {rng(once['wait_mean'].min(), once['wait_mean'].max(), d1)} "
+             f"days for the three colors run once a week; a third day for black was tested in {link('options')} and does not move on-time delivery. "
+             f"{T.see('powder')}</p>")
 
-    b.append("<p>The lever for on-time delivery is brake capacity, with the weld cell's second shift behind it; at the list-set work centers the lever is the list, "
-             "and it costs no capacity.</p>")
-
-    # 3 ── setups against standard
-    b.append("<h2 id='f3'>3. Setups Against Standard</h2>")
+    # 3 ── brake hours
+    b.append("<h2 id='f3'>3. Brake Hours: Setups, Standards and the Peak</h2>")
+    b.append(f"<p>The brake queue is set by uneven arrivals and by load above 85%, so what matters at the brakes is hours: how many are lost to setups over standard "
+             f"and how many of those can be recovered, whether the standards the schedule is planned on are right, how far released work exceeds brake capacity at "
+             f"the year-end peak, and where a crewed shift is open. This section measures each from the record. {link('options')} takes these measured hours as inputs "
+             f"and tests, on the shop model, what changing them does to on-time delivery, alongside release and dispatch rules. One measured quantity is set aside "
+             f"here: halving the spread of setup time (each setup time moved halfway to the mean, the curve rescaled for the lower variability of setup and run) "
+             f"releases {d1(C.SV.loc['year', 'hours_per_week_released'])} brake hours a week and cuts the queue time on the curve from "
+             f"{d2(C.SV.loc['year', 'queue_on_curve'])} to {d2(C.SV.loc['year', 'queue_with_half_setup_spread'])} days. The mean setup time is a different matter, and "
+             f"is where the hours are.</p>")
+    b.append("<h3 id='f3_1'>Brake setups</h3>")
     ST, MH_WEEK = S.ST, S.MH_WEEK
     b.append(f"<p>{n0(len(S.D['s']))} setups at all work centers in {YEAR}, {n0(y['setups'])} of them at the brakes. A setup's ratio is its setup machine hours over "
              f"the setup standard on the job operation; hours over standard is total setup hours over total standard hours. Every work center except the brakes runs "
@@ -620,13 +714,13 @@ def build():
              f"with the 2024 year-end build: the median is {d2(S.OV.loc['Q1', 'median_ratio'])} in the first quarter and {d2(S.OV.loc[REST, 'median_ratio'])} in "
              f"{REST}. {T.see('bywc', 'period')}</p>")
 
-    b.append("<h3 id='f3_1'>Where the overrun sits</h3>")
+    b.append("<p id='f3_1_1'><b>Where the overrun sits</b></p>")
     ho, nho, small, LOT, FML, FAM = S.HO.loc["Handed over at a shift boundary"], S.HO.loc["Not handed over"], S.LOT.loc["under 25"], S.LOT, S.FML, S.FAM
     bump = small["median_ratio"] / LOT.drop("under 25")["median_ratio"].mean() - 1
     b.append(f"<p>Setups handed over at a shift boundary (setup transactions by different operators one after the other across the 14:00 or 22:30 shift boundary; two operators at the same time is a two-person "
              f"setup, not a handover) are {pct(ho['share_of_setups'], 0)} of setups "
              f"and {pct(ho['share_of_overrun'], 0)} of the overrun hours, median {d2(ho['median_ratio'])} against {d2(nho['median_ratio'])}; most of those hours are "
-             f"long setups that reached the boundary rather than the handover itself (<a href='#f3_4'>The setup reduction list and the handover</a>). Lots under 25 "
+             f"long setups that reached the boundary rather than the handover itself (<a href='#f3_1_4'>The setup reduction list and the handover</a>). Lots under 25 "
              f"are {pct(small['setups'] / y['setups'], 0)} of setups and {pct(ST['small_lot_overrun_share'], 0)} of the overrun, median {d2(small['median_ratio'])} "
              f"against {d2(LOT.loc['100 and over', 'median_ratio'])} to {d2(LOT.loc['25 to 99', 'median_ratio'])} on larger lots: the setup standards under-plan "
              f"small lots. First setups of a part by the operator run at {d2(FML.loc['none', 'median_ratio'])} against {d2(FML.loc['1 or 2', 'median_ratio'])}. "
@@ -635,7 +729,7 @@ def build():
     b.append(titled(S.fig_conditions(), "Brake Setup Overrun Hours by Condition"))
     b.append(f"<p>The setup standard on lots under 25 pieces should be raised by {pct(bump, 0)}, so the schedule and the quote stop under-planning them.</p>")
 
-    b.append("<h3 id='f3_2'>Operator tenure and familiarity</h3>")
+    b.append("<p id='f3_1_2'><b>Operator tenure and familiarity</b></p>")
     TM, MIX, PLACE, WHO, ANY, SAME = S.TM, S.MIX, S.PLACE, S.WHO, S.ASG_ANY, S.ASG_SAME
     b.append(f"<p>Operators with under 12 months run {pct(TM['tenure_effect_pct'].iloc[0], 0)} above tenured operators before controls and "
              f"{pct(TM['tenure_effect_pct'].iloc[-1], 0)} after familiarity, grouping, machine, lot size, bend count and shift handover. Their "
@@ -648,7 +742,7 @@ def build():
              f"where that operator was on the same shift). This is a matched comparison, not a start-time test, so part of it may be selection. Repeat setups should "
              f"go to an operator who has set the part up before. {T.see('assign')}</p>")
 
-    b.append("<h3 id='f3_3'>Grouping</h3>")
+    b.append("<p id='f3_1_3'><b>Grouping</b></p>")
     GRP = S.GRP
     ga, b12, b345 = GRP.loc["all brakes"], GRP.loc[["B1", "B2"], "share_grouped"], GRP.loc[["B3", "B4", "B5"], "share_grouped"]
     b.append(f"<p>{pct(ga['share_grouped'], 0)} of brake setups follow a job on the same tooling set and run at {d2(ga['ratio_grouped'])} of standard against "
@@ -656,7 +750,7 @@ def build():
              f"setups against {pct(b345.min(), 0)} to {pct(b345.max(), 0)} on B3 to B5: precision work and the hot list come first there. {T.see('grouping')}</p>")
     b.append(titled(S.fig_grouping(), "Same-tooling Grouping by Brake"))
 
-    b.append("<h3 id='f3_4'>The setup reduction list and the handover</h3>")
+    b.append("<p id='f3_1_4'><b>The setup reduction list and the handover</b></p>")
     cf_naive, cf_start, late, early_med = S.HCF.iloc[0], S.HCF.iloc[1], S.HST.iloc[0], S.HST.iloc[2:]["median_ratio"]
     b.append(f"<p>The top {SA.TOP_N} part-operations release {d1(ST['top_hours_per_week'])} brake hours a week at standard: {pct(ST['top_share_of_brake_overrun'], 0)} of "
              f"the overrun and {pct(ST['top_hours_per_week'] / MH_WEEK)} of brake machine time. The overrun is spread across {n0(ST['brake_part_operations'])} "
@@ -669,12 +763,12 @@ def build():
     b.append(f"<p>Three levers release {d1(S.LEVERS)} brake hours a week, {pct(S.LEVERS / MH_WEEK)} of brake machine time: the top {SA.TOP_N} part-operations run at "
              f"standard ({d1(ST['top_hours_per_week'])} hours a week), repeat setups assigned to an operator who has set the part up before "
              f"({d1(ANY['hours_released_per_week'])}), and a shift-handover standard at the brakes, the operator who starts a setup finishing it or leaving a written "
-             f"handover at the machine ({d1(cf_start['hours_per_week'])}). {link('options')} carries these hours as the setup program.</p>")
+             f"handover at the machine ({d1(cf_start['hours_per_week'])}). The options report carries these hours as the setup program.</p>")
+    b.append(chart(f"Brake Hours a Week Released by Setup Lever, {YEAR}", fig_levers()))
 
-    # 4 ── run standards
-    b.append("<h2 id='f4'>4. Run Standards</h2>")
+    b.append("<h3 id='f3_2'>Planning standards</h3>")
     POP, gap = S.POP, S.SRAT["run_gap"]
-    b.append(f"<p>{newer} run at {d2(S.LF[S.NEWER].mean())} of the run standard and L1 at {d2(S.LF['L1'])}; every other work center runs at "
+    b.append(f"<p>The standards the schedule and the quote are built on are wrong in two known directions. {newer} run at {d2(S.LF[S.NEWER].mean())} of the run standard and L1 at {d2(S.LF['L1'])}; every other work center runs at "
              f"{d2(other_run.min())} to {d2(other_run.max())}. {n0(POP['stale_parts'])} of {n0(POP['active_parts_with_routing'])} active parts "
              f"({pct(POP['stale_share'], 0)}) carry a stale standard (one dated at the part's first quote) and run {pct(gap.min(), 0)} to {pct(gap.max(), 0)} further "
              f"above standard than refreshed parts at the same work center. {T.see('run', 'stale')}</p>")
@@ -688,10 +782,35 @@ def build():
              f"standard hours per job by {S.sp(lall['change_both'])}. The {n0(POP['stale_parts'])} stale standards should be refreshed and the {newer} run standards "
              f"set to measured, with the effect on standard hours per job going to estimating ({link('quoting')}). {T.see('planned', 'quoted')}</p>")
 
+    b.append("<h3 id='f3_3'>The peak and the open shift</h3>")
+    pk = PEAK[PEAK["build"]]
+    assert len(pk) == 6
+    a_, b2 = float(pk["released"].mean()), float(pk["capacity"].mean())
+    assert a_ > b2
+    g_ = SATURDAY_HOURS / PEAK_RATIO
+    b.append(f"<p>The year-end build is a brake-hours gap. In the six weeks from November 11, 2024 the shop released {n0(a_)} brake standard hours a week against "
+             f"{n0(b2)} hours of crewed brake capacity net of downtime (weekday shifts, in standard hours at the brakes' {d2(PEAK_RATIO)} actual-over-standard ratio "
+             f"for 2024), a shortfall of {n0(a_ - b2)} hours a week that the queue absorbed; the shop ran {n0(pk['saturday_shifts'].sum())} queue-triggered Saturday "
+             f"brake shifts and {n0(pk['extended_hours'].sum())} extended hours over the period, supplying {n0(pk['extra_hours'].sum() / PEAK_RATIO)} standard hours. "
+             f"One Saturday brake shift on B1 and B2 supplies {n0(g_)} standard hours ({n0(SATURDAY_HOURS)} machine hours), {P(g_ / (a_ - b2))} of the weekly gap; "
+             f"the options report tests a planned Saturday shift every week from November through February against the queue-triggered practice. "
+             f"{T.see('peak')}</p>")
+    b.append(chart("Brake Hours Released Against Capacity by Week, Q4 2024 to Q1 2025", fig_peak()))
+    b.append(f"<p>The robotic weld cell runs one shift at {P(UY.loc['robotic_weld', 'utilization'])} utilization and is at or above 95% in "
+             f"{int(HY.loc['robotic_weld', 'hot_weeks'])} weeks of {int(HY.loc['robotic_weld', 'weeks'])}; its second shift is uncrewed. The options report tests "
+             f"and prices crewing it.</p>")
+
+    b.append("<h3 id='f3_4'>The dispatch list</h3>")
+    mid = SC.midday_wait(X)
+    b.append(f"<p>At grind and deburr, inspection and pack and hardware the lever is the list, not capacity. A midday refresh of the day's dispatch list lets the "
+             f"arrivals between 10:00 and 12:00, {P(HOURS.iloc[3]['share'])} of the total, start the same afternoon; what arrives after the shift ends can only start "
+             f"the next morning" + (f". The gain is lead time rather than on-time delivery, up to {d1(mid)} of the {d1(NEXT_DAY['year'])} working days a shipped job "
+                                    f"spends in next-day starts.</p>" if mid >= 0.3 else ".</p>"))
+
     b.append("<h2 id='appendix'>Appendix</h2>")
     b.append(T.appendix())
-    toc = [("f1", "1. Capacity Across the Shop"), ("f2", "2. Load and Queue Time"), ("f3", "3. Setups Against Standard"), ("f4", "4. Run Standards")]
-    print(f"wrote {page('capacity', chr(10).join(b), toc)}: 4 sections, {len(T.order)} appendix tables")
+    toc = [("f1", "1. Capacity Across the Shop"), ("f2", "2. Load and Queue Time"), ("f3", "3. Brake Hours: Setups, Standards and the Peak")]
+    print(f"wrote {page('capacity', chr(10).join(b), toc)}: 3 sections, {len(T.order)} appendix tables")
     return T.order
 
 
