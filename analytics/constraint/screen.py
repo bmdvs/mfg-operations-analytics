@@ -276,9 +276,12 @@ def first_operation_queue_days(D):
 
 
 def queue_per_operation(D):
-    """Mean and 90th-percentile queue time per operation by work center for the year; the lasers and the punch on their first-operation queue."""
-    later = q("select work_center, mean_queue_days as mean, p90_queue_days as p90 from marts.mart_queue_by_work_center where period = 'year'")
-    first = q(f"select o.work_center, avg(s.days) as mean, quantile_cont(s.days, 0.9) as p90 from intermediate.int_operation_queue o "
-              f"join intermediate.int_job_stage_days s using (job_id, op_seq) where o.is_first_op and s.stage = 'first-operation queue' "
-              f"and year(o.first_start) = {YEAR} group by 1")
-    return pd.concat([later, first]).set_index("work_center").sort_values("mean")
+    """Mean, 90th and 95th-percentile queue time per operation by work center for the year, with the first operations at the lasers and the punch
+    each on their own and together."""
+    later = q(f"select work_center, avg(queue_net_wd) as mean, quantile_cont(queue_net_wd, 0.9) as p90, quantile_cont(queue_net_wd, 0.95) as p95, count(*) as operations "
+              f"from marts.mart_operations where start_year = {YEAR} and not is_first_op group by 1")
+    f = q(f"select o.work_center, s.days from intermediate.int_operation_queue o join intermediate.int_job_stage_days s using (job_id, op_seq) "
+          f"where o.is_first_op and s.stage = 'first-operation queue' and year(o.first_start) = {YEAR} order by o.job_id")
+    rows = [dict(work_center=w, mean=g["days"].mean(), p90=g["days"].quantile(0.9), p95=g["days"].quantile(0.95), operations=len(g)) for w, g in f.groupby("work_center")]
+    rows.append(dict(work_center="first operation", mean=f["days"].mean(), p90=f["days"].quantile(0.9), p95=f["days"].quantile(0.95), operations=len(f)))
+    return pd.concat([later, pd.DataFrame(rows)]).set_index("work_center").sort_values("mean", ascending=False)
