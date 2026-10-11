@@ -100,7 +100,7 @@ def fig_activity():
     h2, l2 = ax2.get_legend_handles_labels()
     f.legend(h1 + h2, l1 + l2, frameon=False, fontsize=9, ncol=2, loc="lower center")
     f.tight_layout(rect=(0, 0.06, 1, 1))
-    return save(f, "capacity_floor_activity", f"Floor Activity by Work Center, {YEAR}")
+    return save(f, "capacity_floor_activity", f"Daily Floor Activity by Work Center, {YEAR}")
 
 
 def fig_utilization_trend():
@@ -454,52 +454,45 @@ def build():
     # 1 ── capacity across the shop
     b.append("<h2 id='f1'>1. Capacity Across the Shop</h2>")
     act = ACTIVITY
-    b.append(f"<p>The shop's floor consists of {n0(act['machines'].sum())} machines across ten work centers. The floor activity (daily operations per machine and "
-             f"hours per operation) in routing order is shown below.</p>")
-    b.append(chart(f"Floor Activity by Work Center, {YEAR}", fig_activity()))
+    b.append(f"<p>The shop's floor consists of {n0(act['machines'].sum())} machines across ten work centers. The daily floor activity (operations per machine and hours "
+             f"per operation) in routing order is shown below.</p>")
+    b.append(chart(f"Daily Floor Activity by Work Center, {YEAR}", fig_activity()))
     all_years = X["uw"][X["uw"]["week_year"].between(YEAR - 2, YEAR)]
     avg = {w: SC.pooled_utilization(all_years[all_years["work_center"] == w]) for w in UY.index}
     assert sorted(avg, key=avg.get, reverse=True)[:2] == LEAD_TWO
+    shop = {y: SC.pooled_utilization(X["uw"][X["uw"]["week_year"] == y]) for y in (YEAR - 2, YEAR)}
     rel = q("select year(quarter_start) as y, sum(releases) as releases, sum(brake_std_hours) as brake_hours "
                                            "from marts.mart_releases_by_quarter group by 1 order by 1").set_index("y")
     b.append(f"<p>The press brakes consistently run at the highest utilization of any work center (average of {P(avg['press_brake'])} 2023-2025), followed by the "
              f"robotic weld cell ({P(avg['robotic_weld'])}). Released work grew {P(rel.loc[YEAR, 'releases'] / rel.loc[YEAR - 2, 'releases'] - 1)} from {YEAR - 2} to "
              f"{YEAR} ({n0(rel.loc[YEAR - 2, 'releases'])} to {n0(rel.loc[YEAR, 'releases'])} jobs a year; brake standard hours up "
-             f"{P(rel.loc[YEAR, 'brake_hours'] / rel.loc[YEAR - 2, 'brake_hours'] - 1)}) across the same set of machines and shifts, accounting for the general "
-             f"positive trend in utilization over the past three years.</p>")
+             f"{P(rel.loc[YEAR, 'brake_hours'] / rel.loc[YEAR - 2, 'brake_hours'] - 1)}) across the same set of machines and shifts, resulting in average machine "
+             f"utilization increasing {(shop[YEAR] - shop[YEAR - 2]) * 100:.0f} points over the past three years, from {P(shop[YEAR - 2])} in {YEAR - 2} to "
+             f"{P(shop[YEAR])} in {YEAR}.</p>")
     b.append(chart("Average monthly utilization by work center, 2023 to 2025", fig_utilization_trend()))
 
     b.append("<h3 id='f1_1'>Capacity Constraints</h3>")
     gap = round(UY["uptime"] * 100) - round(UY["utilization"] * 100)
     assert list(gap.sort_values().index[:2]) == LEAD_TWO and P(UY.loc["press_brake", "uptime"]) == P(UY.loc["robotic_weld", "uptime"])
     b.append(f"<p>In {YEAR}, the press brakes ran at {P(UY.loc['press_brake', 'utilization'])} average utilization and the robotic weld cell at "
-             f"{P(UY.loc['robotic_weld', 'utilization'])}. Against each station's {P(UY.loc['press_brake', 'uptime'])} uptime, the average production capacity buffer "
-             f"was only {gap['press_brake']:.0f} and {gap['robotic_weld']:.0f} points, the smallest of all work centers. {T.see('util')}</p>")
+             f"{P(UY.loc['robotic_weld', 'utilization'])}. Against their {P(UY.loc['press_brake', 'uptime'])} uptime, the average production capacity buffer was only "
+             f"{gap['press_brake']:.0f} points for the press brakes and {gap['robotic_weld']:.0f} points for the robotic weld cell, the smallest of all work centers. "
+             f"{T.see('util')}</p>")
     b.append(titled(C.fig_util(), "Utilization and Machine Uptime by Work Center"))
     hot_share = (HY["hot_weeks"] / HY["weeks"]).sort_values(ascending=False)
     assert list(hot_share.index[:2]) == LEAD_TWO and hot_share.iloc[1] > 1.5 * hot_share.iloc[2]
     b.append(f"<p>With so little buffer, an ordinary heavy week can take the brakes and the weld cell to maximum utilization: they ran at or above 95% utilization in "
              f"{P(hot_share['press_brake'])} and {P(hot_share['robotic_weld'])} of weeks in {YEAR}, far more often than any other work center. {T.see('hot')}</p>")
     b.append(chart(f"Share of weeks at or above 95% utilization, {YEAR}", fig_hot_share()))
-    hall = HALL[HALL["hot_weeks"] > 0]
-    rise = hall["queue_hot"] / hall["queue_other"]
-    assert (rise > 1.3).all() and rise.idxmin() == "press_brake"
-    rest_of = X["uw"][X["uw"]["utilization"] < SC.HOT]
-    other_load = {w: SC.pooled_utilization(rest_of[rest_of["work_center"] == w]) for w in hall.index}
-    assert max(other_load, key=other_load.get) == "press_brake"
-    b.append(f"<p>At each station, average queue time was sharply higher when it was operating near maximum utilization compared to the other weeks of the year. The "
-             f"gap is smallest at the press brakes ({d1(hall.loc['press_brake', 'queue_hot'])} days against {d1(hall.loc['press_brake', 'queue_other'])}, "
-             f"{rise['press_brake']:.1f}x) not because their wait is least sensitive to load but because their other weeks are also heavily loaded, so the comparison "
-             f"is narrower than other work centers. <a href='#f2'>Section 2</a> lays out the sensitivity of queue time against load at the press brakes and robotic "
-             f"weld stations.</p>")
-    b.append(chart("Queue Time in Weeks at or Above 95% Utilization vs. Other Weeks, 2023 to 2025", fig_hot_year()))
     assert QDAYS.index[0] == "press_brake" and QDAYS.loc["robotic_weld", "share_of_queue"] < 0.05 and QDAYS.loc["press_brake", "share_of_queue"] > 0.5
-    b.append(f"<p>Throughout {YEAR}, jobs spent {n0(QDAYS['queue_days'].sum())} days waiting at a work center after their first operation. The press brake station "
-             f"accounted for {P(QDAYS.loc['press_brake', 'share_of_queue'])} of those days, which is a function of its consistently high utilization, as well as its "
-             f"volume of operations. There were nearly {n0(np.ceil(QDAYS.loc['press_brake', 'operations'] / 100) * 100)} brake operations in {YEAR}. The robotic weld "
-             f"cell, which saw similar queue times to the press brakes ({d2(PY.loc['robotic_weld', 'queue_measured'])} days per operation against "
-             f"{d2(PY.loc['press_brake', 'queue_measured'])}), accounted for less than 5% of queue days, because it saw only "
-             f"{n0(QDAYS.loc['robotic_weld', 'operations'])} operations in {YEAR}.</p>")
+    total_ops = len(ops)
+    b.append(f"<p>Throughout {YEAR}, jobs spent {n0(QDAYS['queue_days'].sum())} days waiting in queue at a work center (first operations at the lasers and the "
+             f"punch aside). The press brake station accounted for {P(QDAYS.loc['press_brake', 'share_of_queue'])} of those days, which is a function of its "
+             f"consistently high utilization, as well as its volume of operations. There were {n0(QDAYS.loc['press_brake', 'operations'])} press brake operations in "
+             f"{YEAR}, {P(QDAYS.loc['press_brake', 'operations'] / total_ops)} of total across all work centers. The robotic weld cell, which saw similar high "
+             f"utilization and queue times as the press brakes, accounted for less than 5% of queue days, because only "
+             f"{n0(QDAYS.loc['robotic_weld', 'operations'])} operations, {pct(QDAYS.loc['robotic_weld', 'operations'] / total_ops)} of the total, passed through "
+             f"it.</p>")
     b.append(chart(f"Share of queue days by work center, {YEAR}", fig_queue_days()))
     b.append("<p>The press brakes are therefore the shop's primary constraint on three counts: the highest utilization with the least buffer, the most weeks spent at "
              "maximum utilization, and more than half of all queue days. The robotic weld cell shares the first two and constrains the enclosure work that crosses "
@@ -509,6 +502,18 @@ def build():
     b.append("<h2 id='f2'>2. Load and Queue Time</h2>")
     fits = C.FITS.set_index("work_center")
     at90 = fits["queue_at_0.90"]
+    hall = HALL[HALL["hot_weeks"] > 0]
+    rise = hall["queue_hot"] / hall["queue_other"]
+    assert (rise > 1.3).all() and rise.idxmin() == "press_brake"
+    rest_of = X["uw"][X["uw"]["utilization"] < SC.HOT]
+    other_load = {w: SC.pooled_utilization(rest_of[rest_of["work_center"] == w]) for w in hall.index}
+    assert max(other_load, key=other_load.get) == "press_brake"
+    b.append(f"<p>At each station, average queue time was sharply higher when it was operating near maximum utilization compared to the other weeks of the year. The "
+             f"gap is smallest at the press brakes ({d1(hall.loc['press_brake', 'queue_hot'])} days against {d1(hall.loc['press_brake', 'queue_other'])}, "
+             f"{rise['press_brake']:.1f}x) not because their wait is least sensitive to load but because their other weeks are also heavily loaded, so the comparison "
+             f"is narrower than other work centers. This section lays out the sensitivity of queue time against load at the press brakes and robotic "
+             f"weld stations.</p>")
+    b.append(chart("Queue Time in Weeks at or Above 95% Utilization vs. Other Weeks, 2023 to 2025", fig_hot_year()))
     b.append(f"<p><a href='#f1'>Section 1</a> showed that queue time rises when a work center is full and that the press brakes and the robotic weld cell are the two "
              f"that are full most often and carry the waiting that costs the shop days. This section shows how queue time builds at each as load rises, and what that "
              f"makes the lever. The curve is the queue time expected at each level of utilization for the number of machines at the work center, fitted on rolling "
