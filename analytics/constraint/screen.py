@@ -66,16 +66,9 @@ def band_means(D, work_center):
     return g
 
 
-def band_split(D, work_center, at=0.85):
-    """Mean weekly queue time below a utilization and at or above it, with the mean at or above 95%, full weeks of the whole record."""
-    w = full_weeks(D, work_center)
-    lo, hi, hot = w[w["utilization"] < at], w[w["utilization"] >= at], w[w["utilization"] >= HOT]
-    return dict(below=float(lo["queue_mean"].mean()), weeks_below=len(lo), above=float(hi["queue_mean"].mean()) if len(hi) else np.nan, weeks_above=len(hi),
-                hot=float(hot["queue_mean"].mean()) if len(hot) else np.nan, weeks_hot=len(hot))
-
-
-def weld_weeks_above(D, at=0.85):
-    w = D["uw"][(D["uw"]["work_center"] == "weld") & (D["uw"]["week_year"] == YEAR)]
+def weeks_above(D, work_center, at):
+    """Weeks of the year at or above a utilization, and the weeks in the year."""
+    w = D["uw"][(D["uw"]["work_center"] == work_center) & (D["uw"]["week_year"] == YEAR)]
     return int((w["utilization"] >= at).sum()), len(w)
 
 
@@ -275,13 +268,13 @@ def first_operation_queue_days(D):
     return (w["queue_mean"] * w["operations"]).groupby(w["work_center"]).sum()
 
 
-def queue_per_operation(D):
-    """Mean, 90th and 95th-percentile queue time per operation by work center for the year, with the first operations at the lasers and the punch
-    each on their own and together."""
-    later = q(f"select work_center, avg(queue_net_wd) as mean, quantile_cont(queue_net_wd, 0.9) as p90, quantile_cont(queue_net_wd, 0.95) as p95, count(*) as operations "
-              f"from marts.mart_operations where start_year = {YEAR} and not is_first_op group by 1")
-    f = q(f"select o.work_center, s.days from intermediate.int_operation_queue o join intermediate.int_job_stage_days s using (job_id, op_seq) "
-          f"where o.is_first_op and s.stage = 'first-operation queue' and year(o.first_start) = {YEAR} order by o.job_id")
-    rows = [dict(work_center=w, mean=g["days"].mean(), p90=g["days"].quantile(0.9), p95=g["days"].quantile(0.95), operations=len(g)) for w, g in f.groupby("work_center")]
-    rows.append(dict(work_center="first operation", mean=f["days"].mean(), p90=f["days"].quantile(0.9), p95=f["days"].quantile(0.95), operations=len(f)))
-    return pd.concat([later, pd.DataFrame(rows)]).set_index("work_center").sort_values("mean", ascending=False)
+def queue_distribution(D):
+    """Queue time per operation by work center for operations started in the year: median, mean and the 5th, 25th, 75th and 95th percentiles, the lasers
+    and the punch on the queue of their first operations."""
+    later = q(f"select work_center, queue_net_wd as days from marts.mart_operations where start_year = {YEAR} and not is_first_op order by job_id, op_seq")
+    first = q(f"select o.work_center, s.days from intermediate.int_operation_queue o join intermediate.int_job_stage_days s using (job_id, op_seq) "
+              f"where o.is_first_op and s.stage = 'first-operation queue' and year(o.first_start) = {YEAR} order by o.job_id")
+    g = pd.concat([later, first]).groupby("work_center")["days"]
+    d = pd.DataFrame({"operations": g.size(), "median": g.median(), "mean": g.mean(), "p5": g.quantile(0.05), "p25": g.quantile(0.25), "p75": g.quantile(0.75),
+                      "p95": g.quantile(0.95)})
+    return d.sort_values("median", ascending=False)
