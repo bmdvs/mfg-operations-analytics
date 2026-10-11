@@ -44,14 +44,14 @@ def _capacity():
 
 
 def _options():
-    year, gain, rest = re.search(r"takes the year to ([\d.]+%) on time, up ([\d.]+ points \([\d.]+ to [\d.]+\)).*?Q2-Q4 reaches ([\d.]+%)",
+    gain, year, rest = re.search(r"together they deliver \+([\d.]+ \([\d.]+ to [\d.]+\)), reaching ([\d.]+%) on time.*?In Q2-Q4 the package reaches ([\d.]+%)",
                                  section_text(OPTIONS, "f3")).groups()
-    money = section_text(OPTIONS, "f4_3")
-    alone = re.search(r"On overtime and labor alone .*? second shift\)\.", money).group(0)
-    cell, changer = re.search(r"robotic cell pays back in ([\d.]+) years, the tool changer on B3 in ([\d.]+), the tower not at all", money).groups()
+    money = section_text(OPTIONS, "f4")
+    alone = re.search(r"On overtime and labor savings alone, .*? labor\)\.", money).group(0)
+    cell, changer = re.search(r"the robotic cell pays back in ([\d.]+) years, the tool changer in ([\d.]+) and the package", money).groups()
     return (f"A WIP cap and dispatch rules do not help; the setup program, a second shift on the robotic weld cell and planned Saturdays from November through "
-            f"February take the year to {year} on time, up {gain}, and Q2-Q4 to {rest}. {alone}"
-            f" With half the released brake hours sold, the robotic cell pays back in {cell} years, the tool changer on B3 in {changer}, the laser tower not at all.")
+            f"February take the year to {year} on time, up {gain.replace(' (', ' points (')}, and Q2-Q4 to {rest}. {alone}"
+            f" With half the freed brake hours sold, the robotic cell pays back in {cell} years, the tool changer on B3 in {changer}, the laser tower not at all.")
 
 
 def _quoting():
@@ -71,7 +71,7 @@ REPORTS = [
      "Where does the lead time go, and does the floor's WIP match the quoted lead times? What makes jobs late, and do the shop's late-reason codes say so?", _lead_time),
     (CAPACITY, "Capacity, Constraints and Setups",
      "Which work centers run hot, and how do their queues respond to load? What do setups cost at the brakes, and where is the overrun?", _capacity),
-    (OPTIONS, "Options Tested",
+    (OPTIONS, "What Moves On-Time Delivery",
      "Do release control and dispatch rules help, and what does? Do the capital options pay back?", _options),
     (QUOTING, "Quoting and Early Warning from Load",
      "What lead time should be quoted, and what wins quotes? Which weekly measures move before on-time delivery does?", _quoting),

@@ -21,7 +21,7 @@ ATC, TOWER, CELL, ATC_ALL = "T Tool changer on B3", "T Laser tower on L2", "T Ro
 N_ATC, N_TOWER, N_CELL, N_ALL = [n for n in NAMES if n.startswith("N ")]
 BASE = [ATC, TOWER, CELL]
 ON_PKG = [N_ATC, N_TOWER, N_CELL]
-SHORT = {ATC: "Tool changer on B3", TOWER: "Laser tower on L2", CELL: "Robotic bending cell", PACKAGE: "No-capital package", ATC_ALL: "Tool changing at every setup",
+SHORT = {ATC: "Tool changer on B3", TOWER: "Laser tower on L2", CELL: "Robotic bending cell", PACKAGE: "Operating package", ATC_ALL: "Tool changing at every setup",
          N_ATC: "Package + tool changer on B3", N_TOWER: "Package + laser tower on L2", N_CELL: "Package + robotic bending cell",
          N_ALL: "Package + tool changing at every setup", S0: "Current practice"}
 E = {n: A.economics(S, M, n, S0) for n in NAMES if n != S0}
@@ -90,26 +90,6 @@ def join_and(xs):
 
 
 # ── figures ─────────────────────────────────────────────────────────────────
-def fig_effects():
-    scen = BASE + [PACKAGE] + ON_PKG
-    f, axes = fig(h=4.0, ncols=2, grid="x", sharey=True)
-    y = np.arange(len(scen))[::-1]
-    for ax, m, scale, xl in ((axes[0], "on_time_delivery", 100, "On-time delivery (points)"), (axes[1], "lead_time_p90", 1, "90th-percentile lead time (days)")):
-        for period, off, color, lab in (("year", 0.17, BRAND_BLUE, f"{YEAR}"), (REST, -0.17, AMBER, REST)):
-            r = [S.loc[(s_, period, m)] for s_ in scen]
-            x = np.array([i["diff"] for i in r]) * scale
-            lo, hi = np.array([i["diff_low"] for i in r]) * scale, np.array([i["diff_high"] for i in r]) * scale
-            ax.errorbar(x, y + off, xerr=[x - lo, hi - x], fmt="o", color=color, markersize=4, capsize=2, linewidth=1.2, label=lab)
-        ax.axvline(0, color=GREY, linewidth=1)
-        ax.set_xlabel(xl, fontsize=9.5)
-        ax.set_yticks(y)
-        ax.set_yticklabels([SHORT[s_] for s_ in scen], fontsize=9)
-    hs, ls = axes[0].get_legend_handles_labels()
-    f.legend(hs, ls, frameon=False, fontsize=9, loc="lower center", ncols=2)
-    f.tight_layout(rect=(0, 0.06, 1, 1))
-    return save(f, "technology_roi_option_effects", "Change in on-time delivery and 90th-percentile lead time by option")
-
-
 def fig_laser():
     d = pd.read_csv(QUEUE)
     g = d.groupby(["scenario", "day"])["jobs_waiting_at_lasers"].mean().unstack("scenario")
@@ -143,11 +123,11 @@ def fig_npv(name="technology_roi_npv_by_share_sold", h=3.4):
     ax.axvline(R["utilization_of_released_hours"] * 100, color=GREY, linewidth=1, linestyle=":")
     ax.annotate(f"assumption: {R['utilization_of_released_hours']:.0%} sold", (R["utilization_of_released_hours"] * 100, ax.get_ylim()[1]), textcoords="offset points",
                 xytext=(4, -10), fontsize=8)
-    ax.set_xlabel("Share of released brake hours sold (%)")
+    ax.set_xlabel("Share of freed brake hours sold (%)")
     ax.set_ylabel(f"NPV over {HORIZON} years ($ million)")
     ax.legend(frameon=False, fontsize=8.5, loc="upper left")
     f.tight_layout()
-    return save(f, name, "NPV against the share of released brake hours sold")
+    return save(f, name, "NPV against the share of freed brake hours sold")
 
 
 # ── tables ──────────────────────────────────────────────────────────────────
@@ -159,7 +139,7 @@ def t_measured(short=False):
         ["Brake setup hours per week", d1(M["brake_setup_hours_per_week"]), "[[N:capacity]]"],
         ["of which tool change, at the assumed share", f"{M['tool_change_hours_per_week']:.1f} ({a['tool_change_share_of_setup']:.0%} of setup, assumption)", "[[N:capacity]], assumption"],
         ["Setup hours per week on B3", f"{M['b3_setup_hours_per_week']:.1f} ({pct(M['b3_share_of_setup_hours'])} of brake setup hours)", "[[N:capacity]]"],
-        ["Brake hours per week released by the setup levers", d1(M["setup_levers_hours_per_week"]), "[[N:capacity]]"],
+        ["Brake hours per week freed by the setup levers", d1(M["setup_levers_hours_per_week"]), "[[N:capacity]]"],
         ["Laser utilization", f"{M['laser_utilization']:.3f}", "[[N:capacity]]"],
         ["Laser utilization, weeks of November 11, 18 and 25, 2024", ", ".join(f"{x:.2f}" for x in nv["laser_utilization"]) +
          f" ({join_and([n0(x) for x in nv['wip_at_laser']])} jobs waiting)", "[[N:lead]]"],
@@ -203,14 +183,14 @@ def t_levels(period):
     return table(pd.DataFrame(rows, columns=["Scenario"] + [c for _, _, c in LEVEL]))
 
 
-THRU = f"Throughput value of released constraint hours (assumption: {R['utilization_of_released_hours']:.0%} sold at {R['contribution_margin_share']:.0%} margin)"
+THRU = f"Throughput value of freed constraint hours (assumption: {R['utilization_of_released_hours']:.0%} sold at {R['contribution_margin_share']:.0%} margin)"
 
 
 def t_money(pairs, body=True, summary=S):
     head = ("<tr><th rowspan='2'>Option</th><th rowspan='2'>One-time cost</th><th rowspan='2'>Maintenance a year</th><th rowspan='2'>Overtime avoided</th>"
             "<th rowspan='2'>Labor</th><th colspan='3' style='text-align:center'>Overtime and labor alone</th>"
             f"<th colspan='4' style='text-align:center'>With the {THRU[0].lower() + THRU[1:]}</th>"
-            "<th rowspan='2'>Share of released brake hours sold for NPV of zero</th><th rowspan='2'>Jobs shipped in the model</th></tr>"
+            "<th rowspan='2'>Share of freed brake hours sold for NPV of zero</th><th rowspan='2'>Jobs shipped in the model</th></tr>"
             "<tr><th>Net a year</th><th>Payback (years)</th><th>NPV</th><th>Throughput value</th><th>Net a year</th><th>Payback (years)</th><th>NPV</th></tr>")
     rows = ""
     for n, e in pairs:
@@ -229,7 +209,7 @@ def t_hours(scen):
         rows.append([SHORT[n], n0(e["overtime_hours_avoided"]), n0(e["setup_hours_saved"]), n0(e["manual_brake_hours_displaced"]), n0(e["cell_hours"]),
                      n0(e["weld_second_shift_hours"]), n0(e["released_constraint_hours"]), pct(v(n, "b3_setup_hours") / v(n, "brake_setup_hours"))])
     return table(pd.DataFrame(rows, columns=["Option", "Overtime operator hours avoided", "Brake setup hours saved", "Manual brake hours displaced", "Robotic cell hours",
-                                             "Weld second-shift hours added", "Released constraint hours carrying throughput value", "B3 share of brake setup hours"]))
+                                             "Weld second-shift hours added", "Freed constraint hours carrying throughput value", "B3 share of brake setup hours"]))
 
 
 def t_november():
@@ -263,7 +243,7 @@ UNITS = [
     ("options.robotic_bending_cell.share_of_part_mix", "share of brake standard hours it can run", "share"),
     ("options.robotic_bending_cell.eligible_parts", "parts it can run", ""),
     ("options.robotic_bending_cell.tending_labor_per_cell_hour", "operator hours per cell hour", "hours"),
-    ("no_capital_package.setup_program_one_time", "No-capital package: setup program, one time", "USD"),
+    ("no_capital_package.setup_program_one_time", "Operating package: setup program, one time", "USD"),
     ("no_capital_package.setup_program_annual", "setup program upkeep", "USD a year"),
     ("no_capital_package.weld_second_shift_operators", "operators on the weld cell's second shift", "operators"),
     ("no_capital_package.shift_differential", "second-shift differential", "share of the labor rate"),
@@ -274,7 +254,7 @@ UNITS = [
     ("finance.horizon_years", "Horizon", "years"),
     ("finance.residual_value_share", "Residual value", "share of equipment cost"),
     ("finance.taxes_and_depreciation", "Taxes and depreciation", ""),
-    ("released_hours.utilization_of_released_hours", "Share of released constraint hours sold", "share"),
+    ("released_hours.utilization_of_released_hours", "Share of freed constraint hours sold", "share"),
     ("released_hours.contribution_margin_share", "Contribution margin on revenue per brake hour", "share"),
     ("released_hours.laser_hours_carry_throughput_value", "Laser hours carry throughput value", ""),
 ]

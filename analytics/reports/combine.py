@@ -8,7 +8,7 @@ from analytics.style.style import DOCS, report_shell, table
 REPORTS = {
     "lead": ("lead_time_and_late_jobs", "Flow and On-time Delivery", "the flow report"),
     "capacity": ("capacity_constraints_and_setups", "Capacity, Constraints and Setups", "the capacity report"),
-    "options": ("options_tested", "Options Tested", "the options report"),
+    "options": ("options_tested", "What Moves On-Time Delivery", "the options report"),
     "quoting": ("quoting_and_early_warning", "Quoting and Early Warning from Load", "the quoting report"),
 }
 SHOP = "Custom sheet-metal fabrication job shop, about 120 employees, one plant. "
