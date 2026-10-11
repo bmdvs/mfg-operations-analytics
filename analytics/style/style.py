@@ -98,11 +98,11 @@ def save_conformed(f, name, alt="", up=1):
     return save(f, name, alt, up)
 
 
-def paired_columns(ax, labels, a, b, names, percent=False, decimals=0):
+def paired_columns(ax, labels, a, b, names, percent=False, decimals=0, colors=(LIGHT_BLUE, BRAND_BLUE)):
     """Two columns per label, each with its value above it; `names` are the legend entries of the two series."""
     fmt = (lambda v: f"{v:.0f}%") if percent else (lambda v: f"{v:.{decimals}f}")
     x = np.arange(len(labels))
-    for dx, v, color, lab in ((-0.2, a, LIGHT_BLUE, names[0]), (0.2, b, BRAND_BLUE, names[1])):
+    for dx, v, color, lab in ((-0.2, a, colors[0], names[0]), (0.2, b, colors[1], names[1])):
         v = sig(v)
         ax.bar(x + dx, v, width=0.38, color=color, label=lab)
         for xi, vi in zip(x, v):
