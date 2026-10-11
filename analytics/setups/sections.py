@@ -73,28 +73,6 @@ def fig_tenure(name="setups_tenure_decomposition", h=3.0):
     return save(f, name, "Tenure effect on brake setup ratio as controls are added")
 
 
-def fig_grouping():
-    g = GRP.drop("all brakes")
-    f, ax = fig(h=3.0)
-    x = np.arange(len(g))
-    ax.bar(x, g["share_grouped"] * 100, color=LIGHT_BLUE, width=0.55, label="Share of setups grouped (left)")
-    ax.set_xticks(x)
-    ax.set_xticklabels(g.index)
-    ax.set_ylabel("Setups grouped (%)")
-    ax2 = ax.twinx()
-    ax2.plot(x, g["ratio_grouped"], color=BRAND_BLUE, marker="o", linewidth=0, markersize=7, label="Ratio, grouped (right)")
-    ax2.plot(x, g["ratio_not_grouped"], color=AMBER, marker="s", linewidth=0, markersize=7, label="Ratio, not grouped (right)")
-    ax2.axhline(1.0, color=GREY, linewidth=1, linestyle="--")
-    ax2.set_ylim(0.6, 1.6)
-    ax2.set_ylabel("Setup actual over standard")
-    ax2.spines["top"].set_visible(False)
-    h1, l1 = ax.get_legend_handles_labels()
-    h2, l2 = ax2.get_legend_handles_labels()
-    ax.legend(h1 + h2, l1 + l2, frameon=False, fontsize=8.5, ncol=3, loc="upper center", bbox_to_anchor=(0.5, -0.12))
-    f.tight_layout()
-    return save(f, "setups_grouping_by_machine", "Same-tooling grouping by brake")
-
-
 def fig_run():
     w = RWC.set_index("work_center")["run_ratio"].drop("laser")
     rows = [(f"Laser {m}", float(r)) for m, r in zip(RLAS["machine_id"], RLAS["run_ratio"])] + [(WC[k], float(v)) for k, v in w.sort_values().items()]
