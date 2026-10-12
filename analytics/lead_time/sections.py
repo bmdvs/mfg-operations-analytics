@@ -231,102 +231,92 @@ WAITING, WORKING = "#DCE6EE", BRAND_BLUE
 
 
 def fig_job_flow():
-    """The job flow from release to shipment in two rows, the work centers of a stage stacked where it has more than one, each with the share of jobs through it.
-    Drawn at the width of the report's text column so its lettering is the size of the body text."""
-    P = lambda x: f"{x * 100:.0f}% of jobs"
+    """The job flow from release to shipment in one row, the work centers of a stage stacked where it has more than one, each with the share of jobs through it.
+    Drawn at the width of the report's text column, one unit to a pixel as the page shows it."""
+    P = lambda x: f"{x * 100:.0f}%"
     NL = chr(10)
-    WIDE, TALL = 832.0, 592.0                              # the text column in pixels; one unit is one pixel as the page shows it
-    NAME, SHARE = 10.6, 9.4                                # points: 15 and 13 pixels on the page
+    WIDE, TALL = 832.0, 286.0
+    NAME, SHARE = 8.6, 8.2                                 # points: 12 pixels on the page, against 15 for the body text
     f, ax = fig(h=CHART_W * TALL / WIDE, w=CHART_W)
     ax.set_position([0, 0, 1, 1])
     ax.axis("off")
-    arrow = dict(arrowstyle="-|>", color=DARK, linewidth=1.0, shrinkA=0, shrinkB=0, mutation_scale=10)
+    arrow = dict(arrowstyle="-|>", color=DARK, linewidth=0.9, shrinkA=0, shrinkB=0, mutation_scale=8)
     go = lambda a, b, **kw: ax.annotate("", b, a, arrowprops=dict(arrow, **kw))
     at = {}
 
     def box(key, name, x0, w, yc, hh, share=None, edge=0.9, bold=True):
-        ax.add_patch(FancyBboxPatch((x0, yc - hh / 2), w, hh, boxstyle="round,pad=0,rounding_size=6", facecolor="white", edgecolor=DARK, linewidth=edge))
+        ax.add_patch(FancyBboxPatch((x0, yc - hh / 2), w, hh, boxstyle="round,pad=0,rounding_size=5", facecolor="white", edgecolor=DARK, linewidth=edge))
         n = name.count(NL) + 1
         if share is None:
-            ax.text(x0 + w / 2, yc, name, ha="center", va="center", fontsize=NAME, color=TEXT, fontweight="bold" if bold else None, linespacing=1.15)
+            ax.text(x0 + w / 2, yc, name, ha="center", va="center", fontsize=NAME, color=TEXT, fontweight="bold" if bold else None, linespacing=1.12)
         else:
-            ax.text(x0 + w / 2, yc + 10, name, ha="center", va="center", fontsize=NAME, color=TEXT, fontweight="bold", linespacing=1.15)
-            ax.text(x0 + w / 2, yc - 9 * n - 8, P(share), ha="center", va="center", fontsize=SHARE, color=TEXT)
+            ax.text(x0 + w / 2, yc + 8, name, ha="center", va="center", fontsize=NAME, color=TEXT, fontweight="bold", linespacing=1.12)
+            ax.text(x0 + w / 2, yc - 8 * n - 6, P(share), ha="center", va="center", fontsize=SHARE, color=TEXT)
         at[key] = (x0, x0 + w, yc, hh)
 
     def stage(label, x0, w, top):
-        ax.text(x0 + w / 2, top + 9, label, ha="center", va="bottom", fontsize=NAME, color=TEXT, fontweight="bold")
+        ax.text(x0 + w / 2, top + 6, label, ha="center", va="bottom", fontsize=NAME, color=TEXT, fontweight="bold")
 
-    # the first row: release to the press brakes
-    y1, x, gap = 484.0, 4.0, 72.0
-    box("release", "Release", x, 84, y1, 96, edge=1.7)
+    y, x, gap = 142.0, 2.0, 12.0
+    box("print", "Release to" + NL + "traveler" + NL + "print", x, 72, y, 90, bold=False)
+    box("release", "Release", x, 72, 262, 32, edge=1.6)
+    x += 72 + gap
+    box("laser", "Laser", x, 62, y + 32, 54, FLOW["laser"])
+    box("punch", "Punch", x, 62, y - 32, 54, FLOW["punch"])
+    stage("Cut", x, 62, y + 59)
+    x += 62 + gap
+    box("deburr", "Grind and" + NL + "deburr", x, 74, y, 90, FLOW["deburr"])
+    x += 74 + gap
+    box("brake", "Press" + NL + "brake", x, 60, y, 90, FLOW["form"])
+    x += 60 + gap
+    box("hardware", "Hardware", x, 76, y + 68, 52, FLOW["hardware"])
+    box("weld", "Manual" + NL + "weld", x, 76, y, 64, FLOW["manual_weld"])
+    box("robot", "Robotic" + NL + "weld", x, 76, y - 72, 64, FLOW["robotic_weld"])
+    stage("Insert and join", x, 76, y + 94)
+    x += 76 + gap
+    box("grind", "Grind and" + NL + "deburr", x, 74, y - 36, 112, FLOW["grind_welds"])
+    x += 74 + gap
+    box("powder", "Powder" + NL + "coat", x, 84, y + 44, 64, FLOW["powder"])
+    box("outside", "Outside" + NL + "processing", x, 84, y - 36, 64, FLOW["outside"])
+    stage("Finish", x, 84, y + 76)
     x += 84 + gap
-    box("print", "Release to" + NL + "traveler" + NL + "print", x, 108, y1, 96, bold=False)
-    x += 108 + gap
-    box("laser", "Laser", x, 104, y1 + 37, 62, FLOW["laser"])
-    box("punch", "Punch", x, 104, y1 - 37, 62, FLOW["punch"])
-    stage("Cut", x, 104, y1 + 68)
-    x += 104 + gap
-    box("deburr", "Grind and" + NL + "deburr", x, 112, y1, 96, FLOW["deburr"])
-    x += 112 + gap
-    box("brake", "Press brake", x, 112, y1, 96, FLOW["form"])
-    # the second row: inserting and joining to shipment
-    x, gap = 38.0, 19.0
-    box("hardware", "Hardware", x, 118, 290, 60, FLOW["hardware"])
-    box("weld", "Manual weld", x, 118, 219, 60, FLOW["manual_weld"])
-    box("robot", "Robotic weld", x, 118, 148, 60, FLOW["robotic_weld"])
-    stage("Insert and join", x, 118, 320)
-    x += 118 + gap
-    box("grind", "Grind and" + NL + "deburr", x, 100, 184, 118, FLOW["grind_welds"])
-    x += 100 + gap
-    box("powder", "Powder coat", x, 112, 284, 60, FLOW["powder"])
-    box("outside", "Outside" + NL + "processing", x, 112, 190, 84, FLOW["outside"])
-    stage("Finish", x, 112, 314)
-    x += 112 + gap
-    box("assembly", "Assemble", x, 96, 236, 96, FLOW["assembly"])
-    x += 96 + gap
-    box("inspect", "Inspect" + NL + "and pack", x, 96, 236, 96, FLOW["inspect"])
-    x += 96 + gap
-    box("packed", "Packed," + NL + "waiting" + NL + "to ship", x, 92, 236, 96, bold=False)
-    x += 92 + gap
-    box("ship", "Ship", x, 62, 236, 96, edge=1.7)
-    L, R, Y = (lambda n: at[n][0] - 3), (lambda n: at[n][1] + 3), (lambda n: at[n][2])
+    box("assembly", "Assemble", x, 72, y, 90, FLOW["assembly"])
+    x += 72 + gap
+    box("inspect", "Inspect" + NL + "and pack", x, 72, y, 90, FLOW["inspect"])
+    x += 72 + gap
+    box("packed", "Packed," + NL + "waiting" + NL + "to ship", x, 74, y, 90, bold=False)
+    box("ship", "Shipment", x, 74, 262, 32, edge=1.6)
+    L, R, Y = (lambda n: at[n][0] - 2), (lambda n: at[n][1] + 2), (lambda n: at[n][2])
     link = lambda a, b, dy=0.0, dz=0.0: go((R(a), Y(a) + dy), (L(b), Y(b) + dz))
-    link("release", "print")
-    link("print", "laser", 14)
-    link("print", "punch", -14)
-    link("laser", "deburr", 0, 16)
-    link("punch", "deburr", 0, -16)
+    mid = lambda n: (at[n][0] + at[n][1]) / 2
+    go((mid("release"), at["release"][2] - 18), (mid("print"), at["print"][2] + 47))
+    go((mid("packed"), at["packed"][2] + 47), (mid("ship"), at["ship"][2] - 18))
+    link("print", "laser", 12)
+    link("print", "punch", -12)
+    link("laser", "deburr", 0, 14)
+    link("punch", "deburr", 0, -14)
     link("deburr", "brake")
-    # from the press brakes round to the second row
-    tx, ty, lx = 822.0, 376.0, 14.0
-    ax.plot([R("brake"), tx, tx, lx, lx], [y1, y1, ty, ty, Y("robot")], color=DARK, linewidth=1.0, solid_capstyle="round")
-    for n in ("hardware", "weld", "robot"):
-        go((lx, Y(n)), (L(n), Y(n)))
-    link("weld", "grind", 0, 26)
-    link("robot", "grind", 0, -26)
-    link("hardware", "powder")
-    link("grind", "powder", 34, -14)
-    link("grind", "outside", -8)
-    link("powder", "assembly", 0, 22)
-    link("outside", "assembly", 0, -22)
+    link("brake", "hardware", 18)
+    link("brake", "weld")
+    link("brake", "robot", -18)
+    link("weld", "grind", 0, 30)
+    link("robot", "grind", 0, -30)
+    link("hardware", "powder", 8, 16)
+    link("grind", "powder", 40, -14)
+    link("grind", "outside", -4)
+    link("powder", "assembly", 0, 18)
+    link("outside", "assembly", 0, -18)
     link("assembly", "inspect")
     link("inspect", "packed")
-    link("packed", "ship")
     # inside a stage: hardware on to a weld, powder coat on to outside processing
-    hx = at["hardware"][0] + 22
-    go((hx, at["hardware"][2] - at["hardware"][3] / 2 - 3), (hx, at["weld"][2] + at["weld"][3] / 2 + 3))
-    ax.annotate("", (R("robot"), Y("robot") + 14), (R("hardware"), Y("hardware") - 14), arrowprops=dict(arrow, connectionstyle="arc3,rad=-0.28"))
-    px = at["powder"][0] + 26
-    go((px, at["powder"][2] - at["powder"][3] / 2 - 3), (px, at["outside"][2] + at["outside"][3] / 2 + 3))
-    # holds: anywhere on the routing, from cutting to inspection
-    span = dict(arrowstyle="<|-|>", color=DARK, linewidth=0.9, mutation_scale=10, shrinkA=0, shrinkB=0)
-    ax.annotate("", (at["brake"][1], 402), (at["laser"][0], 402), arrowprops=span)
-    ax.annotate("", (at["inspect"][1], 62), (at["hardware"][0], 62), arrowprops=span)
-    ax.text((at["hardware"][0] + at["inspect"][1]) / 2, 72, f"Holds occur at any operation on the routing ({HOLDS_AT_FIRST * 100:.0f}% at the first Cut operations," + NL
-            + "most of them for material)", ha="center", va="bottom", fontsize=NAME, color=TEXT, linespacing=1.25)
+    hx = at["hardware"][0] + 14
+    go((hx, at["hardware"][2] - 27), (hx, at["weld"][2] + 33))
+    ax.annotate("", (R("robot") - 1, Y("robot") + 12), (R("hardware") - 1, Y("hardware") - 12), arrowprops=dict(arrow, connectionstyle="arc3,rad=-0.22"))
+    px = at["powder"][0] + 16
+    go((px, at["powder"][2] - 33), (px, at["outside"][2] + 33))
+    ax.text(WIDE / 2, 20, "Percentages are the share of jobs that pass through each work center", ha="center", va="center", fontsize=SHARE, color=TEXT)
     ax.set_xlim(0, WIDE)
-    ax.set_ylim(40, 40 + TALL)
+    ax.set_ylim(8, 8 + TALL)
     return save(f, "job_flow_diagram", "Job Flow, Release to Shipment")
 
 
