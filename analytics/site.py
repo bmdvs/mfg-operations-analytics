@@ -23,7 +23,7 @@ def page_links(text):
     return re.sub(r"\]\((docs/[^)]+\.html)\)", lambda m: f"]({PAGES}{m.group(1)})", text)
 
 
-LEAD, CAPACITY, OPTIONS, QUOTING = "lead_time_and_late_jobs", "capacity_constraints_and_setups", "options_tested", "quoting_and_early_warning"
+LEAD, CAPACITY, OPTIONS = "lead_time_and_late_jobs", "capacity_constraints_and_setups", "options_tested"
 
 
 def _lead_time():
@@ -32,8 +32,9 @@ def _lead_time():
     median, quote, rest = re.search(r"shipped in ([\d.]+) working days vs\. an average quoted lead time of ([\d.]+); in Q2-Q4, it was ([\d.]+) vs\.",
                                     section_text(LEAD, "f2_2")).groups()
     causes = re.search(r"In 2025, jobs waiting at work centers .*? respectively\.", section_text(LEAD, "f3_1")).group(0)
+    quoting = re.search(r"Quoting from the brake backlog at release, .*? of revenue\.", section_text(LEAD, "f4")).group(0)
     return (f"Queue at the brakes is {share} of lead time and the stage that separates late jobs from on-time jobs ({late} days against {on_time}); the median job "
-            f"ships in {median} working days against an average quoted lead time of {quote}, {rest} in Q2-Q4. " + causes)
+            f"ships in {median} working days against an average quoted lead time of {quote}, {rest} in Q2-Q4. " + causes + " " + quoting)
 
 
 def _capacity():
@@ -54,27 +55,15 @@ def _options():
             f" With half the freed brake hours sold, the robotic cell pays back in {cell} years, the tool changer on B3 in {changer}, the laser tower not at all.")
 
 
-def _quoting():
-    t = section_text(QUOTING, "f2")
-    y, r, fy, fr, ly, lr = re.search(r"is met on ([\d.]+%) of non-rush jobs for the year and ([\d.]+%) in Q2-Q4 .*? against ([\d.]+%) and ([\d.]+%) for the fixed "
-                                     r"quote; it is longer than the fixed quote on ([\d.]+%) and ([\d.]+%)", t).groups()
-    assert "moved before all four" in section_text(QUOTING, "f4_2")
-    start = re.search(r"The on-time start rate correlates .*? on shifted series\.", section_text(QUOTING, "f4_1")).group(0)
-    return (f"The fixed quote is met on {fy} of non-rush jobs for the year and {fr} in Q2-Q4; a quote by routing class and brake backlog at release, never below "
-            f"the fixed quote, is met on {y} and {r} out of sample and lengthens {ly} and {lr} of promised lead times. " + start +
-            " It moved before all four declines in on-time delivery; no other weekly measure leads in ordinary weeks.")
-
-
 # file stem, title, question, the finding composed from the report's sentences
 REPORTS = [
     (LEAD, "Flow and On-time Delivery",
-     "Where does the lead time go, and does the floor's WIP match the quoted lead times? What makes jobs late, and do the shop's late-reason codes say so?", _lead_time),
+     "Where does the lead time go, and does the floor's WIP match the quoted lead times? What makes jobs late, and do the shop's late-reason codes say so? What lead "
+     "time should be quoted in a build, and which measures warn of a decline?", _lead_time),
     (CAPACITY, "Capacity, Constraints and Setups",
      "Which work centers run hot, and how do their queues respond to load? What do setups cost at the brakes, and where is the overrun?", _capacity),
     (OPTIONS, "What Moves On-Time Delivery",
      "Do release control and dispatch rules help, and what does? Do the capital options pay back?", _options),
-    (QUOTING, "Quoting and Early Warning from Load",
-     "What lead time should be quoted, and what wins quotes? Which weekly measures move before on-time delivery does?", _quoting),
 ]
 SYSTEMS = [
     ("erp", "ERP", "customer, part, routing operation, quote, quote line, sales order, order line, job, job operation, inventory item, inventory transaction, "
@@ -124,7 +113,7 @@ def sources():
 
 PIPELINE = ("`pipeline/load` loads the CSV exports under `data/raw` into DuckDB with dlt, one text table per file. The dbt project under `pipeline/dbt` builds the "
             "staging models (one per export, typed), the intermediate models (working-day clock, machine time, queue, lead time by stage, WIP, utilization, setups, "
-            "late-job attribution) and the marts, with tests on keys. The scripts under `analytics/` read the marts and write the four reports and their figures "
+            "late-job attribution) and the marts, with tests on keys. The scripts under `analytics/` read the marts and write the three reports and their figures "
             "under `docs/`, the dashboard and this file. The shop model under `analytics/release_control/` replays the released jobs for the scenarios of the options report; "
             "its runs are saved under `results/` and each run repeats exactly from its scenario and replication number.")
 RUN = """```

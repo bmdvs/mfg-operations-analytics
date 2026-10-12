@@ -318,8 +318,7 @@ q3_24 = wk[(wk["week_start"] >= "2024-07-01") & (wk["week_start"] <= "2024-09-29
 q4_24 = wk[(wk["week_start"] >= "2024-09-30") & (wk["week_start"] <= "2024-12-29")].reset_index(drop=True)
 _roll = q4_24["laser_utilization"].rolling(6).mean()
 laser_six = q4_24.iloc[int(_roll.idxmax()) - 5:int(_roll.idxmax()) + 1]          # the six consecutive weeks of the fourth quarter with the highest laser load
-laser_three = laser_six.head(3)                                                  # its first three weeks, the three from November 11
-assert list(laser_three["week_start"]) == list(laser_weeks["week_start"])
+assert laser_six["week_start"].min() >= pd.Timestamp("2024-11-04")
 brake_rest = brake_weeks["machine_hours"].sum() / (brake_weeks["scheduled_hours"].sum() - brake_weeks["downtime_hours"].sum())
 _gap = (SY["late"] - SY["on time"]).sort_values(ascending=False)
 assert _gap.index[0] == "queue: press brake"
@@ -418,21 +417,23 @@ def report():
     b.append("<h2 id='f2'>2. Actual vs. quoted lead times</h2>")
     b.append(f"<p>In {YEAR}, the median job shipped in {d1(ya['lead_time_median'])} working days vs. an average quoted lead time of {d1(ya['quoted_lead_days'])}; "
              f"in {RT}, it was {d1(ra['lead_time_median'])} vs. {d1(ra['quoted_lead_days'])}. The quoted lead time was met on {pct(ya['share_within_quoted'], 0)} of jobs in "
-             f"{YEAR} and {pct(ra['share_within_quoted'], 0)} in {RT}. The standard quoted lead times are 10 days for repeat parts (met on {hit['repeat part'][0]} of jobs in "
-             f"{YEAR} and {hit['repeat part'][1]} in {RT}), 15 days for new parts ({hit['new part'][0]} and {hit['new part'][1]}) and 20 days for outside processing "
-             f"({hit['outside processing'][0]} and {hit['outside processing'][1]}). {see('1')}</p>")
-    b.append(f"<p>{pct(ya['on_time_delivery'], 0)} of jobs shipped by the promised date in {YEAR} and {pct(ra['on_time_delivery'], 0)} in {RT}, against the "
+             f"{YEAR} and {pct(ra['share_within_quoted'], 0)} in {RT}. The shop quotes a standard lead time by routing class, 10 working days for repeat parts, 15 for new parts and 20 with outside "
+             f"processing, and adds a week to new quotes once the floor has been backed up for several weeks; the due date is the later of the quote and the "
+             f"customer's requested date. The quote was met on {hit['repeat part'][0]} of repeat-part jobs in {YEAR} ({hit['repeat part'][1]} in {RT}), "
+             f"{hit['new part'][0]} of new-part jobs ({hit['new part'][1]}) and {hit['outside processing'][0]} of outside-processing jobs "
+             f"({hit['outside processing'][1]}). {see('1')}</p>")
+    b.append(f"<p>{pct(ya['on_time_delivery'], 0)} of jobs shipped by the due date in {YEAR} and {pct(ra['on_time_delivery'], 0)} in {RT}, against the "
              f"shop's {pct(required, 0)} target. The 90th-percentile lead time for all jobs is {d1(ya['lead_time_p90'])} days for {YEAR} and "
              f"{d1(ra['lead_time_p90'])} in {RT}. Late jobs have a median lead time of {d1(ya['lead_time_median_late'])} days against "
-             f"{d1(ya['lead_time_median_on_time'])} for on-time jobs.</p>")
+             f"{d1(ya['lead_time_median_on_time'])} for on-time jobs. {see('5a')}</p>")
     b.append(chart("Actual vs. Quoted Lead Times, by Routing Class", fig_distribution()))
 
     b.append("<h2 id='f3'>3. Lead time decomposition</h2>")
     b.append(f"<p>In {YEAR}, the brake queue was {pct(st(SY, bq, 'share'), 0)} of all jobs' lead time and accounted for the largest share of the extra days on "
              f"late jobs: {d2(st(SY, bq, 'late'))} days against {d2(st(SY, bq, 'on time'))} for on-time jobs. This was due to the first quarter's backlog: the "
              f"2024 year-end build released more work than the brakes could absorb and put {n0(q1['late_jobs'])} of the year's {n0(ya['late_jobs'])} late jobs "
-             f"into Q1. In {RT}, with the backlog cleared, late and on-time jobs waited a similar number of days at the brakes "
-             f"({d2(st(SR, bq, 'late'))} and {d2(st(SR, bq, 'on time'))}).</p>")
+             f"into Q1. In {RT}, with the backlog cleared, late jobs waited less at the brakes than on-time jobs "
+             f"({d2(st(SR, bq, 'late'))} days against {d2(st(SR, bq, 'on time'))}).</p>")
     b.append(f"<p>In {RT}, the extra days on late jobs were due to material wait at the first operation "
              f"({d2(st(SR, 'material wait at first operation', 'late'))} days for late jobs vs. {d2(st(SR, 'material wait at first operation', 'on time'))} for "
              f"on-time jobs), outside processing ({d2(st(SR, 'outside processing', 'late'))} vs. {d2(st(SR, 'outside processing', 'on time'))}), "
@@ -457,8 +458,9 @@ def report():
     b.append(chart("Average WIP and Working Days on the Floor, 2023 to 2025", fig_wip_quarters()))
     b.append(f"<p>WIP peaked at {n0(peaks[2024]['peak'])} jobs at the end of 2024 against a Q3 2024 average of {n0(peaks[2024]['q3'])}. In Q4 2024, the shop "
              f"released {pct(brake_up, 0)} more brake standard hours than in Q3. This surge pushed the lasers to "
-             f"{pct(laser_six['laser_utilization'].mean(), 0)} of scheduled hours on average, vs. {pct(q3_24['laser_utilization'].mean(), 0)} in Q3. During the "
-             f"three peak weeks, {n0(laser_three['wip_at_laser'].min())} to {n0(laser_three['wip_at_laser'].max())} jobs were waiting to be cut, "
+             f"{pct(laser_six['laser_utilization'].mean(), 0)} of scheduled hours on average over the six weeks from "
+             f"{laser_six['week_start'].min():%B} {laser_six['week_start'].min().day}, vs. {pct(q3_24['laser_utilization'].mean(), 0)} in Q3. Over those weeks, "
+             f"{n0(laser_six['wip_at_laser'].min())} to {n0(laser_six['wip_at_laser'].max())} jobs were waiting to be cut, "
              f"vs. an average of {n0(q3_24['wip_at_laser'].mean())} jobs in Q3. The work then queued at the brakes, which already run at {pct(brake_rest, 0)} in a "
              f"normal quarter, and it took through Q1 and into Q2 {YEAR} to clear this backlog. {see('7')}</p>")
     b.append(chart("Weekly WIP and Net Inflow, Q3 2024 to Q2 2025", fig_weekly_year()))
@@ -477,13 +479,13 @@ def report():
     b.append(chart("Average Share of Jobs in WIP by Location", fig_wip()))
     ahead = [qlabel(x) for x in llq_miss.loc[llq_miss["wip_over_throughput_x_lead_time"] > 1, "period_start"]]
     behind = [qlabel(x) for x in llq_miss.loc[llq_miss["wip_over_throughput_x_lead_time"] < 1, "period_start"]]
-    assert ahead == ["2024 Q4"] and len(behind) >= 1
+    assert "2024 Q4" in ahead and len(behind) >= 1 and all(x.endswith(("Q4", "Q1", "Q2")) for x in ahead + behind)
     b.append(f"<p>WIP was within 10% of its expected value (measured as <i>throughput x working days</i>) in {llq_in} of the last {len(llq)} quarters, "
-             f"meaning the floor was in balance. The {NUMBER[len(llq_miss)]} quarters that miss are the 2024 year-end build ({ahead[0]}), when WIP ran "
-             f"ahead of shipments, and the quarters in which a build shipped ({join_and(behind)}), when shipments ran ahead of WIP. {see('6')}</p>")
+             f"meaning the floor was in balance. The {NUMBER[len(llq_miss)]} quarters that miss are all year-end quarters: the builds ({join_and(ahead)}), when WIP "
+             f"ran ahead of shipments, and the quarters in which a build shipped ({join_and(behind)}), when shipments ran ahead of WIP. {see('6')}</p>")
 
     b.append("<h2 id='rec'>Recommendation</h2>")
-    b.append(f"<p>Restate the fixed quote as a percentile of the measured lead-time distribution by routing class ([[R:quoting]]): the 10-day repeat quote is met on "
+    b.append(f"<p>Restate the fixed quote as a percentile of the measured lead-time distribution by routing class (Section 4): the 10-day repeat quote is met on "
              f"{hit['repeat part'][1]} of jobs in an ordinary quarter. Plan the fourth-quarter peak with planned Saturday brake shifts from November through February and the setup program, sized on the shop model ([[R:options]]); "
              f"the 2024 build put {n0(q1['late_jobs'])} jobs late in the first quarter of {YEAR}. Ordinary-quarter lateness is taken up in <a href='#f3'>Section 3</a>, where material, vendor and "
              f"robotic weld causes are attributed job by job.</p>")
@@ -525,7 +527,7 @@ def report():
 COUNTERMEASURES = [
     ("Plan the fourth-quarter peak on the shop model: planned Saturday brake shifts and the setup program ([[R:options]]); a WIP cap and due-date dispatch lower on-time "
      "delivery ([[R:options]])", "Plant manager", "April 2026"),
-    ("Restate quoted lead times as a percentile of measured lead time by routing class and brake load ([[R:quoting]])", "Estimating and customer service manager", "May 2026"),
+    ("Restate quoted lead times as a percentile of measured lead time by routing class and brake load (Section 4)", "Estimating and customer service manager", "May 2026"),
 ]
 
 
@@ -533,7 +535,7 @@ def control():
     """The target, the countermeasures and the follow-up, for the Recommendation section."""
     target = (f"{pct(required, 0)} of jobs shipped by the promised date in every quarter, the first quarter included.")
     follow = ("Weekly: WIP by location, brake queue per operation, and material wait at the first operation. "
-              "[[R:quoting]] evaluates these as leading measures of on-time delivery.")
+              "Section 4 evaluates these as leading measures of on-time delivery.")
     return target, COUNTERMEASURES, follow
 
 

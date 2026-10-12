@@ -1,6 +1,6 @@
 """Leading indicators: the data, tables and figures of its part of the report, from the marts.
 
-Built by analytics.reports.quoting_and_early_warning.
+Built by analytics.reports.quoting_section.
 """
 import numpy as np
 import pandas as pd
@@ -32,11 +32,11 @@ DEFS = [
     (SETUP, "Brake setup standard hours over actual setup hours, setups started in the week", "lower"),
     (ADHERENCE, "Operations started in the week whose planned start is no earlier than that of the operation the machine started before it", "lower"),
     (OVERTIME, "Brake labor hours on Saturday and after 22:00 on days with an extended second shift", "higher"),
-    (OUTSIDE, "Outside-processing PO lines received in the week on or before the promised date", "lower"),
+    (OUTSIDE, "Outside-processing PO lines received in the week on or before the vendor's confirmed date", "lower"),
     (KITS, "Kit checks in the week with result complete (job-specific material only)", "lower"),
     (BACKLOG, "Mean, over jobs released in the week, of the brake work waiting at release: standard hours at the brakes' actual-over-standard ratio, in days "
               "of crewed brake capacity", "higher"),
-    (PROMISED, "Jobs released in the week with fewer working days to the promised date than the standard 10, 15 or 20, rush included", "higher"),
+    (PROMISED, "Jobs released in the week with fewer working days to the due date than the job's quoted lead time, rush included", "higher"),
     (RELEASED, "Brake standard hours on jobs released in the week", "higher"),
     (LASER, "Mean daily jobs at the lasers in the week", "higher"),
     (BRAKES, "Mean daily jobs at the brakes in the week", "higher"),
@@ -220,7 +220,7 @@ def review_rows():
         ["Brake backlog at release", "Job, at release", f"Above {A.BACKLOG_THRESHOLD:.0f} days",
          f"Late rate {pct(ta['late_rate_above'])} above and {pct(ta['late_rate_below'])} at or below, 2023 to 2025; marks {pct(tr['share_of_all_jobs_above'])} of jobs "
          f"in {REST}"],
-        ["Released late", "Job, at release", "Fewer working days to the promised date than the standard 10, 15 or 20",
+        ["Released late", "Job, at release", "Fewer working days to the due date than the job's quoted lead time",
          f"{pct(sr['share_of_jobs'])} of jobs and {pct(sr['share_of_late_jobs'])} of late jobs in {REST}; flat as a weekly series"],
         ["Kit shortage", "Job, at the kit check", "Kit check result short",
          f"{pct(ky['share_of_days_short_kit'])} of material lost days ({pct(kr['share_of_days_short_kit'])} in {REST}) against a short rate of "
