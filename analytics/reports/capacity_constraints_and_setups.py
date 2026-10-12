@@ -373,22 +373,81 @@ def fig_brake_cases():
     return save(f, "capacity_brake_utilization_setup_overrun", f"Brake Utilization and Queue Time on the Curve, With and Without Setup Overrun, {YEAR}")
 
 
-def fig_levers():
-    """Brake hours a week: the setup overrun, and what each measured lever releases of it."""
-    cf = S.HCF.iloc[1]
-    rows = [("Brake setup overrun", float(S.ST["brake_overrun_per_week"]), LIGHT_BLUE), ("Top 12 part-operations at standard", float(S.ST["top_hours_per_week"]), BRAND_BLUE),
-            ("Repeat setups to a familiar operator", float(S.ASG_ANY["hours_released_per_week"]), BRAND_BLUE),
-            ("Shift-handover standard", float(cf["hours_per_week"]), BRAND_BLUE), ("The three together", float(S.LEVERS), BRAND_BLUE)][::-1]
+def brake_plan():
+    """Brake hours for the year as planned and as run, on the operations with a routing standard: the plan with the small-lot setup standard raised and
+    the stale standards refreshed, and the actual with the recoverable setup hours taken off."""
+    r = S.D["r"]
+    b = r[r["has_routing"] & (r["work_center"] == "press_brake")]
+    planned, actual = float((b["setup_std"] + b["run_std_hours"]).sum()), float((b["setup_hours"] + b["run_hours"]).sum())
+    bump = float(S.LOT.loc["under 25", "median_ratio"] / S.LOT.drop("under 25")["median_ratio"].mean() - 1)
+    small = float(b[b["qty"] < 25]["setup_std"].sum() * bump)
+    w = S.SWC.set_index("work_center").loc["press_brake"]
+    assert abs(w["planned"] - planned) < 1e-6
+    stale = float(w["refreshed"] - w["planned"])
+    recovery = float(S.LEVERS) * SA.WEEKS
+    corrected, recovered = planned + small + stale, actual - recovery
+    u = C.UY.loc["press_brake"]
+    return dict(planned=planned, actual=actual, gap=actual - planned, points=(actual - planned) / float(u["scheduled"] - u["down"]) * 100, bump=bump, small=small,
+                stale=stale, stale_parts=int(b[b["stale_standard"]]["part_id"].nunique()), closed=(small + stale) / (actual - planned), recovery=recovery,
+                corrected=corrected, recovered=recovered, remaining=recovered - corrected)
+
+
+def fig_brake_plan():
+    p = brake_plan()
+    rows = [("Planned, current standards", 0, p["planned"], LIGHT_BLUE, f"{p['planned']:,.0f}"),
+            ("+ Small-lot setup standard", p["planned"], p["small"], ACCENT, f"+{p['small']:,.0f}"),
+            ("+ Stale standards refreshed", p["planned"] + p["small"], p["stale"], ACCENT, f"+{p['stale']:,.0f}"),
+            ("= Planned, corrected", 0, p["corrected"], BRAND_BLUE, f"{p['corrected']:,.0f}"),
+            ("Actual", 0, p["actual"], LIGHT_BLUE, f"{p['actual']:,.0f}"),
+            ("\u2212 Setup recovery", p["recovered"], p["recovery"], ACCENT, f"\u2212{p['recovery']:,.0f}"),
+            ("= Actual, with recovery", 0, p["recovered"], BRAND_BLUE, f"{p['recovered']:,.0f}")][::-1]
     y = np.arange(len(rows))
-    v = sig(np.array([r[1] for r in rows]))
-    f, ax = fig(h=3.0, grid="x")
-    ax.barh(y, v, height=0.6, color=[r[2] for r in rows])
-    for yi, (name, val, _) in zip(y, rows):
-        ax.text(val + float(v.max()) * 0.012, yi, f"{val:.0f}" if name == "Brake setup overrun" else f"{val:.1f}", ha="left", va="center", fontsize=8.5)
+    start = float(np.floor(p["planned"] / 1000 - 1) * 1000)          # the axis starts short of the plan, so that steps of a few hundred hours can be read
+    f, ax = fig(h=4.6, grid="x")
+    for yi, (_, left, width, color, label) in zip(y, rows):
+        ax.barh([yi], [float(sig(width))], left=float(sig(left)), height=0.6, color=color)
+        ax.text(float(sig(left + width)) + 40, yi, label, ha="left", va="center", fontsize=9)
+    lo, hi = float(sig(p["corrected"])), float(sig(p["recovered"]))
+    ax.plot([lo, lo], [0, 3], color=RED, linewidth=1.0, linestyle="--")
+    ax.plot([lo, lo, hi, hi], [-0.42, -0.62, -0.62, -0.42], color=RED, linewidth=1.3)
+    ax.text((lo + hi) / 2, -0.72, f"Remaining gap, {p['remaining']:,.0f} hours", ha="center", va="top", fontsize=9, color=RED)
     ax.set_yticks(y)
-    ax.set_yticklabels([r[0] for r in rows])
-    ax.set_xlim(0, float(v.max()) * 1.1)
-    ax.set_xlabel("Brake hours a week")
+    ax.set_yticklabels([r_[0] for r_ in rows])
+    ax.set_xlim(start, p["actual"] * 1.045)
+    ax.set_ylim(-1.25, len(rows) - 0.4)
+    ax.xaxis.set_major_formatter(lambda t, _: f"{t:,.0f}")
+    ax.set_xlabel(f"Brake machine hours, {YEAR}")
+    f.tight_layout()
+    return save(f, "capacity_brake_hours_planned_against_actual", f"Brake Hours: Planned Against Actual, {YEAR}")
+
+
+def fig_levers():
+    """Brake hours a week recovered by each setup lever, stepping up to the three together, against the setup overrun."""
+    cf = S.HCF.iloc[1]
+    steps = [("Top 12 part-operations" + "\n" + "at standard", float(S.ST["top_hours_per_week"])),
+             ("Repeat setups to a" + "\n" + "familiar operator", float(S.ASG_ANY["hours_released_per_week"])),
+             ("Shift-handover" + "\n" + "standard", float(cf["hours_per_week"]))]
+    total, over = float(S.LEVERS), float(S.ST["brake_overrun_per_week"])
+    assert abs(sum(v for _, v in steps) - total) < 1e-9
+    f, ax = fig(h=4.3)
+    level = 0.0
+    for k, (_, v) in enumerate(steps):
+        ax.bar([k], [float(sig(v))], bottom=float(sig(level)), width=0.6, color=ACCENT)
+        ax.text(k, level + v + 0.5, f"+{v:.1f}", ha="center", va="bottom", fontsize=9)
+        level += v
+        ax.plot([k - 0.3, k + 1.3], [float(sig(level))] * 2, color="#888888", linewidth=0.8)
+    n = len(steps)
+    ax.bar([n], [float(sig(total))], width=0.6, color=BRAND_BLUE)
+    ax.text(n, total + 0.5, f"{total:.1f} hours a week" + "\n" + "recovered", ha="center", va="bottom", fontsize=9.5, fontweight="bold", linespacing=1.3)
+    ax.plot([n - 0.3, n + 1.3], [float(sig(total))] * 2, color="#888888", linewidth=0.8)
+    ax.bar([n + 1], [float(sig(over - total))], bottom=float(sig(total)), width=0.6, fill=False, edgecolor=RED, linestyle="--", linewidth=1.4)
+    ax.text(n + 1, (over + total) / 2, f"{over - total:.1f} hours" + "\n" + "a week not" + "\n" + "recovered", ha="center", va="center", fontsize=9, color=RED, linespacing=1.3)
+    ax.text(n + 1, over + 0.5, f"{over:.0f} hours a week" + "\n" + "over standard", ha="center", va="bottom", fontsize=9, color=RED, linespacing=1.3)
+    ax.set_xticks(range(n + 2))
+    ax.set_xticklabels([s_ for s_, _ in steps] + ["The three" + "\n" + "together", "Setups over" + "\n" + "standard"], fontsize=9)
+    ax.set_xlim(-0.6, n + 1.6)
+    ax.set_ylim(0, over * 1.18)
+    ax.set_ylabel("Brake hours a week")
     f.tight_layout()
     return save(f, "capacity_brake_hours_by_lever", f"Brake Hours a Week Released by Setup Lever, {YEAR}")
 
@@ -529,8 +588,6 @@ def build():
     T.add("fits", "Fitted queue time curve by work center", C.t_fits())
     T.add("qdays", f"Queue days by work center and driver of queue time, {YEAR}", t_qdays())
     T.add("peak", "Brake standard hours released against crewed brake capacity, the six weeks from November 11, 2024", t_peak())
-    T.add("var", f"Variability sources, {YEAR}", C.t_var())
-    T.add("spread", "Brake queue time with the spread of setup time halved, and the inputs", C.t_setup())
     T.add("machines", f"Utilization and queue time for the five brakes and the robotic weld cell, {YEAR} and {REST}", C.t_machines())
     T.add("basis", "The brakes and the robotic weld cell: hours and utilization on both bases", C.t_machine_basis())
     T.add("robot", "The robotic weld cell: weeks by utilization band, hours by part family, setup and run against standard", t_robot())
@@ -543,9 +600,7 @@ def build():
     T.add("lot", "Brake setups by lot-size band", S.t_by(S.LOT, "Lot size"))
     T.add("familiarity", "Brake setups by the operator's prior setups of the part", S.t_by(S.FML, "Prior setups"))
     T.add("family", "Brake setups by part family", S.t_by(S.FAM, "Family"))
-    T.add("tenure", "Brake setups by operator tenure, and the tenure effect as controls are added", S.t_by(S.TEN, "Tenure") + S.t_tenure())
     T.add("assign", "First setups of repeat parts where another operator had set the part up", S.t_assign())
-    T.add("grouping", "Same-tooling grouping by brake", S.t_grouping())
     T.add("top12", f"The top {SA.TOP_N} setup reduction candidates by overrun hours times work center utilization, {YEAR}", S.t_top())
     T.add("top20", "Setup reduction candidates, top 20", S.t_top20())
     T.add("released", "Brake hours released: the handover and the candidate list", S.t_cf())
@@ -693,109 +748,84 @@ def build():
     assert max(down_week, run_week) < ST["brake_overrun_per_week"] / 3
     b.append(f"<p>Sections 1 and 2 established the press brakes as the shop's primary constraint and mapped how their queue time rises with load. This section is aimed "
              f"at the brake hours themselves: where hours are lost to setups running over standard and how many can be recovered, whether the standard hours the "
-             f"schedule is planned in are right, and where crewed hours fall short, at the year-end peak and on the robotic weld cell's second shift. The next "
+             f"schedule is planned in are right, and where crewed hours fall short. The next "
              f"report, {link('options')}, takes these measured hours as its inputs.</p>")
     cases = brake_cases()
     run, rec, std = cases["As run"], cases["Recoverable hours restored"], cases["All setups at standard"]
     assert std["utilization"] < 0.85 < rec["utilization"] < run["utilization"]
-    b.append(f"<p>Utilization is running machine hours over hours available, and the shop controls both sides: how many hours each job takes beyond its standard, and "
-             f"how many hours are crewed. Downtime ({n0(down_week)} hours a week at {P(UY.loc['press_brake', 'uptime'])} uptime) and run time over standard (about "
-             f"{n0(run_week)} a week at {d2(brake_run['run_ratio'])} of standard) are small. Setups over standard are not: {n0(y['overrun_hours'])} hours in {YEAR}, "
-             f"{n0(ST['brake_overrun_per_week'])} a week, which is {d1(std['points'])} points of brake utilization. Run at standard, the brakes would have been at "
-             f"{P(std['utilization'])} instead of {P(run['utilization'])}, below the knee of their curve, with queue time on the curve of {d2(std['queue'])} days per "
-             f"operation instead of {d2(run['queue'])}. The overrun is the difference between a constraint and a busy work center.</p>")
+    lots = S.LOT.loc["under 25"]
+    corrected = float(lots["standard_hours"] * (lots["median_ratio"] / S.LOT.drop("under 25")["median_ratio"].mean() - 1))
+    available = float(UY.loc["press_brake", "scheduled"] - UY.loc["press_brake", "down"])
+    after = (float(y["overrun_hours"]) - corrected) / available * 100
+    assert 0 < after < std["points"]
+    b.append(f"<p>Utilization is running machine hours over hours available, and the shop controls both sides: how many hours each job takes, and how many hours are "
+             f"crewed. Downtime ({n0(down_week)} hours a week at {P(UY.loc['press_brake', 'uptime'])} uptime) and run time over standard ({n0(run_week)} hours a week "
+             f"at {d2(brake_run['run_ratio'])} of standard) are small. Setups over standard are not: {n0(ST['brake_overrun_per_week'])} hours a week, which is "
+             f"{d1(std['points'])} points of brake utilization against the standards the schedule plans with, and about {d1(after)} points once the small-lot "
+             f"standards are corrected.</p>")
     b.append(chart(f"Brake Utilization and Queue Time on the Curve, With and Without Setup Overrun, {YEAR}", fig_brake_cases()))
-    b.append(f"<p>The variability at the brakes is in arrivals and "
-             f"run times, not setups (coefficients of variation {d2(C.var('Arrivals: jobs released per working day'))} for daily arrivals and "
-             f"{d2(C.var('Brake run time'))} for run time against {d2(C.var('Brake setup time'))} for setup time; {T.cite('var', 'spread')}), so halving the spread "
-             f"of setup time (each setup moved halfway to the mean, the curve rescaled) releases only {d1(C.SV.loc['year', 'hours_per_week_released'])} brake hours "
-             f"a week; the mean setup time is where the hours are.</p>")
-    b.append("<h3 id='f3_1'>Where the setup hours go</h3>")
-    b.append(f"<p>The overrun is a brake problem: no other work center exceeds {n0(others_setup['overrun_hours'].max())} setup hours over standard in the year or a "
-             f"median ratio of {d2(others_setup['median_ratio'].max())}, while the median brake setup runs at {d2(y['median_ratio'])} of standard and the 90th "
-             f"percentile at {d2(y['p90_ratio'])}, and the ratio does not move with the year-end build ({d2(S.OV.loc['Q1', 'median_ratio'])} in Q1, "
-             f"{d2(S.OV.loc[REST, 'median_ratio'])} in {REST}). {T.see('bywc')}</p>")
+    b.append("<h3 id='f3_1'>Brake setups over standard</h3>")
+    b.append(f"<p>Setups over standard on the brakes ran {n0(y['overrun_hours'])} hours in {YEAR}, with the median brake setup running at {d2(y['median_ratio'])} of "
+             f"standard and the 90th percentile at {d2(y['p90_ratio'])}. This overrun is unique to brakes: no other work center exceeds "
+             f"{n0(others_setup['overrun_hours'].max())} setup hours over standard in the year or a median ratio of {d2(others_setup['median_ratio'].max())}. "
+             f"{T.see('bywc')}</p>")
     ho, small, LOT, FML, FAM = S.HO.loc["Handed over at a shift boundary"], S.LOT.loc["under 25"], S.LOT, S.FML, S.FAM
-    bump = small["median_ratio"] / LOT.drop("under 25")["median_ratio"].mean() - 1
-    closed = float(small["standard_hours"] * bump)
-    assert 0 < closed < small["overrun_hours"]
     larger, plain = LOT.drop("under 25")["median_ratio"], FAM.loc[["panel", "bracket"], "median_ratio"]
-    b.append(f"<p>Four conditions hold most of the {n0(y['overrun_hours'])} hours, and they overlap. Setups handed over at a shift boundary are "
-             f"{pct(ho['share_of_setups'], 0)} of setups and {pct(ho['share_of_overrun'], 0)} of the overrun. Lots under 25 pieces are "
-             f"{pct(small['setups'] / y['setups'], 0)} of setups and {pct(ST['small_lot_overrun_share'], 0)} of the overrun, because the setup standards under-plan "
-             f"small lots (median {d2(small['median_ratio'])} against {rng(larger.min(), larger.max())} on larger lots): the standard on lots under 25 should be "
-             f"raised by {pct(bump, 0)}, which brings {n0(closed)} of their {n0(small['overrun_hours'])} overrun hours onto the plan. First setups of a part by an "
-             f"operator run at {d2(FML.loc['none', 'median_ratio'])} against {d2(FML.loc['1 or 2', 'median_ratio'])} when the operator has set it up before. "
-             f"Enclosures and chassis run at {d2(FAM.loc['enclosure', 'median_ratio'])} and {d2(FAM.loc['chassis', 'median_ratio'])} against "
-             f"{rng(plain.min(), plain.max())} for panels and brackets. {T.span('period', 'handover', 'lot', 'familiarity', 'family')}</p>")
-    b.append(chart(f"Share of Brake Setups Against Share of Overrun Hours by Condition, {YEAR}", fig_condition_shares())
-             + note("Conditions overlap; a setup can fall under more than one."))
+    brake_setups = S.D["s"][S.D["s"]["work_center"] == "press_brake"]
+    assert len(brake_setups) == int(y["setups"])
+    larger_median = float(brake_setups[brake_setups["lot_band"] != "under 25"]["setup_ratio"].median())
+    assert larger.min() <= larger_median <= larger.max()
+    b.append(f"<p>Four overlapping conditions drove most of the overrun. Setups handed over at a shift boundary are {pct(ho['share_of_setups'], 0)} of setups and "
+             f"{pct(ho['share_of_overrun'], 0)} of the overrun. Lots under 25 pieces are {pct(small['setups'] / y['setups'], 0)} of setups and "
+             f"{pct(ST['small_lot_overrun_share'], 0)} of the overrun, because the setup standards under-plan small lots (median {d2(small['median_ratio'])} against "
+             f"{d2(larger_median)} on larger lots). First setups of a part by an operator run at {d2(FML.loc['none', 'median_ratio'])} against "
+             f"{d2(FML.loc['1 or 2', 'median_ratio'])} when the operator has set it up before. Enclosures and chassis run at "
+             f"{d2(FAM.loc['enclosure', 'median_ratio'])} and {d2(FAM.loc['chassis', 'median_ratio'])} against {rng(plain.min(), plain.max())} for panels and "
+             f"brackets. {T.span('period', 'handover', 'lot', 'familiarity', 'family')}</p>")
+    b.append(chart(f"Share of Brake Setups Against Share of Overrun Hours by Condition, {YEAR}", fig_condition_shares()))
 
     b.append("<h3 id='f3_2'>What can be recovered</h3>")
     TM, MIX, PLACE, WHO, ANY = S.TM, S.MIX, S.PLACE, S.WHO, S.ASG_ANY
-    cf_naive, cf_start, late, early_med = S.HCF.iloc[0], S.HCF.iloc[1], S.HST.iloc[0], S.HST.iloc[2:]["median_ratio"]
+    cf_start = S.HCF.iloc[1]
     b.append(f"<p>Three changes recover {d1(S.LEVERS)} of the {n0(ST['brake_overrun_per_week'])} hours a week, {d1(rec['points'])} points of brake utilization, taking "
              f"the brakes from {P(run['utilization'])} to {P(rec['utilization'])} and queue time on the curve from {d2(run['queue'])} to {d2(rec['queue'])} days per "
-             f"operation. First, the top {SA.TOP_N} part-operations by overrun, run at standard, release {d1(ST['top_hours_per_week'])} hours a week; the rest of "
-             f"the overrun is spread across {n0(ST['brake_part_operations'])} part-operations, so no longer list captures much more. Second, assigning repeat setups "
-             f"to an operator who has set the part up before releases {d1(ANY['hours_released_per_week'])} hours a week: {n0(ANY['count'])} first setups of a repeat "
-             f"part were made while another current brake operator had set the part up in the previous 24 months, and they ran at "
-             f"{d2(ANY['hours_weighted_ratio'])} of standard against {d2(ANY['ratio_with_familiarity'])} for setups with prior familiarity in the same lot band and "
-             f"family (a matched comparison, so part of the gap may be selection). Third, a shift-handover standard, the operator who starts a setup finishing it or "
-             f"leaving a written handover at the machine, releases {d1(cf_start['hours_per_week'])} hours a week: handed-over setups carry "
-             f"{d1(cf_naive['hours_per_week'])} hours a week above setups finished by the operator who started them, but most of that is length, since a long setup "
-             f"is the one that reaches the shift end; setups started in the last 30 minutes of a shift are handed over {pct(late['share_handed_over'], 0)} of the "
-             f"time and run at {d2(late['median_ratio'])} against {d2(early_med.min())} to {d2(early_med.max())} for setups started with more than an hour left, and "
-             f"that difference is the handover's own cost. The options report carries the {d1(S.LEVERS)} hours as the setup program. "
-             f"{T.see('top12', 'top20', 'assign', 'released')}</p>")
+             f"operation. Running the top {SA.TOP_N} part-operations by overrun at standard releases {d1(ST['top_hours_per_week'])} hours a week; the rest of the "
+             f"overrun is spread across {n0(ST['brake_part_operations'])} part-operations. Assigning repeat setups to an operator who has set the part up before "
+             f"releases {d1(ANY['hours_released_per_week'])}: first setups of a repeat part by a new operator ran at {d2(ANY['hours_weighted_ratio'])} of standard "
+             f"against {d2(ANY['ratio_with_familiarity'])} with prior familiarity. A handover standard, under which the operator who starts a setup finishes it or "
+             f"leaves a written handover at the machine, releases {d1(cf_start['hours_per_week'])}, the handover's own cost once long setups are set aside. The "
+             f"report {link('options')} carries these {d1(S.LEVERS)} hours as the setup program. {T.span('top12', 'top20', 'assign', 'released')}</p>")
     b.append(chart(f"Brake Hours a Week Released by Setup Lever, {YEAR}", fig_levers()))
-    assert MIX.loc[1, "fam0"] > 0.5 > MIX.loc[0, "fam0"]
-    b.append(f"<p>Two apparent levers are smaller than they look. Operators with under 12 months run {pct(TM['tenure_effect_pct'].iloc[0], 0)} above tenured operators, "
-             f"but {pct(TM['tenure_effect_pct'].iloc[-1], 0)} once familiarity, grouping, machine, lot size, bend count and shift handover are controlled for: their "
-             f"{n0(MIX.loc[1, 'setups'])} setups were made by {len(WHO)} operators, {n0(WHO.iloc[0])} by one, {pct(PLACE.loc['B4', 1], 0)} of them on B4, and "
-             f"{pct(MIX.loc[1, 'fam0'], 0)} were first setups of parts new to them (against {pct(MIX.loc[0, 'fam0'], 0)} for tenured operators). The tenure gap is "
-             f"largely the familiarity gap already counted above and the work new operators are given, not a training problem. {T.see('tenure')}</p>")
-    b.append(titled(S.fig_tenure(), "Tenure Effect on Brake Setup Ratio as Controls Are Added"))
-    GRP = S.GRP
-    ga, b12, b345 = GRP.loc["all brakes"], GRP.loc[["B1", "B2"], "share_grouped"], GRP.loc[["B3", "B4", "B5"], "share_grouped"]
-    assert b12.max() < b345.min()
-    b.append(f"<p>Same-tooling grouping already saves {d1(ga['hours_saved_per_week'])} hours a week: {pct(ga['share_grouped'], 0)} of brake setups follow a job on the "
-             f"same tooling set and run at {d2(ga['ratio_grouped'])} of standard against {d2(ga['ratio_not_grouped'])}. B1 and B2 group only {pct(b12.min(), 0)} to "
-             f"{pct(b12.max(), 0)} of their setups against {pct(b345.min(), 0)} to {pct(b345.max(), 0)} on B3 to B5, because precision work and the hot list are run "
-             f"on them first; raising grouping there means loosening the priority that keeps their queues short (Section 2), so it is not counted as a lever. "
-             f"{T.see('grouping')}</p>")
 
     b.append("<h3 id='f3_3'>Planning standards</h3>")
-    POP, gap = S.POP, S.SRAT["run_gap"]
-    b.append(f"<p>The schedule and the quote are planned in standard hours, and two groups of standards misstate the hours the brakes and lasers will take, "
-             f"so the plan commits capacity it does not have or holds back capacity it does. {newer} run at {d2(S.LF[S.NEWER].mean())} of the run standard and L1 at {d2(S.LF['L1'])}; every other work center runs at "
-             f"{d2(other_run.min())} to {d2(other_run.max())}. {n0(POP['stale_parts'])} of {n0(POP['active_parts_with_routing'])} active parts "
-             f"({pct(POP['stale_share'], 0)}) carry a stale standard (one dated at the part's first quote) and run {pct(gap.min(), 0)} to {pct(gap.max(), 0)} further "
-             f"above standard than refreshed parts at the same work center. {T.see('run', 'stale')}</p>")
-    b.append(titled(S.fig_run(), "Run Actual Over Standard by Work Center"))
-    swc = S.SWC.set_index("work_center")
-    sall, lall = S.SRC.set_index("routing_class").loc["all"], S.LRC.set_index("routing_class").loc["all"]
-    b.append(f"<p>With the stale standards refreshed, planned hours rise {pct(swc.loc['press_brake', 'change'])} at the brakes and "
-             f"{pct(swc['change'].min())} to {pct(swc['change'].max())} elsewhere; standard hours per job rise {pct(sall['change_stale_jobs'], 0)} on jobs for those parts "
-             f"({pct(sall['jobs_on_stale_parts'] / sall['jobs'], 0)} of jobs) and {pct(sall['change_all_jobs'])} overall. With the {newer} run standards set "
-             f"to measured, planned laser hours fall {pct(-S.LWC['change'].iloc[1])} and standard hours per job fall {pct(-lall['change_laser'])}. Both together move "
-             f"standard hours per job by {S.sp(lall['change_both'])}. The {n0(POP['stale_parts'])} stale standards should be refreshed and the {newer} run standards "
-             f"set to measured, with the effect on standard hours per job going to estimating ({link('quoting')}). {T.see('planned', 'quoted')}</p>")
+    POP = S.POP
+    bp = brake_plan()
+    brake_gap = float(S.SRAT.set_index("work_center").loc["press_brake", "run_gap"])
+    assert 0 < bp["remaining"] < bp["gap"] and 0 < bp["closed"] < 1
+    b.append(f"<p>The schedule and the quote are built in standard hours, and the brake standards understate what the brakes actually run: the {YEAR} plan carried "
+             f"{n0(bp['planned'])} brake hours against {n0(bp['actual'])} run, a gap of {n0(bp['gap'])} hours, or {d1(bp['points'])} points of utilization. "
+             f"Two corrections bring part of it onto the plan. Raising the setup standard on lots under 25 pieces by {pct(bp['bump'], 0)} adds "
+             f"{n0(bp['small'])} hours. Refreshing the {n0(bp['stale_parts'])} stale brake standards (those dated at the part's first quote, which run "
+             f"{pct(brake_gap, 0)} further above standard than refreshed parts) adds {n0(bp['stale'])}. Together they close {pct(bp['closed'], 0)} of the gap, and "
+             f"the setup recovery above takes a further {n0(bp['recovery'])} hours off the actual. What remains, {n0(bp['remaining'])} hours, is the overrun the plan "
+             f"will still not see. {T.span('run', 'stale', 'planned', 'quoted')}</p>")
+    b.append(chart(f"Brake Hours: Planned Against Actual, {YEAR}", fig_brake_plan()))
+    b.append(f"<p>Away from the constraint, the {newer} lasers run at {d2(S.LF[S.NEWER].mean())} of their run standard, so planned laser hours are overstated by "
+             f"{pct(-S.LWC['change'].iloc[1])}; setting those standards to measured is an estimating correction ({link('quoting')}) rather than a capacity one.</p>")
 
-    b.append("<h3 id='f3_4'>The peak and the open shift</h3>")
+    b.append("<h3 id='f3_4'>Where crewed hours fall short</h3>")
     pk = PEAK[PEAK["build"]]
     assert len(pk) == 6
     a_, b2 = float(pk["released"].mean()), float(pk["capacity"].mean())
     assert a_ > b2
     g_ = SATURDAY_HOURS / PEAK_RATIO
-    b.append(f"<p>The recovered setup hours cover an ordinary quarter; the year-end peak needs hours the brakes do not have, and the robotic weld cell has a "
-             f"shift it does not crew. In the six weeks from November 11, 2024 the shop released {n0(a_)} brake standard hours a week against "
-             f"{n0(b2)} hours of crewed brake capacity net of downtime (weekday shifts, in standard hours at the brakes' {d2(PEAK_RATIO)} actual-over-standard ratio "
-             f"for 2024), a shortfall of {n0(a_ - b2)} hours a week that the queue absorbed; the shop ran {n0(pk['saturday_shifts'].sum())} queue-triggered Saturday "
-             f"brake shifts and {n0(pk['extended_hours'].sum())} extended hours over the period, supplying {n0(pk['extra_hours'].sum() / PEAK_RATIO)} standard hours. "
-             f"One Saturday brake shift on B1 and B2 supplies {n0(g_)} standard hours ({n0(SATURDAY_HOURS)} machine hours), {P(g_ / (a_ - b2))} of the weekly gap; "
-             f"the options report tests a planned Saturday shift every week from November through February against the queue-triggered practice. "
-             f"{T.see('peak')}</p>")
+    supplied = pk["extra_hours"].sum() / PEAK_RATIO
+    assert round(g_ / (a_ - b2), 1) == 0.2 and pk["extended_hours"].sum() == 0 and supplied < 0.1 * (a_ - b2) * len(pk)
+    b.append(f"<p>Setup recovery adds {d1(S.LEVERS)} brake hours a week; the year-end peak needs far more. In the six weeks from November 11, 2024 the shop released "
+             f"{n0(a_)} brake standard hours a week against {n0(b2)} of crewed capacity, a shortfall of about {n0(a_ - b2)} hours a week that went into the queue. "
+             f"Queue-triggered Saturday shifts covered almost none of it: {n0(pk['saturday_shifts'].sum())} shifts in six weeks, {n0(supplied)} hours in total. One "
+             f"planned Saturday shift on B1 and B2 supplies {n0(g_)} hours, a fifth of the weekly gap; {link('options')} tests one every week from November through "
+             f"February. {T.see('peak')}</p>")
     b.append(chart("Brake Hours Released Against Capacity by Week, Q4 2024 to Q1 2025", fig_peak()))
     b.append(f"<p>The robotic weld cell runs one shift at {P(UY.loc['robotic_weld', 'utilization'])} utilization and is at or above 95% in "
              f"{int(HY.loc['robotic_weld', 'hot_weeks'])} weeks of {int(HY.loc['robotic_weld', 'weeks'])}; its second shift is uncrewed. Enclosures are "
@@ -805,7 +835,7 @@ def build():
     b.append(f"<p>Measured from the record: the brakes lose {n0(ST['brake_overrun_per_week'])} hours a week to setups over standard, enough to put them above the "
              f"knee of their curve on its own; {d1(S.LEVERS)} of those hours are recoverable by three changes; the small-lot setup standard, "
              f"{n0(POP['stale_parts'])} stale standards and the {newer} run standards misstate planned hours in known directions; the year-end peak releases about "
-             f"{n0(a_ - b2)} brake hours a week more than the brakes can run; and the robotic weld cell's second shift is uncrewed. The options report takes these "
+             f"{n0(a_ - b2)} brake hours a week more than the brakes can run; and the robotic weld cell's second shift is uncrewed. {link('options')} takes these "
              f"as its inputs.</p>")
 
     b.append("<h2 id='appendix'>Appendix</h2>")

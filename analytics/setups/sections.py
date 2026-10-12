@@ -60,34 +60,6 @@ def conditions():
     return [(n, len(g), float((g["setup_hours"] - g["setup_std"]).sum()), float(g["setup_ratio"].median())) for n, g in rows]
 
 
-def fig_tenure(name="setups_tenure_decomposition", h=3.0):
-    f, ax = fig(h=h)
-    lab = ["Tenure only", "+ familiarity", "+ grouping", "+ machine", "+ lot size, bends,\nshift handover"]
-    v = TM["tenure_effect_pct"].to_numpy() * 100
-    ax.bar(lab, v, color=[BRAND_BLUE] + [ACCENT] * 3 + [LIGHT_BLUE])
-    for i, x in enumerate(v):
-        ax.text(i, x + 0.3, f"+{x:.1f}%", ha="center", fontsize=9.5)
-    ax.set_ylabel("New operators over tenured (%)")
-    ax.set_ylim(0, v.max() * 1.2)
-    f.tight_layout()
-    return save(f, name, "Tenure effect on brake setup ratio as controls are added")
-
-
-def fig_run():
-    w = RWC.set_index("work_center")["run_ratio"].drop("laser")
-    rows = [(f"Laser {m}", float(r)) for m, r in zip(RLAS["machine_id"], RLAS["run_ratio"])] + [(WC[k], float(v)) for k, v in w.sort_values().items()]
-    f, ax = fig(h=3.2)
-    ax.bar([r[0] for r in rows], [r[1] for r in rows], color=[AMBER if r[0] in [f"Laser {m}" for m in NEWER] else ACCENT if r[0].startswith("Laser") else LIGHT_BLUE for r in rows])
-    ax.axhline(1.0, color=GREY, linewidth=1, linestyle="--")
-    ax.set_ylim(0.6, 1.15)
-    ax.set_ylabel("Run actual over standard")
-    for lab in ax.get_xticklabels():
-        lab.set_rotation(25)
-        lab.set_ha("right")
-    f.tight_layout()
-    return save(f, "setups_run_ratio", "Run actual over standard by work center")
-
-
 # ── tables ──────────────────────────────────────────────────────────────────
 COLS = ["Setups", "Median ratio", "Hours over standard ratio", "90th percentile", "Setup hours", "Standard hours", "Overrun hours"]
 
