@@ -8,7 +8,7 @@ from analytics.style.style import DOCS, report_shell, table
 REPORTS = {
     "lead": ("lead_time_and_late_jobs", "Flow and On-time Delivery", "the flow report"),
     "capacity": ("capacity_constraints_and_setups", "Capacity, Constraints and Setups", "the capacity report"),
-    "options": ("options_tested", "What Moves On-Time Delivery", "the options report"),
+    "options": ("options_tested", "Discrete Event Simulation: On-time Delivery", "the simulation report"),
 }
 SHOP = "Custom sheet-metal fabrication job shop, about 120 employees, one plant. "
 TABLES = re.compile(r"\b(Tables?) (\d+[a-z]?(?:(?:, | and | to )\d+[a-z]?)*)")
