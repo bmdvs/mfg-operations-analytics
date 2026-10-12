@@ -493,7 +493,7 @@ def panel_quoting():
             definition("Quote error is the mean absolute difference between the actual lead time and the quote, in whole working days from the release day to the ship day, on "
                        "non-rush jobs; lines accepted inside the quote are left out. The current quote is the class standard (10 days for repeat parts, 15 for new parts, 20 "
                        "with outside processing) lengthened by the estimators once the floor has been backed up for several weeks. The recommended quote is the median lead time of jobs of the same routing "
-                       "class at the same brake backlog at release, refitted each month from the jobs shipped before it (Flow and On-time Delivery, Section 5 and its table "
+                       "class at the same brake backlog at release, refitted each month from the jobs shipped before it (Flow and On-time Delivery, Section 4 and its table "
                        "Quoted Lead Time by Routing Class and Brake Backlog at Release)."))
 
 
