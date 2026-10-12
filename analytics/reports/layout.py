@@ -5,10 +5,10 @@ from analytics.style.style import DOCS, report_shell
 REST, RT = "Q2 to Q4", "Q2-Q4"
 
 
-def link(key, text=None):
-    """Another report by its title, or by the text given, as a link."""
+def link(key, text=None, anchor=None):
+    """Another report by its title, or by the text given, as a link; to a section of it when an anchor is given."""
     stem, title, _ = REPORTS[key]
-    return f"<a href='{stem}.html'>{text or title}</a>"
+    return f"<a href='{stem}.html{'#' + anchor if anchor else ''}'>{text or title}</a>"
 
 
 def join_and(items):
@@ -19,8 +19,8 @@ def join_and(items):
 class Tables:
     """The appendix tables, numbered in the order the text first refers to them; each is linked once, by `see`."""
 
-    def __init__(self):
-        self.held, self.order, self.linked = {}, [], set()
+    def __init__(self, start=0):
+        self.held, self.order, self.linked, self.start = {}, [], set(), start          # start: tables already numbered ahead of these
 
     def add(self, key, title, html):
         self.held[key] = (title, html)
@@ -33,7 +33,7 @@ class Tables:
 
     def number(self, key):
         self.reserve(key)
-        return self.order.index(key) + 1
+        return self.start + self.order.index(key) + 1
 
     def plain(self, key):
         """The table by its number, without a link: for a mention apart from the sentence that links it."""
@@ -67,7 +67,7 @@ class Tables:
 
     def appendix(self):
         assert set(self.order) == set(self.held) == self.linked, (set(self.held) - set(self.order), set(self.held) - self.linked)
-        return "\n".join(f"<h3 id='t{n}'>Table {n}. {self.held[k][0]}</h3>{self.held[k][1]}" for n, k in enumerate(self.order, 1))
+        return "\n".join(f"<h3 id='t{n}'>Table {n}. {self.held[k][0]}</h3>{self.held[k][1]}" for n, k in enumerate(self.order, self.start + 1))
 
 
 def chart(title, img):

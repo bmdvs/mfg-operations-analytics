@@ -218,7 +218,7 @@ def t_scenarios():
         ["Laser tower on L2", "A second automated tower: 6 unattended hours after second shift on L2."],
         ["Robotic bending cell", f"A sixth brake on two shifts at {O['robotic_bending_cell']['added_crewed_hours_per_week'] / 80:.3f} availability that runs light, "
                                  f"repeat parts in lots of 25 or more."],
-        ["Load-based quote table", "Promised dates restated from the quote table of the quoting report (routing class and brake backlog at release, never below the "
+        ["Load-based quote table", "Promised dates restated from the quote table of the flow report (routing class and brake backlog at release, never below the "
                                    "fixed quote); the floor is unchanged."],
     ]
     return table(pd.DataFrame(rows, columns=["Scenario", "How it is modelled"]))
@@ -397,7 +397,7 @@ def build():
     assert qy > v(PY, NOCAP, "on_time_delivery") and qr > v(PR, NOCAP, "on_time_delivery") and 0 < short
     b.append(f"<p>With the package in place the year is at {pct(v(PY, NOCAP, 'on_time_delivery'))} and {REST} at {pct(v(PR, NOCAP, 'on_time_delivery'))}, "
              f"{short:.0f} points short of the {TARGET:.0f}% target in an ordinary quarter. The remaining late jobs were released late, and no capacity lever reaches "
-             f"them: on the same floor, quoting from the load-based table of {link('quoting')} (routing class and brake backlog at release, never below the fixed "
+             f"them: on the same floor, quoting from the load-based table of {link('lead', anchor='f4')}, Section 4 (routing class and brake backlog at release, never below the fixed "
              f"quote) lifts the year to {pct(qy)} and {REST} to {pct(qr)}, with {pct(v(PY, NOCAP, 'promises_longer_quote_table'), 0)} and "
              f"{pct(v(PR, NOCAP, 'promises_longer_quote_table'), 0)} of non-rush promised lead times longer than the fixed quote, and does so without changing "
              f"anything on the floor. Capacity closes the first-quarter gap; the quote closes most of what is left. {T.see('rules')}</p>")

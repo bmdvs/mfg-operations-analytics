@@ -149,7 +149,7 @@ def panel_delivery():
                    (d1(c["lead_time_p90"]), "90th-percentile lead time (days)")]) +
             a + cap(f"On-time delivery with the {pct(TARGET, 0)} target line, and median and 90th-percentile lead time, by ship week.") +
             b + f"<div class='caption'>The same series from {wk(W.index.min())}, with the start of each of the {len(DEC)} declines in on-time delivery marked.</div>" +
-            definition("On-time delivery: jobs shipped on or before the promised date, by ship week. Lead time runs from the release date at 10:00 to the ship date at "
+            definition("On-time delivery: jobs shipped on or before the due date, by ship week. Lead time runs from the release date at 10:00 to the ship date at "
                        "15:00, in working days; a scheduled Saturday counts as one. A decline starts in the first week the on-time delivery of the trailing 4 weeks is "
                        "more than 5 points below that of the 13 weeks before them, at least 8 weeks after the last."))
 
@@ -226,7 +226,8 @@ def panel_leading():
     rows = []
     for per in ("2023 to 2025", f"{INDICATORS.YEAR} Q2 to Q4"):
         jj = dict(INDICATORS.periods(j))[per]
-        rows += [[per, "Released above 3 days of brake backlog", pct(thr.loc[per, "share_of_all_jobs_above"]), pct(thr.loc[per, "late_rate_above"]),
+        rows += [[per, "Released above 3 days of brake backlog", pct(thr.loc[per, "share_of_all_jobs_above"]),
+                  pct(thr.loc[per, "late_rate_above"]) if thr.loc[per, "late_jobs_above"] or thr.loc[per, "share_of_all_jobs_above"] else "none flagged",
                   pct(thr.loc[per, "late_rate_below"])],
                  [per, "Released late", pct(sp.loc[per, "share_of_jobs"]), pct(sp.loc[per, "late_rate_inside"]), pct(sp.loc[per, "late_rate_other"])],
                  [per, "Short kit at the kit check", pct((jj["kit_result"] == "short").mean()), pct(jj.loc[jj["kit_result"] == "short", "late"].mean()),
@@ -241,7 +242,7 @@ def panel_leading():
                        "job's release are left out. Jobs waiting at the lasers: mean daily jobs at the lasers in the week. Trigger: the 4-week mean adverse to the 13 "
                        "weeks before by more than one standard deviation of those weeks. Brake backlog at release: the standard hours of brake operations waiting at "
                        "10:00 on the release date, at the brakes' actual-over-standard ratio, in days of crewed brake capacity. Released late: jobs released with fewer "
-                       "working days to the promised date than the standard quoted lead time for the routing class. Short kit: kit check result short (job-specific material only)."))
+                       "working days to the due date than the job's quoted lead time. Short kit: kit check result short (job-specific material only)."))
 
 
 # ── 3 WIP and queue ─────────────────────────────────────────────────────────
@@ -451,8 +452,8 @@ def panel_quoting():
     f, axes = fig(h=3.0, ncols=2, gridspec_kw=dict(width_ratios=[1.7, 1]))
     ax = axes[0]
     ok = QW["shipped_share"] >= SHIPPED_SHARE
-    line13(ax, QW["fixed_quote_met"].where(ok), GREY, "Fixed quote", scale=100)
-    line13(ax, QW["quote_table_met"].where(ok), BRAND_BLUE, "Quote table", scale=100)
+    line13(ax, QW["fixed_quote_met"].where(ok), GREY, "Quoted lead time", scale=100)
+    line13(ax, QW["recommended_rule_met"].where(ok), BRAND_BLUE, "Recommended rule", scale=100)
     ax.axhline(80, color=RED, linewidth=1, linestyle="--")
     ax.set_ylabel("Quote met (%)", fontsize=9)
     ax.legend(frameon=False, fontsize=8, loc="lower left")
@@ -469,8 +470,8 @@ def panel_quoting():
     a = save(f, "dashboard_quoting_13_weeks", "Quote hit rates by release week and win rate by turnaround, 13 weeks")
     f, axes = fig(h=4.2, nrows=2, sharex=True)
     t = QW[ok]
-    axes[0].plot(t.index, t["fixed_quote_met"] * 100, color=GREY, linewidth=1.2, label="Fixed quote")
-    axes[0].plot(t.index, t["quote_table_met"] * 100, color=BRAND_BLUE, linewidth=1.2, label="Quote table")
+    axes[0].plot(t.index, t["fixed_quote_met"] * 100, color=GREY, linewidth=1.2, label="Quoted lead time")
+    axes[0].plot(t.index, t["recommended_rule_met"] * 100, color=BRAND_BLUE, linewidth=1.2, label="Recommended rule")
     axes[0].axhline(80, color=RED, linewidth=1, linestyle="--")
     axes[0].set_ylabel("Quote met (%)", fontsize=9)
     axes[0].legend(frameon=False, fontsize=8, loc="lower left")
@@ -479,17 +480,19 @@ def panel_quoting():
     f.tight_layout()
     b = save(f, "dashboard_quoting_trend", "Quote hit rates by release week and share of quotes sent within 3 days, trend")
     return ("<h2 id='panel7'>7. Quoting</h2>" +
-            tiles([(pct(r["fixed_quote_met"]), f"Fixed quote met, jobs released in the week of {wk(last)}"),
-                   (pct(r["quote_table_met"]), f"Quote table met, jobs released in the week of {wk(last)}"),
+            tiles([(pct(r["fixed_quote_met"]), f"Quoted lead time met, jobs released in the week of {wk(last)}"),
+                   (pct(r["recommended_rule_met"]), f"Recommended rule met, jobs released in the week of {wk(last)}"),
                    (pct(c["sent_within_3_days"]), f"Quotes sent within 3 days, of {n0(c['quotes_sent'])} sent"),
                    (pct(v["won_within_3_days"].sum() / v["quotes_sent"].sum() + v["won_over_3_days"].sum() / v["quotes_sent"].sum()),
                     f"Win rate, {VIEW} weeks; {pct(undecided)} of quotes undecided")]) +
-            a + cap(f"Share of non-rush jobs meeting the fixed quote and the quote table by release week, through the week of {wk(last)}, the latest with at least "
+            a + cap(f"Share of non-rush jobs meeting the quoted lead time and the recommended rule by release week, through the week of {wk(last)}, the latest with at least "
                     f"{pct(SHIPPED_SHARE, 0)} of its jobs shipped; and win rate by turnaround for quotes sent in the {VIEW} weeks.") +
             b + f"<div class='caption'>Quote hit rates by release week and the share of quotes sent within 3 days by week from {wk(QW.index.min())}; the line is 80%.</div>" +
-            definition("A quote is met when the working days from the release day to the ship day are at or under it; rush lines are left out. The fixed quote is 10 days "
-                       "for repeat parts, 15 for new parts and 20 with outside processing. The quote table is the table fitted on 2023 to 2025 (Quoting and Early Warning from Load, Table 4): the "
-                       "80th-percentile lead time of the routing class and brake backlog band at release, rounded up, never below the fixed quote. Turnaround is weekdays "
+            definition("A quote is met when the working days from the release day to the ship day are at or under it; rush lines are left out. The quoted lead time is the "
+                       "class standard (10 days for repeat parts, 15 for new parts, 20 with outside processing) plus the shop's week when the floor is backed up. The "
+                       "quote table is the table fitted on 2023 to 2025 (Flow and On-time Delivery, Table 16): the 80th-percentile lead time of the routing class and "
+                       "brake backlog band at release, rounded up, never below the class standard. The recommended rule quotes the class standard below 2.5 days of "
+                       "brake backlog at release and the quote table at or above it (Flow and On-time Delivery, Section 4 and Table 16). Turnaround is weekdays "
                        "from RFQ received to quote sent. Win rate is won over quotes sent, with no decision counted as not won."))
 
 

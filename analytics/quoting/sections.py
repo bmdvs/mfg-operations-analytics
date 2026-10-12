@@ -1,6 +1,6 @@
 """Lead-time quoting and quote analytics: the data, tables and figures of its part of the report, from the marts.
 
-Built by analytics.reports.quoting_and_early_warning.
+Built by analytics.reports.quoting_section.
 """
 import numpy as np
 import pandas as pd
