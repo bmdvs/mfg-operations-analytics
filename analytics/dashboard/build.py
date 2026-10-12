@@ -8,6 +8,7 @@ import pandas as pd
 from analytics.db import q
 from analytics.constraint import analysis as CONSTRAINT
 from analytics.leading_indicators import analysis as INDICATORS
+from analytics.quoting import accuracy as ACCURACY
 from analytics.style.style import ACCENT, AMBER, BRAND_BLUE, CSS, DOCS, GREEN, GREY, LIGHT_BLUE, RED, fig, pct, table
 from analytics.style import style
 
@@ -444,56 +445,56 @@ def panel_overtime():
 def panel_quoting():
     done = QW.index[(QW["shipped_share"] >= SHIPPED_SHARE) & (QW.index <= CW)]
     last = done.max()
-    r = QW.loc[last]
-    c = QW.loc[CW]
-    v = QW.loc[V]
-    win_fast, win_slow = v["won_within_3_days"].sum() / v["quotes_within_3_days"].sum(), v["won_over_3_days"].sum() / v["quotes_over_3_days"].sum()
-    undecided = v["quotes_undecided"].sum() / v["quotes_sent"].sum()
-    f, axes = fig(h=3.0, ncols=2, gridspec_kw=dict(width_ratios=[1.7, 1]))
+    # quote accuracy by release week: non-rush jobs, lines accepted inside the quote left out; weeks with nearly all of their jobs shipped
+    d = ACCURACY.D.assign(week=ACCURACY.D["release_date"] - pd.to_timedelta(ACCURACY.D["release_date"].dt.weekday, unit="D"))
+    names = ((ACCURACY.CURRENT, AMBER, "Current quote"), (ACCURACY.REC, BRAND_BLUE, "Recommended quote"))
+    g = d.groupby("week")
+    wq = pd.DataFrame({"actual": g["lead"].mean()})
+    for k, _, _ in names:
+        wq[f"quote|{k}"] = g[k].mean()
+        wq[f"error|{k}"] = (d["lead"] - d[k]).abs().groupby(d["week"]).mean()
+    wq = wq[wq.index.isin(done)]
+    view = list(wq.index[-VIEW:])
+    recent = d[d["week"].isin(view)]
+    error = {k: float((recent["lead"] - recent[k]).abs().mean()) for k, _, _ in names}
+    x = range(len(view))
+    f, axes = fig(h=3.0, ncols=2)
     ax = axes[0]
-    ok = QW["shipped_share"] >= SHIPPED_SHARE
-    line13(ax, QW["fixed_quote_met"].where(ok), GREY, "Quoted lead time", scale=100)
-    line13(ax, QW["recommended_rule_met"].where(ok), BRAND_BLUE, "Recommended rule", scale=100)
-    ax.axhline(80, color=RED, linewidth=1, linestyle="--")
-    ax.set_ylabel("Quote met (%)", fontsize=9)
-    ax.legend(frameon=False, fontsize=8, loc="lower left")
-    axis13(ax)
-    ax = axes[1]
-    ax.bar([0, 1], [win_fast * 100, win_slow * 100], color=[BRAND_BLUE, AMBER], width=0.55)
-    for xi, y, n_ in ((0, win_fast, v["quotes_within_3_days"].sum()), (1, win_slow, v["quotes_over_3_days"].sum())):
-        ax.annotate(f"{y:.1%}\n{n_:,.0f} quotes", (xi, y * 100), textcoords="offset points", xytext=(0, 2), ha="center", fontsize=8)
-    ax.set_xticks([0, 1])
-    ax.set_xticklabels(["3 days or less", "Over 3 days"], fontsize=9)
-    ax.set_ylabel(f"Win rate, {VIEW} weeks (%)", fontsize=9)
-    ax.set_ylim(0, 75)
+    ax.plot(x, wq.loc[view, "actual"], color=GREY, marker="o", markersize=3.5, linewidth=1.6, label="Actual lead time")
+    for k, color, lab in names:
+        ax.plot(x, wq.loc[view, f"quote|{k}"], color=color, marker="o", markersize=3.5, linewidth=1.6, label=lab)
+        axes[1].plot(x, wq.loc[view, f"error|{k}"], color=color, marker="o", markersize=3.5, linewidth=1.6, label=lab)
+    ax.set_ylabel("Mean working days", fontsize=9)
+    axes[1].set_ylabel("Mean absolute error (days)", fontsize=9)
+    for ax in axes:
+        ax.set_ylim(0, None)
+        ax.set_xticks(list(x))
+        ax.set_xticklabels([short(t) for t in view], fontsize=7.5, rotation=45, ha="right")
+        ax.legend(frameon=False, fontsize=8, loc="lower left")
     f.tight_layout()
-    a = save(f, "dashboard_quoting_13_weeks", "Quote hit rates by release week and win rate by turnaround, 13 weeks")
+    a = save(f, "dashboard_quoting_13_weeks", "Actual lead time, current quote and recommended quote by release week, and the quote error of each, 13 weeks")
     f, axes = fig(h=4.2, nrows=2, sharex=True)
-    t = QW[ok]
-    axes[0].plot(t.index, t["fixed_quote_met"] * 100, color=GREY, linewidth=1.2, label="Quoted lead time")
-    axes[0].plot(t.index, t["recommended_rule_met"] * 100, color=BRAND_BLUE, linewidth=1.2, label="Recommended rule")
-    axes[0].axhline(80, color=RED, linewidth=1, linestyle="--")
-    axes[0].set_ylabel("Quote met (%)", fontsize=9)
-    axes[0].legend(frameon=False, fontsize=8, loc="lower left")
-    axes[1].plot(QW.index, QW["sent_within_3_days"] * 100, color=BRAND_BLUE, linewidth=1.2)
-    axes[1].set_ylabel("Quotes sent within 3 days (%)", fontsize=9)
+    axes[0].plot(wq.index, wq["actual"], color=GREY, linewidth=1.2, label="Actual lead time")
+    for k, color, lab in names:
+        axes[0].plot(wq.index, wq[f"quote|{k}"], color=color, linewidth=1.2, label=lab)
+        axes[1].plot(wq.index, wq[f"error|{k}"].rolling(VIEW, min_periods=VIEW).mean(), color=color, linewidth=1.2, label=lab)
+    axes[0].set_ylabel("Mean working days", fontsize=9)
+    axes[1].set_ylabel(f"Mean absolute error," + chr(10) + f"{VIEW}-week mean (days)", fontsize=9)
+    for ax in axes:
+        ax.set_ylim(0, None)
+        ax.legend(frameon=False, fontsize=8, loc="upper left")
     f.tight_layout()
-    b = save(f, "dashboard_quoting_trend", "Quote hit rates by release week and share of quotes sent within 3 days, trend")
+    b = save(f, "dashboard_quoting_trend", "Actual lead time, current quote and recommended quote by release week, and the quote error of each, trend")
     return ("<h2 id='panel7'>7. Quoting</h2>" +
-            tiles([(pct(r["fixed_quote_met"]), f"Quoted lead time met, jobs released in the week of {wk(last)}"),
-                   (pct(r["recommended_rule_met"]), f"Recommended rule met, jobs released in the week of {wk(last)}"),
-                   (pct(c["sent_within_3_days"]), f"Quotes sent within 3 days, of {n0(c['quotes_sent'])} sent"),
-                   (pct(v["won_within_3_days"].sum() / v["quotes_sent"].sum() + v["won_over_3_days"].sum() / v["quotes_sent"].sum()),
-                    f"Win rate, {VIEW} weeks; {pct(undecided)} of quotes undecided")]) +
-            a + cap(f"Share of non-rush jobs meeting the quoted lead time and the recommended rule by release week, through the week of {wk(last)}, the latest with at least "
-                    f"{pct(SHIPPED_SHARE, 0)} of its jobs shipped; and win rate by turnaround for quotes sent in the {VIEW} weeks.") +
-            b + f"<div class='caption'>Quote hit rates by release week and the share of quotes sent within 3 days by week from {wk(QW.index.min())}; the line is 80%.</div>" +
-            definition("A quote is met when the working days from the release day to the ship day are at or under it; rush lines are left out. The quoted lead time is the "
-                       "class standard (10 days for repeat parts, 15 for new parts, 20 with outside processing) plus the shop's week when the floor is backed up. The "
-                       "quote table is the table fitted on 2023 to 2025 (Flow and On-time Delivery, Table 17): the 80th-percentile lead time of the routing class and "
-                       "brake backlog band at release, rounded up, never below the class standard. The recommended rule quotes the class standard below 2.5 days of "
-                       "brake backlog at release and the quote table at or above it (Flow and On-time Delivery, Section 5 and Table 17). Turnaround is weekdays "
-                       "from RFQ received to quote sent. Win rate is won over quotes sent, with no decision counted as not won."))
+            tiles([(f"{error[ACCURACY.CURRENT]:.1f} days", f"Quote error, last {VIEW} weeks (recommended quote {error[ACCURACY.REC]:.1f})")]) +
+            a + "<div class='caption'>" + (f"Mean actual lead time, current quote and recommended quote of non-rush jobs by release week, and the mean absolute error of each quote, for the {VIEW} "
+                    f"weeks through the week of {wk(last)}, the latest with at least {pct(SHIPPED_SHARE, 0)} of its jobs shipped.") + "</div>" +
+            b + f"<div class='caption'>The same by release week from {wk(wq.index.min())}; the error is the mean of the {VIEW} weeks to each week.</div>" +
+            definition("Quote error is the mean absolute difference between the actual lead time and the quote, in whole working days from the release day to the ship day, on "
+                       "non-rush jobs; lines accepted inside the quote are left out. The current quote is the class standard (10 days for repeat parts, 15 for new parts, 20 "
+                       "with outside processing) lengthened by the estimators once the floor has been backed up for several weeks. The recommended quote is the median lead time of jobs of the same routing "
+                       "class at the same brake backlog at release, refitted each month from the jobs shipped before it (Flow and On-time Delivery, Section 5 and its table "
+                       "Quoted Lead Time by Routing Class and Brake Backlog at Release)."))
 
 
 # ── page ────────────────────────────────────────────────────────────────────
