@@ -257,40 +257,40 @@ def fig_job_flow():
     def stage(label, x0, w, top):
         ax.text(x0 + w / 2, top + 6, label, ha="center", va="bottom", fontsize=NAME, color=TEXT, fontweight="bold")
 
-    y, x, gap = 142.0, 2.0, 12.0
-    box("print", "Release to" + NL + "traveler" + NL + "print", x, 72, y, 90, bold=False)
-    box("release", "Release", x, 72, 262, 32, edge=1.6)
-    x += 72 + gap
-    box("laser", "Laser", x, 62, y + 32, 54, FLOW["laser"])
-    box("punch", "Punch", x, 62, y - 32, 54, FLOW["punch"])
-    stage("Cut", x, 62, y + 59)
-    x += 62 + gap
+    y, x, gap = 142.0, 2.0, 18.0
+    box("print", "Release to" + NL + "traveler" + NL + "print", x, 68, y, 90, bold=False)
+    box("release", "Release", x, 68, 262, 32, edge=1.6)
+    x += 68 + gap
+    box("laser", "Laser", x, 48, y + 32, 54, FLOW["laser"])
+    box("punch", "Punch", x, 48, y - 32, 54, FLOW["punch"])
+    stage("Cut", x, 48, y + 59)
+    x += 48 + gap
     box("deburr", "Grind and" + NL + "deburr", x, 74, y, 90, FLOW["deburr"])
     x += 74 + gap
-    box("brake", "Press" + NL + "brake", x, 60, y, 90, FLOW["form"])
-    x += 60 + gap
-    box("hardware", "Hardware", x, 76, y + 68, 52, FLOW["hardware"])
-    box("weld", "Manual" + NL + "weld", x, 76, y, 64, FLOW["manual_weld"])
-    box("robot", "Robotic" + NL + "weld", x, 76, y - 72, 64, FLOW["robotic_weld"])
-    stage("Insert and join", x, 76, y + 94)
-    x += 76 + gap
+    box("brake", "Press" + NL + "brake", x, 50, y, 90, FLOW["form"])
+    x += 50 + gap
+    box("hardware", "Hardware", x, 72, y + 68, 52, FLOW["hardware"])
+    box("weld", "Manual" + NL + "weld", x, 72, y, 64, FLOW["manual_weld"])
+    box("robot", "Robotic" + NL + "weld", x, 72, y - 72, 64, FLOW["robotic_weld"])
+    stage("Insert and join", x, 72, y + 94)
+    x += 72 + gap
     box("grind", "Grind and" + NL + "deburr", x, 74, y - 36, 112, FLOW["grind_welds"])
     x += 74 + gap
-    box("powder", "Powder" + NL + "coat", x, 84, y + 44, 64, FLOW["powder"])
-    box("outside", "Outside" + NL + "processing", x, 84, y - 36, 64, FLOW["outside"])
-    stage("Finish", x, 84, y + 76)
-    x += 84 + gap
+    box("powder", "Powder" + NL + "coat", x, 82, y + 44, 64, FLOW["powder"])
+    box("outside", "Outside" + NL + "processing", x, 82, y - 36, 64, FLOW["outside"])
+    stage("Finish", x, 82, y + 76)
+    x += 82 + gap
     box("assembly", "Assemble", x, 72, y, 90, FLOW["assembly"])
     x += 72 + gap
-    box("inspect", "Inspect" + NL + "and pack", x, 72, y, 90, FLOW["inspect"])
-    x += 72 + gap
-    box("packed", "Packed," + NL + "waiting" + NL + "to ship", x, 74, y, 90, bold=False)
-    box("ship", "Shipment", x, 74, 262, 32, edge=1.6)
+    box("inspect", "Inspect" + NL + "and pack", x, 68, y, 90, FLOW["inspect"])
+    x += 68 + gap
+    box("packed", "Packed," + NL + "waiting" + NL + "to ship", x, 58, y, 90, bold=False)
+    box("ship", "Shipment", x + 58 - 70, 70, 262, 32, edge=1.6)
     L, R, Y = (lambda n: at[n][0] - 2), (lambda n: at[n][1] + 2), (lambda n: at[n][2])
     link = lambda a, b, dy=0.0, dz=0.0: go((R(a), Y(a) + dy), (L(b), Y(b) + dz))
     mid = lambda n: (at[n][0] + at[n][1]) / 2
     go((mid("release"), at["release"][2] - 18), (mid("print"), at["print"][2] + 47))
-    go((mid("packed"), at["packed"][2] + 47), (mid("ship"), at["ship"][2] - 18))
+    go((mid("packed"), at["packed"][2] + 47), (mid("packed"), at["ship"][2] - 18))
     link("print", "laser", 12)
     link("print", "punch", -12)
     link("laser", "deburr", 0, 14)
@@ -309,7 +309,7 @@ def fig_job_flow():
     link("assembly", "inspect")
     link("inspect", "packed")
     # inside a stage: hardware on to a weld, powder coat on to outside processing
-    hx = at["hardware"][0] + 14
+    hx = at["hardware"][0] + 12
     go((hx, at["hardware"][2] - 27), (hx, at["weld"][2] + 33))
     ax.annotate("", (R("robot") - 1, Y("robot") + 12), (R("hardware") - 1, Y("hardware") - 12), arrowprops=dict(arrow, connectionstyle="arc3,rad=-0.22"))
     px = at["powder"][0] + 16
