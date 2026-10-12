@@ -1,4 +1,4 @@
--- One row per job: the brake backlog on the release date at 10:00, the promise against the standard lead time, and the kit check.
+-- One row per job: the brake backlog on the release date at 10:00, the promise against the quoted lead time, and the kit check.
 -- Brake backlog is the standard hours of brake operations waiting (previous operation ended, brake operation not started), at the brakes'
 -- actual-over-standard ratio, in days of crewed brake capacity.
 with brake_ops as (
@@ -25,7 +25,7 @@ backlog as (
 select
     {{ batch_id() }} as export_batch_id,
     j.job_id, j.release_date, cast(date_trunc('week', j.release_date) as date) as release_week, j.ship_date, j.routing_class, j.family, j.rush_flag,
-    j.quoted_lead_days, j.promised_lead_wd, j.promised_lead_wd < j.quoted_lead_days as promised_inside_standard,
+    j.standard_lead_days, j.quoted_lead_days, j.promised_lead_wd, j.promised_lead_wd < j.quoted_lead_days as promised_inside_standard,
     j.on_time, j.days_late,
     b.brake_jobs_waiting, b.brake_std_hours_waiting,
     b.brake_std_hours_waiting * r.actual_over_standard / c.daily_hours as brake_backlog_days,

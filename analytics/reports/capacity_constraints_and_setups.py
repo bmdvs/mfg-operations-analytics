@@ -647,9 +647,9 @@ def build():
              f"{T.see('util')}</p>")
     b.append(titled(C.fig_util(), "Utilization and Machine Uptime by Work Center"))
     hot_share = (HY["hot_weeks"] / HY["weeks"]).sort_values(ascending=False)
-    assert list(hot_share.index[:2]) == LEAD_TWO and hot_share.iloc[1] > 1.5 * hot_share.iloc[2]
+    assert set(hot_share.index[:2]) == set(LEAD_TWO) and 1.6 <= hot_share.iloc[1] / hot_share.iloc[2] <= 2.4
     b.append(f"<p>With so little buffer, an ordinary heavy week can take the brakes and the weld cell to maximum utilization: they ran at or above 95% utilization in "
-             f"{P(hot_share['press_brake'])} and {P(hot_share['robotic_weld'])} of weeks in {YEAR}, far more often than any other work center. "
+             f"{P(hot_share['press_brake'])} and {P(hot_share['robotic_weld'])} of weeks in {YEAR}, about twice as often as any other work center. "
              f"This is explored in more detail in Section 2. {T.see('hot')}</p>")
     b.append(chart(f"Share of weeks at or above 95% utilization, {YEAR}", fig_hot_share()))
     all_share = ALL_QDAYS / ALL_QDAYS.sum()
@@ -662,9 +662,12 @@ def build():
              f"less than 5% of queue days, because only {n0(QDAYS.loc['robotic_weld', 'operations'])} operations "
              f"({pct(QDAYS.loc['robotic_weld', 'operations'] / total_ops)} of total) passed through it.</p>")
     b.append(chart(f"Share of queue days by work center, {YEAR}", fig_queue_days()))
-    b.append("<p><b>The press brakes are therefore the shop's primary constraint on three counts: the highest utilization with the least buffer, the most weeks spent at "
-             "maximum utilization, and nearly half of all queue days.</b> The robotic weld cell shares the first two and constrains the enclosure work that crosses "
-             "it. These stations are examined in more detail throughout this report.</p>")
+    hw = HY["hot_weeks"]
+    assert hw["robotic_weld"] > hw["press_brake"] and all_share.idxmax() == "press_brake"
+    b.append(f"<p><b>The press brakes are therefore the shop's primary constraint on two counts: the highest utilization with the least buffer, and "
+             f"{P(all_share['press_brake'])} of all queue days.</b> The robotic weld cell spends more weeks at maximum utilization "
+             f"({int(hw['robotic_weld'])} against {int(hw['press_brake'])}) and constrains the enclosure work that crosses it. These stations are examined in "
+             f"more detail throughout this report.</p>")
 
     # 2 ── load and queue time
     b.append("<h2 id='f2'>2. Load and Queue Time</h2>")
@@ -715,20 +718,24 @@ def build():
     BD = BRAKE_DIST
     lead, rest = BD.loc[["B1", "B2"]], BD.loc[["B3", "B4", "B5"]]
     b12 = MY.loc[["B1", "B2"], "utilization"]
+    qm, b345 = MY.loc[C.BRAKES, "queue_mean"], MY.loc[["B3", "B4", "B5"], "utilization"]
     assert len(BD) == 5 and P(b12.min()) == P(b12.max()) and lead["median"].max() < rest["median"].min() and lead["p95"].max() < rest["p95"].min()
-    b.append(f"<p>The brake center consists of five machines. Precision work and expedited jobs are routed to B1 and B2, so these two machines, at {P(b12.max())} "
-             f"utilization, have the shortest queue times. The long brake waits that drive late jobs are concentrated on B3, B4, and B5, where jobs are routed "
+    assert qm[["B1", "B2"]].max() < qm[["B3", "B4", "B5"]].min() and abs(b345.mean() - b12.mean()) < 0.03
+    b.append(f"<p>The brake center consists of five machines. Precision work and expedited jobs are routed to B1 and B2, so these two machines have the shortest "
+             f"queue times ({d1(qm['B1'])} and {d1(qm['B2'])} days against {rng(qm[['B3', 'B4', 'B5']].min(), qm[['B3', 'B4', 'B5']].max(), d1)} on B3 to B5) at "
+             f"about the same utilization ({P(b12.max())} against {P(b345.min())} to {P(b345.max())}). The long brake waits that drive late jobs are concentrated on B3, B4, and B5, where jobs are routed "
              f"without a priority queue. {T.see('machines', 'basis')}</p>")
     b.append(chart(f"Queue Time per Operation by Individual Brakes, {YEAR}", fig_brake_distribution()))
 
     pair = ["assembly", "weld"]
     assert all(above(w, 0.85) > 2 * low[w] for w in pair)
-    assert abs(fits.loc["assembly", "rank_correlation"] - FB["rank_correlation"]) < 0.05 < FB["rank_correlation"] - fits.loc["weld", "rank_correlation"]
+    assert FB["rank_correlation"] - fits.loc["assembly", "rank_correlation"] > 0.05 and fits.loc["assembly", "rank_correlation"] - fits.loc["weld", "rank_correlation"] > 0.05
     b.append(f"<p>Assembly and the manual weld bays sit below the knee most weeks: in {YEAR} they were above 85% utilization in {w85['assembly']} "
              f"({P(w85['assembly'] / weeks)}) and {w85['weld']} ({P(w85['weld'] / weeks)}) weeks. Both show the same step as the brakes: at low utilization levels, "
              f"mean queue time of {d2(low['assembly'])} at assembly and {d2(low['weld'])} at manual weld against {d2(above('assembly', 0.85))} and "
-             f"{d2(above('weld', 0.85))} at or above 85% utilization. The curve fits assembly about as well as the brakes (rank correlation "
-             f"{d2(fits.loc['assembly', 'rank_correlation'])}) and the weld bays less well ({d2(fits.loc['weld', 'rank_correlation'])}), since six bays pool arrivals "
+             f"{d2(above('weld', 0.85))} at or above 85% utilization. The curve fits assembly less closely than the brakes (rank correlation "
+             f"{d2(fits.loc['assembly', 'rank_correlation'])} against {d2(FB['rank_correlation'])}) and the weld bays less closely again "
+             f"({d2(fits.loc['weld', 'rank_correlation'])}), since six bays pool arrivals "
              f"until the last few points of load. {T.see('qdays', 'assembly', again=('bins', 'pos'))}</p>")
     b.append(chart(pair_title(pair), fig_pair(pair, "capacity_queue_curve_assembly_weld")))
     first = ["laser", "punch"]
@@ -820,12 +827,20 @@ def build():
     assert a_ > b2
     g_ = SATURDAY_HOURS / PEAK_RATIO
     supplied = pk["extra_hours"].sum() / PEAK_RATIO
-    assert round(g_ / (a_ - b2), 1) == 0.2 and pk["extended_hours"].sum() == 0 and supplied < 0.1 * (a_ - b2) * len(pk)
+    assert pk["extended_hours"].sum() == 0 and supplied < 0.1 * (a_ - b2) * len(pk)
+    worked = q("select sum(hours) / count(distinct cast(start_ts as date)) from intermediate.int_machine_time where work_center = 'press_brake' "
+               "and dayofweek(start_ts) = 6").iloc[0, 0]                                          # brake machine hours on a Saturday with brake time
+    weekday_yield = q("select sum(m.machine_hours) / sum(m.scheduled_hours - m.downtime_hours) from marts.mart_machine_weekly m join marts.mart_weekly_floor w "
+                      "using (week_start) where m.work_center = 'press_brake' and m.saturday_hours = 0 and m.machine_id not in ('B1', 'B2') "
+                      "and w.wip_at_brakes > 120 and w.weekdays = 5").iloc[0, 0]                   # crewed hours worked when work is waiting
+    both = SATURDAY_HOURS * weekday_yield
+    as_worked, both_share = worked / PEAK_RATIO / (a_ - b2), both / PEAK_RATIO / (a_ - b2)
+    assert P(as_worked) != P(both_share) and worked < 0.6 * both
     b.append(f"<p>Setup recovery adds {d1(S.LEVERS)} brake hours a week; the year-end peak needs far more. In the six weeks from November 11, 2024 the shop released "
              f"{n0(a_)} brake standard hours a week against {n0(b2)} of crewed capacity, a shortfall of about {n0(a_ - b2)} hours a week that went into the queue. "
-             f"Queue-triggered Saturday shifts covered almost none of it: {n0(pk['saturday_shifts'].sum())} shifts in six weeks, {n0(supplied)} hours in total. One "
-             f"planned Saturday shift on B1 and B2 supplies {n0(g_)} hours, a fifth of the weekly gap; {link('options')} tests one every week from November through "
-             f"February. {T.see('peak')}</p>")
+             f"Queue-triggered Saturday shifts covered almost none of it: {n0(pk['saturday_shifts'].sum())} shifts in six weeks, {n0(supplied)} hours in total. A "
+             f"Saturday brake shift as the shop has worked it supplies {d1(worked)} machine hours, {P(as_worked)} of the weekly gap; one with both B1 and B2 crewed "
+             f"supplies about {n0(both)}, {P(both_share)}. {link('options')} tests one every week from November through February. {T.see('peak')}</p>")
     b.append(chart("Brake Hours Released Against Capacity by Week, Q4 2024 to Q1 2025", fig_peak()))
     b.append(f"<p>The robotic weld cell runs one shift at {P(UY.loc['robotic_weld', 'utilization'])} utilization and is at or above 95% in "
              f"{int(HY.loc['robotic_weld', 'hot_weeks'])} weeks of {int(HY.loc['robotic_weld', 'weeks'])}; its second shift is uncrewed. Enclosures are "
