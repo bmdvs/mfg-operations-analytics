@@ -45,14 +45,10 @@ def _capacity():
 
 
 def _options():
-    gain, year, rest = re.search(r"together they deliver \+([\d.]+ \([\d.]+ to [\d.]+\)), reaching ([\d.]+%) on time.*?In Q2-Q4 the package reaches ([\d.]+%)",
-                                 section_text(OPTIONS, "f3")).groups()
-    money = section_text(OPTIONS, "f4")
-    alone = re.search(r"On overtime and labor savings alone, .*? labor\)\.", money).group(0)
-    cell, changer = re.search(r"the robotic cell pays back in ([\d.]+) years, the tool changer in ([\d.]+) and the package", money).groups()
-    return (f"A WIP cap and dispatch rules do not help; the setup program, a second shift on the robotic weld cell and planned Saturdays from November through "
-            f"February take the year to {year} on time, up {gain.replace(' (', ' points (')}, and Q2-Q4 to {rest}. {alone}"
-            f" With half the freed brake hours sold, the robotic cell pays back in {cell} years, the tool changer on B3 in {changer}, the laser tower not at all.")
+    lead = sentences(section_text(OPTIONS, "f3"))[0].rstrip(".") + "."
+    package = re.search(r"With the operating package the shop ships .*? in the year\.", section_text(OPTIONS, "f3_2")).group(0)
+    money = re.search(r"The operating package addresses the year-end build: .*? and needs \d+%\.", section_text(OPTIONS, "f4")).group(0)
+    return f"{lead} {package} {money}"
 
 
 # file stem, title, question, the finding composed from the report's sentences
@@ -62,8 +58,8 @@ REPORTS = [
      "time should be quoted in a build, and which measures warn of a decline?", _lead_time),
     (CAPACITY, "Capacity, Constraints and Setups",
      "Which work centers run hot, and how do their queues respond to load? What do setups cost at the brakes, and where is the overrun?", _capacity),
-    (OPTIONS, "What Moves On-Time Delivery",
-     "Do release control and dispatch rules help, and what does? Do the capital options pay back?", _options),
+    (OPTIONS, "Discrete Event Simulation: On-time Delivery",
+     "Do release and dispatch rules raise on-time delivery, or only added brake hours? What do the changes that work cost and return?", _options),
 ]
 SYSTEMS = [
     ("erp", "ERP", "customer, part, routing operation, quote, quote line, sales order, order line, job, job operation, inventory item, inventory transaction, "
@@ -114,7 +110,7 @@ def sources():
 PIPELINE = ("`pipeline/load` loads the CSV exports under `data/raw` into DuckDB with dlt, one text table per file. The dbt project under `pipeline/dbt` builds the "
             "staging models (one per export, typed), the intermediate models (working-day clock, machine time, queue, lead time by stage, WIP, utilization, setups, "
             "late-job attribution) and the marts, with tests on keys. The scripts under `analytics/` read the marts and write the three reports and their figures "
-            "under `docs/`, the dashboard and this file. The shop model under `analytics/release_control/` replays the released jobs for the scenarios of the options report; "
+            "under `docs/`, the dashboard and this file. The shop model under `analytics/release_control/` replays the released jobs for the scenarios of the simulation report; "
             "its runs are saved under `results/` and each run repeats exactly from its scenario and replication number.")
 RUN = """```
 python -m venv .venv

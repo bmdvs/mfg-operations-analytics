@@ -71,8 +71,8 @@ class Inputs:
     def __init__(self, start="2024-01-01"):
         self.batch = q("select export_batch_id from marts.mart_job_lead_time limit 1").iloc[0, 0]
         jobs = q(f"""
-            select j.job_id, j.part_id, j.release_date, j.due_date, j.qty, l.rush_flag, l.routing_class, l.quoted_lead_days, ol.order_date, ol.requested_date,
-                p.family, p.bend_count, p.thickness, p.tolerance_critical, p.powder_color, p.repeat_part
+            select j.job_id, j.part_id, j.customer_id, j.release_date, j.due_date, j.qty, l.rush_flag, l.routing_class, l.quoted_lead_days, ol.order_date,
+                ol.requested_date, round(coalesce(ol.unit_price * ol.qty, 0), 2) as revenue, p.family, p.bend_count, p.thickness, p.tolerance_critical, p.powder_color, p.repeat_part
             from staging.stg_erp__jobs j
             join intermediate.int_job_lead_time l using (job_id)
             join staging.stg_erp__parts p on p.part_id = j.part_id
@@ -94,6 +94,11 @@ class Inputs:
         jobs["cell_ok"] = (jobs["cls"] == "light") & jobs["repeat_part"].fillna(False).astype(bool) & (jobs["qty"] >= CELL_MIN_LOT)
         self.jobs = jobs.sort_values(["release_date", "job_id"]).reset_index(drop=True)
         self.ops = {k: g.to_dict("records") for k, g in ops.groupby("job_id")}
+        # the customers that make up 80% of the revenue shipped in the report year, largest first
+        rev = q(f"""select j.customer_id, sum(ol.unit_price * ol.qty) as revenue from staging.stg_erp__jobs j join staging.stg_erp__order_lines ol using (order_line_id)
+                    where year(j.ship_date) = {REPORT_YEAR} group by 1 order by 2 desc, 1""")
+        share = (rev["revenue"].cumsum() - rev["revenue"]) / rev["revenue"].sum()
+        self.top_customers = {c: round(float(v), 2) for c, v in zip(rev["customer_id"][share < 0.8], rev["revenue"][share < 0.8])}
 
         cal = q("select work_center, calendar_date, scheduled_hours, saturday from staging.stg_erp__work_center_calendar order by all")
         cal["calendar_date"] = pd.to_datetime(cal["calendar_date"])
@@ -126,10 +131,28 @@ class Inputs:
             for sm in (True, False):
                 x = b[(b["grouped"] == g_) & ((b["qty"] < 25) == sm)]
                 self.brake_setup_ratio[(g_, sm)] = Sampler(x["setup_std"], x["setup_ratio"], bands=4)
-        r = q(f"select work_center, machine_id, run_std_hours, run_hours / run_std_hours as ratio from marts.mart_run_standards "
-              f"where start_year = {REPORT_YEAR} and run_std_hours > 0 order by all")
-        self.run_ratio = {wc: Sampler(g["run_std_hours"], g["ratio"]) for wc, g in r.groupby("work_center")}
-        self.laser_run_ratio = {m: Sampler(g["run_std_hours"], g["ratio"]) for m, g in r[r["work_center"] == "laser"].groupby("machine_id")}
+        # Setup and run are drawn together. At every work center 5% to 7% of operations have no setup clocked (press brake 317 of 5,566 in the
+        # report year): the setup was clocked under run, so their run hours hold it. Until this change a setup was drawn for every operation and the
+        # run ratio from all operations, which counted those setups twice (about 357 brake hours a year).
+        #   no_setup_share  the share of operations of the work center with a setup standard and no setup clocked
+        #   run_ratio       run hours over run standard, from operations with a setup clocked
+        #   whole_ratio     run hours over setup plus run standard, from operations with no setup clocked, banded on the whole standard. Pooled:
+        #                   press brake 0.98, robotic weld 1.00, manual weld 0.97, punch 0.97, hardware 0.96, inspection and pack 0.94,
+        #                   powder coat 0.91, grind and deburr 0.90, laser 0.85, assembly 1.02.
+        # The whole-time ratio replaces the form first used for these operations, run standard times their run hours over run standard: that
+        # ratio is large wherever the run is short beside the setup inside it (mean 4.1 by operation at the robotic weld cell, highest 162 at the
+        # brakes), and drawn onto other operations it put the robotic weld cell at 0.913 of crewed hours against 0.818 in the record.
+        r = q(f"select work_center, machine_id, setup_std, run_std_hours, run_hours, coalesce(setup_hours, 0) = 0 and setup_std > 0 as no_setup "
+              f"from marts.mart_run_standards where start_year = {REPORT_YEAR} and run_std_hours > 0 order by all")
+        r["no_setup"] = r["no_setup"].astype(bool)
+        r["ratio"], r["whole_std"] = r["run_hours"] / r["run_std_hours"], r["setup_std"] + r["run_std_hours"]
+        r["whole"] = r["run_hours"] / r["whole_std"]
+        both, none = r[~r["no_setup"]], r[r["no_setup"]]
+        self.no_setup_share = {wc: round(float(g["no_setup"].mean()), 9) for wc, g in r.groupby("work_center")}
+        self.run_ratio = {wc: Sampler(g["run_std_hours"], g["ratio"]) for wc, g in both.groupby("work_center")}
+        self.laser_run_ratio = {m: Sampler(g["run_std_hours"], g["ratio"]) for m, g in both[both["work_center"] == "laser"].groupby("machine_id")}
+        self.whole_ratio = {wc: Sampler(g["whole_std"], g["whole"]) for wc, g in none.groupby("work_center")}
+        self.laser_whole_ratio = {m: Sampler(g["whole_std"], g["whole"]) for m, g in none[none["work_center"] == "laser"].groupby("machine_id")}
         st = q(f"""select s.job_id, s.op_seq, s.work_center, s.stage, s.days, l.routing_class from intermediate.int_job_stage_days s
                    join intermediate.int_job_lead_time l using (job_id) where year(l.ship_date) = {REPORT_YEAR} order by all""")
         mat = st[st["stage"] == "material wait at first operation"].groupby("job_id")["days"].sum()
@@ -154,11 +177,40 @@ class Inputs:
                   join marts.mart_weekly_floor w using (week_start)
                   where m.work_center = 'press_brake' and m.saturday_hours = 0 and m.machine_id not in ('B1', 'B2') and w.wip_at_brakes > 120 and w.weekdays = 5""")
         self.brake_availability = round(min(float(av.iloc[0, 0]), 1.0), 9)
-        # the quote table: 80th-percentile lead time by routing class and brake backlog band at release
-        from analytics.quoting import analysis as quoting
-        qt = quoting.quote_table(quoting.load())
-        self.quote_edges = np.array(quoting.BANDS[1:-1], dtype=float)
-        self.quote_table = {(c, quoting.BAND_LABELS.index(b)): float(v) for c, b, v in zip(qt["routing_class"], qt["band"], qt["p80"]) if v == v}
+        # Share of crewed laser hours net of downtime worked when work is waiting, measured as the brake share is: full weeks with over 90 jobs at
+        # the lasers (10 weeks). Until this change the lasers worked every crewed hour, 1.000; the record gives 0.909, and 0.917 over the nine weeks
+        # from November 11, 2024. The unattended hours of a sheet tower are not crewed hours and stay at 1.
+        lv = q("""select sum(u.machine_hours) / sum(u.scheduled_hours - u.downtime_hours) from marts.mart_utilization_weekly u
+                  join marts.mart_weekly_floor w using (week_start) where u.work_center = 'laser' and w.wip_at_laser > 90 and w.weekdays = 5""")
+        self.laser_availability = round(min(float(lv.iloc[0, 0]), 1.0), 9)
+        # Brake hours outside the ordinary weekday shift, as the whole record shows them worked. Until this export's rerun every crewed brake hour,
+        # Saturday, extended and holiday-week hours included, was worked at brake_availability (0.967), and a Saturday shift was 8 hours on both B1 and B2.
+        #   saturday_with_time  was 1.000 (every Saturday called was worked), now 0.679: scheduled brake Saturdays in the calendar that have brake machine time
+        #   saturday_yield      was 0.967 on two brakes, now 1.000 on one brake: brake machine hours on those Saturdays over 8 hours each, at most 1
+        #   extended_yield      was 0.967, now 0.239: weekday and extended machine hours in full weeks with extended hours, less weekday crewed hours at
+        #                       brake_availability, over the extended hours scheduled
+        #   holiday_yield       was 0.967, now 0.885: machine hours over crewed hours net of downtime in weeks with fewer than five working weekdays
+        #   brake_availability  0.967, unchanged, on ordinary weekday hours
+        sat = q("""select c.calendar_date, coalesce(t.hours, 0) as hours from staging.stg_erp__work_center_calendar c
+                   left join (select cast(start_ts as date) as d, sum(hours) as hours from intermediate.int_machine_time where work_center = 'press_brake' group by 1) t
+                     on t.d = c.calendar_date
+                   where c.work_center = 'press_brake' and c.saturday order by 1""")
+        worked = sat[sat["hours"] > 0]
+        self.saturday_with_time = round(float(len(worked) / len(sat)), 9)
+        self.saturday_yield = round(min(float(worked["hours"].sum() / (8.0 * len(worked))), 1.0), 9)
+        bw = q("""select m.week_start, w.weekdays, max(u.extended_hours) as extended_hours, sum(m.machine_hours - m.saturday_hours) as worked,
+                      sum(m.scheduled_hours - m.downtime_hours) as crewed
+                  from marts.mart_machine_weekly m join marts.mart_weekly_floor w using (week_start)
+                  join marts.mart_utilization_weekly u on u.week_start = m.week_start and u.work_center = 'press_brake'
+                  where m.work_center = 'press_brake' group by 1, 2 order by 1""")
+        ext = bw[(bw["weekdays"] == 5) & (bw["extended_hours"] > 0)]
+        fitted = (ext["worked"].sum() - self.brake_availability * ext["crewed"].sum()) / ext["extended_hours"].sum()
+        self.extended_yield = round(float(min(max(fitted, 0.0), 1.0)), 9)
+        short = bw[bw["weekdays"] < 5]
+        self.holiday_yield = round(float(short["worked"].sum() / short["crewed"].sum()), 9)
+        bc = self.cal[(self.cal["work_center"] == "press_brake") & ~self.cal["saturday"]]
+        per_week = bc.groupby(bc["calendar_date"] - pd.to_timedelta(bc["calendar_date"].dt.weekday, unit="D")).size()
+        self.holiday_days = {(wk - T0).days + k for wk in per_week[per_week < 5].index for k in range(7)}
 
     # working-day clock
     def W(self, t):
@@ -288,9 +340,11 @@ class Shop:
         self.machines = defaultdict(list)
         self.pool = defaultdict(list)          # nest pools by sheet item
         self.results = []
+        self.op_log = []                           # every finished operation: work center, job, operation, arrival, start, end, standard hours,
+                                                   # and the end of the job's previous operation (its arrival for a first operation)
         self.overtime = dict(saturdays=0, extended_days=0, hours=0.0)
         self.ot_log = []
-        self.backlog_at_release = {}               # days of brake work waiting when each job is released
+        self.saturday_scheduled = defaultdict(float)   # by (year, quarter): the calendar's 16 scheduled brake hours for each Saturday called
         self.gate = None
         if self.sc.get("wip_cap"):
             self.gate = Gate(self, "cap", self.sc["wip_cap"])
@@ -427,6 +481,9 @@ class Shop:
     def durations(self, m, e, grouped):
         inp, r = self.inp, self.rng
         wc = m.wc
+        if r.random() < inp.no_setup_share.get(wc, 0.0):                 # the setup is inside the run hours, as on the operations with none clocked
+            sm = inp.laser_whole_ratio.get(m.id) if wc == "laser" else inp.whole_ratio.get(wc)
+            return 0.0, e["std"] * (sm.draw(r, e["std"]) if sm is not None else 1.0)
         if wc == "press_brake":
             red = self.sc.get("setup_reduction")
             if red and (e["part_id"], e["op_seq"]) in red["at_standard"]:
@@ -445,22 +502,44 @@ class Shop:
         run = e["run_std"] * (sm.draw(r, e["run_std"]) if sm is not None and e["run_std"] > 0 else 1.0)
         return su, run
 
+    def rate(self, m, w):
+        """Machine hours worked per crewed hour in a window: at the brakes the measured share for an ordinary weekday shift, a Saturday shift, an
+        extended shift or a holiday week; at the lasers the measured share of crewed hours; 1 elsewhere."""
+        if m.id == CELL:
+            return self.sc["bending_cell"]["availability"]
+        inp = self.inp
+        if m.wc == "laser":
+            return 1.0 if w[0] % 24 >= TOWER_HOURS[0] - 1e-9 else inp.laser_availability
+        if m.wc != "press_brake":
+            return 1.0
+        day = int(w[0] // 24)
+        if inp.days[day].weekday() == 5:
+            both = self.sc.get("planned_saturday_crew") == "both" and inp.days[day].month in self.sc.get("planned_saturday_months", ())
+            return inp.brake_availability if both else inp.saturday_yield
+        if w[0] % 24 >= EXTENDED[0] - 1e-9:
+            return inp.extended_yield
+        return inp.holiday_yield if day in inp.holiday_days else inp.brake_availability
+
+    def note_work(self, m, start, machine_hours):
+        """Called for every stretch of machine time; the model itself keeps none of them."""
+
     def work(self, m, hours_needed):
-        """Hold the machine for `hours_needed` of machine time across its windows; at the brakes the crewed time needed is longer by the measured availability."""
+        """Hold the machine for `hours_needed` of machine time across its windows; at the brakes the crewed time needed is longer by the measured yield."""
         env = self.env
-        phi = self.sc["bending_cell"]["availability"] if m.id == CELL else self.inp.brake_availability if m.wc == "press_brake" else 1.0
-        left = hours_needed / phi
+        left = hours_needed
         while left > 1e-9:
             w = m.next_window(env.now)
             if w is None:
                 return
             if w[0] > env.now:
                 yield env.timeout(w[0] - env.now)
-            dt = min(left, w[1] - env.now)
+            phi = self.rate(m, w)
+            dt = min(left / phi, w[1] - env.now)
             yield env.timeout(dt)
             ts = T0 + pd.Timedelta(hours=env.now - dt / 2)
             m.busy_hours[(ts.year, ts.quarter)] += dt * phi
-            left -= dt
+            self.note_work(m, env.now - dt, dt * phi)
+            left -= dt * phi
 
     def machine_loop(self, m):
         env = self.env
@@ -492,6 +571,7 @@ class Shop:
             e["start"] = env.now
             yield from self.work(m, su + run)
             m.busy = False
+            self.op_log.append((m.wc, e["job_id"], e["op_seq"], e["arrival"], e["start"], env.now, e["std"], e["previous_end"]))
             e["done"].succeed()
 
     # jobs -------------------------------------------------------------------
@@ -511,11 +591,13 @@ class Shop:
             if wc == "outside_processing":
                 yield env.timeout(inp.wd_add(env.now, float(r.choice(inp.outside))) - env.now)
                 continue
+            left = env.now if k > 0 else None
             if k > 0 and wc in inp.move:
                 yield env.timeout(inp.wd_add(env.now, float(r.choice(inp.move[wc]))) - env.now)
             e = dict(job_id=j.job_id, part_id=j.part_id, op_seq=o["op_seq"], rush=bool(j.rush_flag), due_h=due_h, planned=hours(o["planned_start"]), arrival=env.now, family=j.family, cls=j.cls,
                      qty=j.qty, tool=o["tooling_set"], setup_std=o["setup_std"], run_std=o["run_std_hours"], std=o["setup_std"] + o["run_std_hours"],
-                     remaining_std=remaining, color=j.powder_color if wc == "powder_coat" else None, eligible=True, cell_ok=bool(j.cell_ok), done=env.event())
+                     remaining_std=remaining, color=j.powder_color if wc == "powder_coat" else None, eligible=True, cell_ok=bool(j.cell_ok), done=env.event(),
+                     previous_end=env.now if left is None else left)
             if wc == "laser":
                 self.nest(e, j)
             self.queue[wc].append(e)
@@ -525,7 +607,7 @@ class Shop:
             if wc == "press_brake" and self.gate is not None:
                 self.gate.brake_done(e["std"])
         yield env.timeout(inp.wd_add(env.now, float(r.choice(inp.ship))) - env.now)
-        self.results.append(dict(job_id=j.job_id, release_date=j.release_date, due_date=j.due_date, ship_ts=T0 + pd.Timedelta(hours=env.now),
+        self.results.append(dict(job_id=j.job_id, customer_id=j.customer_id, revenue=j.revenue, release_date=j.release_date, due_date=j.due_date, ship_ts=T0 + pd.Timedelta(hours=env.now),
                                  routing_class=j.routing_class, rush=bool(j.rush_flag), order_date=j.order_date, requested_date=j.requested_date,
                                  quoted_lead_days=j.quoted_lead_days))
         if self.gate is not None:
@@ -577,15 +659,24 @@ class Shop:
             k = int(np.searchsorted(inp.ot_edges, self.jobs_at_brakes(), side="right"))
             planned = inp.days[d].month in self.sc.get("planned_saturday_months", ())
             if inp.days[d].weekday() == 4 and (planned or r.random() < inp.p_saturday[k]):
+                # a planned shift is crewed; a queue-triggered one is worked as often as the record's scheduled Saturdays were, on one brake
+                if planned and self.sc.get("planned_saturday_crew") == "both":
+                    crew = SAT_MACHINES
+                elif planned or r.random() < inp.saturday_with_time:
+                    crew = (SAT_MACHINES[int(inp.days[d].isocalendar()[1]) % 2],)
+                else:
+                    crew = ()
                 a = 24 * (d + 1) + FIRST[0]
-                for mid in SAT_MACHINES:
+                for mid in crew:
                     bisect.insort(mach[mid].extra, (a, a + 8.0, not planned))
-                    mach[mid].sched_added[(inp.days[d + 1].year, inp.days[d + 1].quarter)] += 8.0
+                # Brake utilization counts a Saturday as the shop's calendar does: 16 scheduled hours for each Saturday called, whichever brakes
+                # are crewed. Until this change it counted 8 hours for each brake crewed, which read about 1 point above the record's figure.
+                self.saturday_scheduled[(inp.days[d + 1].year, inp.days[d + 1].quarter)] += 16.0
                 self.overtime["saturdays"] += 1
-                self.overtime["hours"] += 16.0
-                self.ot_log.append((inp.days[d + 1], "saturday", 16.0))
+                self.overtime["hours"] += 8.0 * len(crew)
+                self.ot_log.append((inp.days[d + 1], "saturday", 8.0 * len(crew)))
             yield env.timeout(2.0)
-            if r.random() < inp.p_extended[k]:
+            if r.random() < inp.p_extended[k] and inp.extended_yield >= 0.01:
                 a = 24 * d + EXTENDED[0]
                 for mid in SAT_MACHINES:
                     bisect.insort(mach[mid].extra, (a, a + 2.0, True))
@@ -613,7 +704,6 @@ class Shop:
             if t > env.now:
                 yield env.timeout(t - env.now)
             ops = self.inp.ops.get(j.job_id)
-            self.backlog_at_release[j.job_id] = sum(e["std"] for e in self.queue["press_brake"]) * self.inp.brake_actual_over_standard / 72.0
             if ops:
                 env.process(self.job_flow(j, ops))
 
@@ -644,6 +734,19 @@ def quarter_measures(shop):
     return g
 
 
+def customer_measures(shop):
+    """Jobs shipped and jobs on time in the report year for each of the customers that make up 80% of its revenue, from one run."""
+    r = pd.DataFrame(shop.results)
+    r["ship_date"] = r["ship_ts"].dt.normalize()
+    r["on_time"] = r["ship_date"] <= pd.to_datetime(r["due_date"])
+    rows = []
+    for fq, label in ((1, "year"), (2, "Q2 to Q4")):
+        y = r[(r["ship_date"].dt.year == REPORT_YEAR) & (r["ship_date"].dt.quarter >= fq) & r["customer_id"].isin(shop.inp.top_customers)]
+        g = y.groupby("customer_id")["on_time"].agg(jobs="size", on_time="sum").reset_index()
+        rows += [dict(period=label, customer_id=c, jobs=int(n), on_time=int(k)) for c, n, k in zip(g["customer_id"], g["jobs"], g["on_time"])]
+    return rows
+
+
 # ── measures ────────────────────────────────────────────────────────────────
 def measures(shop, first_quarter=1):
     """Lead time, WIP, utilization and on-time delivery of the report year from one run, on the same definitions as the marts."""
@@ -660,6 +763,23 @@ def measures(shop, first_quarter=1):
     wip = np.mean([np.searchsorted(rel, np.datetime64(d), side="right") - np.searchsorted(shp, np.datetime64(d), side="right") for d in days])
     out = dict(jobs_shipped=len(y), lead_time_median=float(y["lead"].median()), lead_time_p90=float(y["lead"].quantile(0.9)), wip_mean=float(wip),
                on_time_delivery=float(y["on_time"].mean()))
+    # late jobs, and the working days from the due date to the ship date summed over them
+    late = y[~y["on_time"]]
+    out["late_jobs"] = float(len(late))
+    out["days_late"] = float(sum(inp.W(hours(s)) - inp.W(hours(d)) for s, d in zip(late["ship_date"], late["due_date"])))
+    out["revenue_shipped"] = float(y["revenue"].sum())
+    # Queue time per operation, operations started in the period: working days from the end of the job's previous operation to the start, the
+    # basis of the record's queue figures (the move is inside it). Until this change it ran from arrival at the work center.
+    start, end = hours(f"{REPORT_YEAR}-{3 * first_quarter - 2:02d}-01"), hours(f"{REPORT_YEAR + 1}-01-01")
+    ops = [(o[0], inp.W(o[4]) - inp.W(o[7])) for o in shop.op_log if start <= o[4] < end]
+    brake = [w for wc, w in ops if wc == "press_brake"]
+    out["brake_queue_mean"] = float(np.mean(brake)) if brake else np.nan
+    out["queue_mean_all"] = float(np.mean([w for _, w in ops])) if ops else np.nan
+    # standard hours already worked on the jobs on the floor, mean over the days of the period
+    day_no = np.array([(d - T0).days for d in days])
+    ship_day = {x: (s - T0).days for x, s in zip(r["job_id"], r["ship_date"])}
+    done = sum(o[6] * (np.searchsorted(day_no, ship_day.get(o[1], 10 ** 9), side="left") - np.searchsorted(day_no, int(o[5] // 24) + 1, side="left")) for o in shop.op_log)
+    out["wip_standard_hours_worked"] = float(done / len(day_no))
     for wc, name in (("press_brake", "brake_utilization"), ("robotic_weld", "robotic_weld_utilization"), ("laser", "laser_utilization")):
         busy = sched = 0.0
         for m in shop.machines[wc]:
@@ -675,6 +795,8 @@ def measures(shop, first_quarter=1):
             for (yr, qtr), h in m.sched_added.items():
                 if yr == REPORT_YEAR and qtr >= first_quarter:
                     sched += h
+        if wc == "press_brake":
+            sched += sum(h for (yr, qtr), h in shop.saturday_scheduled.items() if yr == REPORT_YEAR and qtr >= first_quarter)
         out[name] = busy / sched
     def in_period(k):
         return k[0] == REPORT_YEAR and k[1] >= first_quarter
@@ -695,63 +817,10 @@ def measures(shop, first_quarter=1):
     out["lead_time_released_nov_2024"] = float(nov["lead"].median())
     log = [x for x in shop.ot_log if x[0].year == REPORT_YEAR and x[0].quarter >= first_quarter]
     out["saturday_shifts"] = float(sum(1 for x in log if x[1] == "saturday"))
+    out["saturday_hours"] = float(sum(x[2] for x in log if x[1] == "saturday"))                   # crewed brake hours on the Saturdays worked
+    winter = [x for x in shop.ot_log if x[1] == "saturday" and pd.Timestamp(f"{REPORT_YEAR - 1}-11-01") <= x[0] < pd.Timestamp(f"{REPORT_YEAR}-03-01")]
+    out["saturday_shifts_winter"], out["saturday_hours_winter"] = float(len(winter)), float(sum(x[2] for x in winter))
     out["extended_hours"] = float(sum(x[2] for x in log if x[1] == "extended"))
     if shop.gate is not None:
         out["release_hold_days"] = float(np.mean(shop.gate.held_days)) if shop.gate.held_days else 0.0
-    out.update(load_aware_promise(shop, r, first_quarter))
-    out.update(quote_table_promise(shop, r, first_quarter))
     return out
-
-
-def quote_table_promise(shop, r, first_quarter):
-    """On-time delivery if non-rush lines were promised at the later of the requested date and the order date plus the quote table's lead time:
-    the table value for the routing class and the brake backlog at release, never below the fixed quote. The floor is not changed."""
-    inp = shop.inp
-    r = r.dropna(subset=["order_date"]).copy()
-    r["order_date"] = pd.to_datetime(r["order_date"])
-    r["requested_date"] = pd.to_datetime(r["requested_date"])
-    r["due_new"] = pd.to_datetime(r["due_date"])
-    r["quote_new"] = np.nan
-    for idx, jid, cls, od, req, rush, fixed in zip(r.index, r["job_id"], r["routing_class"], r["order_date"], r["requested_date"], r["rush"], r["quoted_lead_days"]):
-        if rush or od.year != REPORT_YEAR and (od + pd.Timedelta(days=120)).year != REPORT_YEAR:
-            continue
-        band = int(np.searchsorted(inp.quote_edges, shop.backlog_at_release[jid], side="left"))
-        n = max(float(fixed), inp.quote_table.get((cls, band), float(fixed)))
-        new = (T0 + pd.Timedelta(hours=inp.wd_add(hours(od), n))).normalize()
-        r.at[idx, "due_new"] = max(new, req) if req == req else new
-        r.at[idx, "quote_new"] = n
-    y = r[(r["ship_date"].dt.year == REPORT_YEAR) & (r["ship_date"].dt.quarter >= first_quarter)]
-    q_ = y.dropna(subset=["quote_new"])
-    return dict(on_time_delivery_quote_table=float((y["ship_date"] <= y["due_new"]).mean()),
-                promises_longer_quote_table=float((q_["quote_new"] > q_["quoted_lead_days"]).mean()) if len(q_) else np.nan,
-                quote_table_mean=float(q_["quote_new"].mean()) if len(q_) else np.nan)
-
-
-def load_aware_promise(shop, r, first_quarter, weeks=13, pctl=0.8, min_jobs=20):
-    """On-time delivery if non-rush lines were promised at the later of the requested date and the order date plus the 80th-percentile
-    lead time of the routing class over the trailing 13 weeks. Rush lines keep their promise. The floor is not changed."""
-    inp = shop.inp
-    r = r.dropna(subset=["order_date"]).copy()
-    r["order_date"] = pd.to_datetime(r["order_date"])
-    r["requested_date"] = pd.to_datetime(r["requested_date"])
-    r["due_new"] = pd.to_datetime(r["due_date"])
-    r["quote_new"] = np.nan
-    for cls, g in r.groupby("routing_class"):
-        h = g.sort_values("ship_date")
-        ship, lead = h["ship_date"].to_numpy(), h["lead"].to_numpy()
-        for idx, od, req, rush in zip(g.index, g["order_date"], g["requested_date"], g["rush"]):
-            if rush or od.year != REPORT_YEAR and (od + pd.Timedelta(days=120)).year != REPORT_YEAR:
-                continue
-            a, b = np.searchsorted(ship, np.datetime64(od - pd.Timedelta(weeks=weeks))), np.searchsorted(ship, np.datetime64(od))
-            if b - a < min_jobs:
-                continue
-            n = float(np.ceil(np.quantile(lead[a:b], pctl)))
-            t = inp.wd_add(hours(od), n)
-            new = (T0 + pd.Timedelta(hours=t)).normalize()
-            r.at[idx, "due_new"] = max(new, req) if req == req else new
-            r.at[idx, "quote_new"] = n
-    y = r[(r["ship_date"].dt.year == REPORT_YEAR) & (r["ship_date"].dt.quarter >= first_quarter)]
-    q_ = y.dropna(subset=["quote_new"])
-    return dict(on_time_delivery_load_aware=float((y["ship_date"] <= y["due_new"]).mean()),
-                promises_longer_than_fixed_quote=float((q_["quote_new"] > q_["quoted_lead_days"]).mean()) if len(q_) else np.nan,
-                load_aware_quote_mean=float(q_["quote_new"].mean()) if len(q_) else np.nan)
