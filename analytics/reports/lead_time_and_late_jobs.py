@@ -10,7 +10,7 @@ from analytics.reports import quoting_section
 from analytics.reports.combine import write
 
 
-ORDER = [("Flow and WIP", [1, 4]), ("Lead Time", [3, 2]), ("Late Jobs", [5, 6, 7, 8])]
+ORDER = [("Flow and WIP", [1, 4]), ("Lead Time", [3, 2]), ("On-time and Late Jobs", [5, 6, 7, 8])]
 # tables that come in pairs for the year and the ordinary quarters, by the numbers they carry as merged
 PAIRS = {"2a": "2b", "13": "14"}
 
