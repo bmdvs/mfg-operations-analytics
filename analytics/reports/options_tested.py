@@ -173,8 +173,8 @@ def fig_effects():
 
 
 WORKING = [SETUP, SAT_BOTH, SAT_ONE, WELD, CHANGER, CELL, EDD]
-# the outcomes of the chart of changes that work: measure, panel title, decimals, in points, and whether a rise is good for delivery (None: neither)
-PANELS = [("on_time_delivery", "On-time delivery" + chr(10) + "(points)", 1, True, True), ("brake_utilization", "Brake utilization" + chr(10) + "(points)", 1, True, None),
+# the outcomes of the chart of changes that work: measure, panel title, decimals, in points, and whether a rise is good for delivery
+PANELS = [("on_time_delivery", "On-time delivery" + chr(10) + "(points)", 1, True, True), ("brake_utilization", "Brake utilization" + chr(10) + "(points)", 1, True, False),
           ("brake_queue_mean", "Brake queue time" + chr(10) + "(days)", 2, False, False), ("wip_mean", "Floor WIP" + chr(10) + "(jobs)", 0, False, False),
           ("late_jobs", "Late jobs" + chr(10), 0, False, False), ("days_late", "Days late" + chr(10), 0, False, False)]
 # the panels under each heading: first and last, by position
@@ -192,7 +192,7 @@ def fig_changes():
         ax.axhline(0.8, color=GREY, lw=0.6, ls=":")
         for yi, s in zip(y, names):
             t = [v * (100 if points else 1) for v in A.diff(s, m)]
-            color = NEUTRAL if up_is_good is None else (BETTER if (t[0] > 0) == up_is_good else WORSE)
+            color = NEUTRAL if t[1] <= 0 <= t[2] else (BETTER if (t[0] > 0) == up_is_good else WORSE)   # no effect where the interval takes in zero
             ax.plot([t[1], t[2]], [yi, yi], color=color, lw=1.6)
             ax.scatter([t[0]], [yi], color=color, s=22, zorder=3)
             lab = sg(t[0], d)
