@@ -526,12 +526,14 @@ def build():
     assert ten["within"].all() and bd["peak_week"] == bd["peak_week_model"]
     assert _pk["payback"] * 12 < 5 and _cell["npv"][0] > max(_pk["npv"][0], A.money(P_CHANGER, PACKAGE)["npv"][0], A.money(P_TOWER, PACKAGE)["npv"][0])
     kusd = lambda x: f"${x / 1000:,.1f}k".replace(".0k", "k")
-    b.append("<p>A discrete event simulation of the shop floor was built to test which changes to the shop would raise on-time delivery before any of them are made. "
-             "This simulation models the shop's machines, shift calendars, dispatch rules and recorded downtime, and draws setup, run, move, and material times straight from the data record. "
-             "This allowed us to implement various scenarios with changes to the shop's release, dispatch and capacity and see which impact on-time delivery.</p>")
-    b.append(f"<p>Before running the simulations, the model was tuned and its accuracy and validation scores are presented in <a href='#f4'>Section 4</a>. "
-             f"The model reproduced the shop's {YEAR} figures within tolerance on {pc(ten['within'].mean(), 0)} of the measures it was tested on, including an on-time delivery rate of "
-             f"{pc(model_otd['year'])} (vs. measured rate of {pc(measured_otd['year'])}) and a peak year-end WIP build of {n0(bd['peak_model'])} jobs (vs. measured peak of {n0(bd['peak_measured'])}).</p>")
+    assert len(ten) == 10
+    b.append(f"<p>A discrete event simulation of the shop floor was built to test a range of scenarios aimed at raising on-time delivery. "
+             f"The model replays every job released from January {YEAR - 1} through the shop's routings, shift calendars, crewing, recorded downtime and dispatch rules, "
+             f"and draws setup, run, move and material times from the shop's {YEAR} record. "
+             "This let us measure the effect of each change on on-time delivery and related measures: floor WIP, late jobs, days late, and brake utilization and queue time.</p>")
+    b.append(f"<p>The model's accuracy was checked with a baseline run of every job with no changes, replicating the shop as it actually operated. "
+             f"It reproduced all ten measures within tolerance, including {YEAR} on-time delivery of {pc(model_otd['year'])} against {pc(measured_otd['year'])} measured and a year-end peak of "
+             f"{n0(bd['peak_model'])} jobs on the floor against {n0(bd['peak_measured'])} measured. <a href='#f4'>Section 4</a> gives the full validation.</p>")
     b.append("<p>We ran scenarios across two broad categories: (i) Release and Dispatch, no-cost changes to the order or release of work, and (ii) Capacity, capital-intensive changes that add "
              "machine hours, permanently or seasonally. As seen below, changes that add brake hours had the largest positive impact on on-time delivery.</p>")
     b.append(titled(fig_summary_effects(), f"Change in On-time Delivery by Scenario, {YEAR}"))
