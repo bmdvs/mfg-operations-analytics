@@ -201,10 +201,29 @@ def fig_distribution():
     return save(f, "lead_time_distribution", "Lead time distribution by routing class")
 
 
+def first_cut(quarters):
+    """The first-operation queue split between the lasers and the punch: mean working days per job, for on-time and late jobs shipped in the given quarters."""
+    d = q(f"""select case when l.on_time then 'on time' else 'late' end as job_class, s.work_center, sum(s.days) as days
+              from intermediate.int_job_lead_time l left join intermediate.int_job_stage_days s on s.job_id = l.job_id and s.stage = 'first-operation queue'
+              where year(l.ship_date) = {YEAR} and quarter(l.ship_date) in ({", ".join(str(k) for k in quarters)}) group by 1, 2""")
+    n = q(f"""select case when on_time then 'on time' else 'late' end as job_class, count(*) as jobs from intermediate.int_job_lead_time
+              where year(ship_date) = {YEAR} and quarter(ship_date) in ({", ".join(str(k) for k in quarters)}) group by 1""").set_index("job_class")["jobs"]
+    g = d.dropna(subset=["work_center"]).pivot(index="work_center", columns="job_class", values="days").fillna(0.0)
+    assert set(g.index) == set(CUT)
+    return g[["on time", "late"]] / n[["on time", "late"]]
+
+
 def fig_stages_report():
-    f, axes = fig(h=7.2, ncols=2, grid="x", sharey=True, sharex=True)
-    for ax, (p, label) in zip(axes, ((SY, f"{YEAR}"), (SR, f"{YEAR} {RT}"))):
+    f, axes = fig(h=7.4, ncols=2, grid="x", sharey=True, sharex=True)
+    for ax, (p, label, quarters) in zip(axes, ((SY, f"{YEAR}", (1, 2, 3, 4)), (SR, f"{YEAR} {RT}", (2, 3, 4)))):
         g = p.copy()
+        cut = first_cut(quarters)
+        assert all(abs(cut[c].sum() - g.loc["first-operation queue", c]) < 1e-9 for c in ("on time", "late"))
+        at = g.loc["first-operation queue", "order"]
+        g = g.drop(index="first-operation queue")
+        for k, wc in enumerate(CUT):
+            g.loc[f"queue: {wc}", ["on time", "late"]] = cut.loc[wc].values
+            g.loc[f"queue: {wc}", "order"] = at + 0.1 * k
         holds = g[g.index.str.startswith("hold:")][["on time", "late"]].sum()
         g = g[~g.index.str.startswith("hold:")]
         g.loc["hold (recorded)", ["on time", "late"]] = holds.values
