@@ -698,7 +698,7 @@ def build():
              f"{musd(ordinary[PACKAGE]['npv'][0])}; the cell's is {musd(oc['npv'][0])} and the tool changer's {musd(ot_['npv'][0])}.</p>")
     b.append(titled(fig_sold(money), "NPV Against the Share of Freed Brake Hours Sold"))
 
-    b.append("<h3 id='f3_2'>What the money does not capture</h3>")
+    b.append("<h3 id='f3_2'>Other Considerations</h3>")
     b.append(f"<p>Several effects of these changes are measured but not priced, and some are not measured at all. {T.see('customers')}</p>")
     base90 = A.lifted(CURRENT, 0.90)
 
@@ -711,16 +711,19 @@ def build():
             h = -chg(sc, "brake_setup_hours", "year", ref)
         else:
             return ""
-        return f" Operator hours freed: {n0(h)}."
+        return f"Operator hours freed: {n0(h)}"
 
     def unpriced(sc, ref):
+        """What is measured for a change and shown nowhere else: the chart of scenarios with positive impact carries on-time delivery, late jobs, days late and floor WIP."""
         c90, c95 = A.lifted(sc, 0.90), A.lifted(sc, 0.95)
         per = "rest" if sc == WELD else "year"
         lab = RT if sc == WELD else f"{YEAR}"
-        return (f"{lab}: {n0(-chg(sc, 'late_jobs', per, ref))} late jobs and {n0(-chg(sc, 'days_late', per, ref))} days late removed ({sg(chg(sc, 'on_time_delivery', per, ref) * 100)} points); "
-                f"90th-percentile lead time {sg(chg(sc, 'lead_time_p90', per, ref), 1)} days; floor WIP {sg(chg(sc, 'wip_mean', per, ref), 0)} jobs. Top customers at or above 90% on time: "
-                f"{c90[0]} of {len(A.REVENUE)} ({musd(c90[1])} of revenue) against {base90[0]} today; at or above 95%: {c95[0]}.{freed_hours(sc, ref)} Weekend hours per brake operator, "
-                f"November to February: {d1(A.mean(sc, 'saturday_hours_winter') / M['operators'])}.")
+        items = [f"90th-percentile lead time, {lab}: {sg(chg(sc, 'lead_time_p90', per, ref), 1)} days",
+                 f"Top customers at or above 90% on time: {c90[0]} of {len(A.REVENUE)} ({musd(c90[1])} of revenue), against {base90[0]} today",
+                 f"Top customers at or above 95% on time: {c95[0]}",
+                 freed_hours(sc, ref),
+                 f"Weekend hours per brake operator, November to February: {d1(A.mean(sc, 'saturday_hours_winter') / M['operators'])}"]
+        return "<ul style='margin:0;padding-left:18px'>" + "".join(f"<li>{x}</li>" for x in items if x) + "</ul>"
 
     sats = A.mean(SAT_BOTH, "saturday_hours_winter") / 8 / M["operators"]
     sats_now = A.mean(CURRENT, "saturday_hours_winter") / 8 / M["operators"]
