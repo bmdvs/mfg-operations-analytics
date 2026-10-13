@@ -139,19 +139,16 @@ def fig_build(w):
 
 
 IMPACT = {"Positive Impact": BRAND_BLUE, "No effect": GREY, "Negative Impact": RED}
-IMPACT_NOTE = ("presented using 95% confidence intervals. Positive and negative impacts defined as the full confidence interval sitting above or below 0, and no effect is denoted "
-               "when the interval crosses 0.")
-
 
 def impact(t, up_is_good=True):
     """Positive or negative where the whole interval lies on one side of zero; no effect where it takes in zero."""
     return "No effect" if t[1] <= 0 <= t[2] else ("Positive Impact" if (t[0] > 0) == up_is_good else "Negative Impact")
 
 
-def fig_effects(names, file):
-    """The change in on-time delivery of the given scenarios against the status quo, for the year and for the ordinary quarters, largest first."""
+def fig_effects(names, file, head):
+    """The change in on-time delivery of the given scenarios against the status quo, for the year and for the ordinary quarters, largest first, under a heading."""
     names = sorted(names, key=lambda s: chg(s, "on_time_delivery"))
-    h = 1.75 + 0.3 * len(names)
+    h = 2.05 + 0.3 * len(names)
     f, axes = fig(h=h, ncols=2, grid="x", sharey=True)
     y = np.arange(len(names))
     for ax, (per, lab) in zip(axes, PERIODS):
@@ -165,8 +162,12 @@ def fig_effects(names, file):
         lo, hi = ax.get_xlim()
         ax.set_xlim(lo - (hi - lo) * 0.12, hi + (hi - lo) * 0.12)
         ax.set_title(lab, fontsize=10)
-    axes[0].set_yticks(y)
-    axes[0].set_yticklabels(names, fontsize=8.5)
+    axes[0].set_yticks(list(y) + [len(names)])
+    axes[0].set_yticklabels(names + [head], fontsize=8.5)
+    axes[0].get_yticklabels()[-1].set_fontweight("bold")
+    axes[0].get_yticklabels()[-1].set_color("black")
+    axes[0].yaxis.get_major_ticks()[-1].tick1line.set_visible(False)
+    axes[0].set_ylim(-0.6, len(names) + 0.4)
     f.tight_layout(rect=(0, 0.78 / h, 1, 1))
     middle = float(sig((axes[0].get_position().x0 + axes[1].get_position().x1) / 2, 4))
     f.text(middle, 0.52 / h, "Change in on-time delivery vs. Status Quo (points)", ha="center", va="center", fontsize=10)
@@ -241,7 +242,7 @@ def fig_summary_effects():
     ax.set_yticklabels(names, fontsize=9)
     lo, hi = ax.get_xlim()
     ax.set_xlim(lo - 1.2, hi + 1.2)
-    ax.set_xlabel(f"Change in on-time delivery, {YEAR} (points)")
+    ax.set_xlabel("Change in on-time delivery")
     f.legend([Patch(color=c) for c in KIND_COLOR.values()], list(KIND_COLOR), frameon=False, fontsize=8.5, ncol=2, loc="lower center")
     f.tight_layout(rect=(0, 0.1, 1, 1))
     return save(f, "summary_effects", "")
@@ -249,7 +250,7 @@ def fig_summary_effects():
 
 def fig_summary_steps(package, cell):
     """On-time delivery from the status quo to the package and the package with the robotic cell, each with its cost and return under the bar."""
-    f, ax = fig(h=4.6)
+    f, ax = fig(h=3.7)
     base, pk, pc_ = (A.mean(s, "on_time_delivery") * 100 for s in (CURRENT, PACKAGE, P_CELL))
     short = lambda x: musd(x) if abs(x) >= 1e6 else f"${x / 1e3:,.0f}K"
     back = lambda y: f"{y * 12:.0f} months" if y < 1 else f"{y:.1f} years"
@@ -270,7 +271,7 @@ def fig_summary_steps(package, cell):
     ax.set_xticklabels(["" for _ in steps])
     ax.set_ylim(floor, 96)
     ax.set_ylabel("On-time delivery (%)")
-    f.subplots_adjust(left=0.08, right=0.99, top=0.96, bottom=0.25)
+    f.subplots_adjust(left=0.08, right=0.99, top=0.95, bottom=0.31)
     return save(f, "summary_steps", "")
 
 
@@ -526,34 +527,36 @@ def build():
     assert _pk["payback"] * 12 < 5 and _cell["npv"][0] > max(_pk["npv"][0], A.money(P_CHANGER, PACKAGE)["npv"][0], A.money(P_TOWER, PACKAGE)["npv"][0])
     b.append("<p>A discrete event simulation of the shop floor was built to test a range of scenarios aimed at raising on-time delivery. "
              f"The model replays every job released from January {YEAR - 1} through the shop's own routings, shift calendars, crewing, recorded downtime, and dispatch rules, "
-             "and draws setup, run, move and material times from the shop's recorded performance. "
-             "This let us measure the impact that each scenario has on on-time delivery and related measures: floor WIP, late jobs, days late, and brake utilization and queue time.</p>")
-    b.append(f"<p>The model's accuracy was checked with a baseline run of every job with no changes, replicating the shop as it actually operated. "
+             "and draws setup, run, move, and material times from the shop's recorded performance. "
+             "This lets us measure the impact that each scenario has on on-time delivery and related measures: brake utilization and queue time, floor WIP, late jobs, and days late.</p>")
+    b.append(f"<p>The model's accuracy was checked with a baseline run of every job with no changes, replicating the shop as it actually operated (the &quot;Status Quo&quot; scenario). "
              f"It reproduced {pc(ten['within'].mean(), 0)} of measures within tolerance, including {YEAR} on-time delivery of {pc(model_otd['year'])} against {pc(measured_otd['year'])} measured and a "
              f"year-end peak of {n0(bd['peak_model'])} jobs on the floor against {n0(bd['peak_measured'])} measured. <a href='#f4'>Section 4</a> gives the full validation.</p>")
     b.append("<p>We tested scenarios in two categories: (i) release and dispatch rules governing when work is released and the order in which it is run, and (ii) capacity changes that add "
              "machine hours. As shown below, the changes that add brake hours raised on-time delivery the most, while changes to release and dispatch had a neutral or negative impact.</p>")
-    b.append(titled(fig_summary_effects(), f"Change in On-time Delivery by Scenario, {YEAR}"))
+    b.append(titled(fig_summary_effects(), f"Scenario Results: Change in On-time Delivery vs. Status Quo, {YEAR}"))
     b.append(f"<p>We compared the results of the scenarios individually and in specific combinations alongside their cost of implementation, NPV and payback periods. We found that the "
              f"<b>&quot;Operating Package&quot; (brake setup program + additional Saturday shifts on both brakes)</b> increased {YEAR} on-time delivery by "
              f"{chg(PACKAGE, 'on_time_delivery') * 100:.1f} points to {pc(A.mean(PACKAGE, 'on_time_delivery'))} without significant capital investment. Adding a robotic bending cell on top of "
              f"the Operating Package generated the highest return of all capital-intensive options tested, increasing on-time delivery another "
              f"{(A.mean(P_CELL, 'on_time_delivery') - A.mean(PACKAGE, 'on_time_delivery')) * 100:.1f} points to {pc(A.mean(P_CELL, 'on_time_delivery'))}. "
              f"<a href='#f2'>Sections 2</a> and <a href='#f3'>3</a> detail these results and ROI.</p>")
-    b.append(titled(fig_summary_steps(_pk, _cell), f"On-time Delivery From Current Practice, With Cost and Return, {YEAR}"))
+    b.append(titled(fig_summary_steps(_pk, _cell), f"On-time Delivery, Status Quo vs. Recommended Scenarios, {YEAR}"))
     b.append(f"<div class='caption'>Note: net present value and payback period assume {A.SOLD:.0%} of the freed brake hours are sold.</div>")
     # 1 ── the scenarios
-    b.append("<h2 id='f1'>1. The Scenarios Simulated</h2>")
-    b.append(f"<p>{link('capacity', 'The capacity report')} finds that the brakes are the shop's primary constraint: they hold {pc(M['brake_share_of_queue'], 0)} of queue time and lose "
-             f"{n0(M['setups_over_per_week'])} hours a week to setups over standard. Given this, we considered two broad ways to raise on-time delivery: release and dispatch rules and "
-             f"additional press brake hours. {T.see('assume', 'modelled')}</p>")
+    b.append("<h2 id='f1'>1. Simulations Tested</h2>")
+    queue_days_share = re.search(r"the highest utilization with the least buffer, and (\d+)% of all queue days", cap_text).group(1)
+    runs = A.ALL["replication"].nunique()
+    assert runs == 30
+    b.append("<p>We considered two broad categories of simulations intended to raise on-time delivery:</p>")
     b.append("<p><b>Release and dispatch scenarios</b> change the rules that govern how work enters and moves through the floor. These changes cost nothing to implement. If late jobs come "
              "from too much work on the floor, or from the wrong job going next at the brakes, these should move on-time delivery.</p>")
-    b.append("<p><b>Capacity scenarios</b> add hours at the brakes or around them, through operating changes or new equipment. These changes cost labor and/or capital. If late jobs come "
-             "from too few brake hours, these should move on-time delivery.</p>")
-    b.append(f"<p>Each scenario was run on its own. It changes only the inputs listed for it in the tables below, and everything else in the model stays as the shop operates today, the "
-             f"status quo. Each scenario was run {A.ALL['replication'].nunique()} times, each with different draws of setup, run, move and material times, and its effect is the difference "
-             f"from the status quo over those runs, reported with a 95% confidence interval. The combinations in <a href='#f2'>Section 2</a> were run the same way.</p>")
+    b.append(f"<p><b>Capacity scenarios</b> add machine hours through operating changes or new equipment. These changes cost labor and/or capital. "
+             f"{link('capacity', 'The capacity report')} finds that the brakes are the shop's primary constraint: they operate at the highest utilization with the least buffer, and hold "
+             f"{queue_days_share}% of all queue days. Given this, we expect scenarios that add brake hours to move on-time delivery.</p>")
+    b.append(f"<p>Each scenario changes only the inputs listed for it in the tables below; everything else stays as the shop operates today (the Status Quo). Each scenario and the "
+             f"Status Quo were run {runs} times, each run with its own draws of setup, run, move and material times. <a href='#f2'>Section 2</a> presents the results. "
+             f"{T.see('assume', 'modelled')}</p>")
     # late jobs against on-time jobs by stage, for the year (the flow report's stage table)
     _st = q("select stage, job_class, mean_days from marts.mart_lead_time_by_stage where period = 'year' and job_class in ('on time', 'late')").pivot(index="stage", columns="job_class", values="mean_days")
     _gap = _st["late"] - _st["on time"]
@@ -601,20 +604,23 @@ def build():
     T.held["modelled"] = (T.held["modelled"][0], table(pd.DataFrame([[r[0], r[4]] for r in release + capacity_rows], columns=["Scenario", "How it is modelled"])))
 
     # 2 ── results
-    b.append("<h2 id='f2'>2. Simulation Results</h2>")
+    b.append("<h2 id='f2'>2. Results</h2>")
     works_cap = [s for s in (SETUP, SAT_BOTH, CHANGER, CELL) if A.VERDICT[s] == "Works"]
     assert len(works_cap) == 4 and A.VERDICT[EDD] == "Works" and A.VERDICT[WELD] == "Works" and A.VERDICT[SAT_ONE] == "Works" and A.VERDICT[TOWER] == "No effect"
     assert [s for s in A.RELEASE if A.VERDICT[s] == "Works"] == [EDD] and all(A.VERDICT[s] == "Makes it worse" for s in A.RELEASE[:3] + [RATIO, "Shortest processing time at the brakes"])
     edd_late, edd_days = A.diff(EDD, "late_jobs"), A.diff(EDD, "days_late")
     assert edd_late[2] < 0 and edd_days[1] < 0 < edd_days[2]
     cap180 = A.RELEASE[2]
-    b.append(f"<p>Each scenario was evaluated based on its impact on on-time delivery rates in either {YEAR} or {RT}. As detailed in {link('lead', 'the flow report')}, this {RT} period "
+    b.append(f"<p>Each scenario was evaluated based on its impact on on-time delivery rates in {YEAR} and {RT}. As detailed in {link('lead', 'the flow report')}, this {RT} period "
              f"excludes the significant capacity constraints and backlog build in Q1, and so presents a view of the scenario's performance in more normalized operating periods.</p>")
+    b.append(f"<p>Each result in this section is a scenario's average over its {runs} runs less the Status Quo's average over its {runs} runs, with a 95% confidence interval: the range "
+             f"the true effect likely falls in. An effect is denoted positive or negative when the whole interval lies on one side of zero, and shows as no effect when the interval "
+             f"crosses zero.</p>")
     b.append(f"<p>Among the release and dispatch rules, only earliest due date improved on-time delivery. The other release and dispatch scenarios had a neutral to negative impact. "
-             f"The three WIP caps, the due-date ratio and shortest processing time at the brakes make delivery worse, the cap at 180 by {d1(-chg(cap180, 'on_time_delivery') * 100)} points, "
-             f"because a cap moves the wait from the brakes to the release gate ({d1(A.mean(cap180, 'release_hold_days'))} days held) without adding brake hours. {T.see('hold')}</p>")
-    b.append(titled(fig_effects(A.RELEASE, "effects_release_dispatch"), "Release and Dispatch Scenarios: Change in On-Time Delivery vs. Status Quo"))
-    b.append(f"<div class='caption'>Change in on-time delivery {IMPACT_NOTE}</div>")
+             f"The three WIP caps, the due-date ratio and shortest processing time at the brakes make on-time delivery worse, with the cap at 180 jobs reducing it by "
+             f"{d1(-chg(cap180, 'on_time_delivery') * 100)} points, because the caps move the wait from the brakes to the release gate ({d1(A.mean(cap180, 'release_hold_days'))} days held) "
+             f"without adding machine hours. {T.see('hold')}</p>")
+    b.append(titled(fig_effects(A.RELEASE, "effects_release_dispatch", "Release and Dispatch"), "Release and Dispatch Scenarios: Change in On-Time Delivery vs. Status Quo"))
 
     low_cost = {d1(chg(s, "on_time_delivery") * 100) for s in (SETUP, SAT_BOTH)}
     assert len(low_cost) == 1 and max(chg(s, "on_time_delivery") for s in (WELD, TOWER)) < min(chg(s, "on_time_delivery") for s in (SETUP, SAT_BOTH, SAT_ONE, CHANGER, CELL))
@@ -623,8 +629,7 @@ def build():
              f"replacing brake B3, also yielded improvements ({d1(chg(CELL, 'on_time_delivery') * 100)} and {d1(chg(CHANGER, 'on_time_delivery') * 100)} points); they're analyzed in "
              f"more detail in <a href='#f3'>Section 3</a>. The scenarios impacting capacity at the robotic weld and laser cutting centers yielded less improvement in on-time delivery, "
              f"further validating the brakes as the shop's primary constraint.</p>")
-    b.append(titled(fig_effects(A.CAPACITY, "effects_capacity"), "Capacity Scenarios: Change in On-Time Delivery vs. Status Quo"))
-    b.append(f"<div class='caption'>Change in on-time delivery {IMPACT_NOTE}</div>")
+    b.append(titled(fig_effects(A.CAPACITY, "effects_capacity", "Capacity"), "Capacity Scenarios: Change in On-Time Delivery vs. Status Quo"))
 
     on_top = {s: chg(s, "on_time_delivery", "year", PACKAGE) for s in (P_CELL, P_CHANGER, P_TOWER)}
     assert max(on_top, key=on_top.get) == P_CELL
@@ -632,18 +637,22 @@ def build():
              f"and additional Saturday shifts on both brakes, the two low cost capacity scenarios. This combination added {d1(chg(PACKAGE, 'on_time_delivery') * 100)} points to on-time "
              f"delivery. On top of the Operating Package, the more capital-intensive scenarios were considered, with the robotic bending cell yielding the most significant further "
              f"improvement to on-time delivery.</p>")
-    b.append(titled(fig_effects([PACKAGE, P_CELL, P_CHANGER, P_TOWER], "effects_combinations"), "Combination Scenarios: Change in On-Time Delivery vs. Status Quo"))
-    b.append(f"<div class='caption'>Change in on-time delivery {IMPACT_NOTE}</div>")
+    b.append(titled(fig_effects([PACKAGE, P_CELL, P_CHANGER, P_TOWER], "effects_combinations", "Combinations"), "Combination Scenarios: Change in On-Time Delivery vs. Status Quo"))
 
     b.append("<h3 id='f2_1'>Scenarios with Positive Impact on On-time Delivery</h3>")
     assert all(impact(A.diff(s, m), up) == "Positive Impact" for s in (SETUP, CHANGER, CELL) for m, _, _, _, up in PANELS)
-    b.append(f"<p>Scenarios that improved on-time delivery rates are shown below alongside the delivery mechanisms and outcomes. Changes that add brake hours (brake setup program, "
-             f"replacing press brake B3, and the new robotic bending cell) saw improvements across the board: decreased brake utilization, lower queue times per operation, reduced "
-             f"floor WIP, and improvements in both number of late jobs and total days late. {T.see('year', 'rest', 'tower')}</p>")
+    assert all(impact(A.diff(s, "brake_utilization"), False) == "No effect" for s in (SAT_BOTH, SAT_ONE))
+    assert impact(edd_late, False) == "Positive Impact" and impact(edd_days, False) == "No effect" and chg(EDD, "on_time_delivery") < min(chg(s, "on_time_delivery") for s in (SETUP, SAT_BOTH, CHANGER, CELL))
+    shown = pd.DataFrame({"gain": [chg(s, "on_time_delivery") for s in WORKING + [PACKAGE, P_CELL, P_CHANGER, P_TOWER]],
+                          "queue": [chg(s, "brake_queue_mean") for s in WORKING + [PACKAGE, P_CELL, P_CHANGER, P_TOWER]]}).rank()
+    assert shown["gain"].corr(shown["queue"]) < -0.9
+    b.append(f"<p>Scenarios that improved on-time delivery are shown below alongside their impact on other delivery mechanism and outcome metrics. Changes that free brake capacity "
+             f"(brake setup program, replacing press brake B3, and the new robotic bending cell) saw improvements across the board: decreased brake utilization, lower queue times per "
+             f"operation, reduced floor WIP, and improvements in both number of late jobs and total days late. Additional Saturdays reach a similar result by adding hours rather than "
+             f"removing work, so the brakes stay as busy as before and utilization is unchanged. Earliest due date reorders work without adding capacity, so its gain is smaller: it moves "
+             f"jobs about to miss ahead of jobs due later, which removes late jobs but not days late, as the jobs it delays are later when they miss. Across all scenarios, the gain in "
+             f"on-time delivery follows the cut in brake queue time. {T.see('year', 'rest', 'tower')}</p>")
     b.append(titled(fig_changes(), f"Scenario Analysis: Improvements vs. Status Quo, {YEAR}, With 95% Intervals"))
-    b.append(f"<div class='caption'>Change from the status quo {IMPACT_NOTE} For brake utilization, brake queue time, floor WIP, late jobs and days late, a positive impact is an "
-             f"interval below 0. The second shift on the robotic weld cell has a positive impact on on-time delivery in {RT} ({sg(chg(WELD, 'on_time_delivery', 'rest') * 100)} point); "
-             f"for {YEAR} as a whole its interval crosses 0.</div>")
 
     pk, pkr = A.diff(PACKAGE, "on_time_delivery"), A.diff(PACKAGE, "on_time_delivery", "rest")
 
@@ -797,7 +806,7 @@ def build():
 
     b.append("<h2 id='appendix'>Appendix</h2>")
     b.append(T.appendix())
-    toc = [("summary", "Executive Summary"), ("f1", "1. The Scenarios Simulated"), ("f2", "2. Simulation Results"), ("f3", "3. Return on the Changes That Work"),
+    toc = [("summary", "Executive Summary"), ("f1", "1. Simulations Tested"), ("f2", "2. Results"), ("f3", "3. Return on the Changes That Work"),
            ("f4", "4. Model Accuracy & Validation")]
     print(f"wrote {page('options', chr(10).join(b), toc, heading=REPORTS['options'][1])}: a summary and 4 sections, {len(T.order)} appendix tables")
 
