@@ -114,7 +114,7 @@ def sources():
 PIPELINE = ("`pipeline/load` loads the CSV exports under `data/raw` into DuckDB with dlt, one text table per file. The dbt project under `pipeline/dbt` builds the "
             "staging models (one per export, typed), the intermediate models (working-day clock, machine time, queue, lead time by stage, WIP, utilization, setups, "
             "late-job attribution) and the marts, with tests on keys. The scripts under `analytics/` read the marts and write the three reports and their figures "
-            "under `docs/`, the dashboard and this file. The shop model under `analytics/release_control/` replays the released jobs for the scenarios of the simulation report; "
+            "under `docs/`, and this file. The shop model under `analytics/release_control/` replays the released jobs for the scenarios of the simulation report; "
             "its runs are saved under `results/` and each run repeats exactly from its scenario and replication number.")
 RUN = """```
 python -m venv .venv
@@ -133,57 +133,73 @@ python -m analytics.technology_roi.scenarios 30 6 laser_queue
 ```"""
 
 
-INTRO = ("Delivery, flow, capacity and quoting analytics on a custom sheet-metal fabrication job shop, January 2023 to December 2025, computed on the shop's complete ERP and MES record.")
+INTRO = ("Three client reports on a custom sheet-metal fabrication job shop, built on its complete ERP and MES record for January 2023 to December 2025. Flow and On-time Delivery "
+         "traces where lead time goes between release and shipment, attributes each late job's lost days to the stage that lost them, and measures how accurately the shop's quote "
+         "predicts lead time. Capacity, Constraints and Setups identifies the press brakes as the shop's constraint and measures what setups over standard cost them. Discrete Event "
+         "Simulation: On-time Delivery replays the shop's jobs on a validated model of the floor, tests 16 release, dispatch and capacity changes, and sets the cost, NPV and payback of "
+         "those that work against their gain in on-time delivery.")
 INCLUDED = [
-    "Eight connected studies, each delivered as a client report: lead-time decomposition, late-job attribution, the constraint and variability, setups "
-    "against standards, release control on a discrete-event model of the floor, leading indicators, lead-time quoting and quote analytics, technology ROI.",
-    "One operations dashboard: on-time delivery, lead time, WIP, utilization and queue by work center, setup against standard, overtime, the leading indicators; weekly grain, 13-week view, "
-    "three-year trend.",
     "A data pipeline from raw system exports to analysis-ready marts: DuckDB, dbt with schema tests, one build command that regenerates every table, figure and page byte-identically.",
 ]
+# the question and the finding of each report as the README states them, by file stem
+README_REPORTS = {
+    LEAD: ("Where does lead time go, why are jobs late, and how accurate is the quoted lead time?",
+           "Queue at the press brakes is 24% of lead time and where late jobs lose the most time (5.76 days against 2.50 for on-time jobs). Waiting at work centers caused 42% of the "
+           "3,473 days lost in 2025 and late release 21%, and 36% of late jobs carry no reason code. The quote misses actual lead time by 4.8 days on average: too long in ordinary "
+           "months, too short in the year-end build."),
+    CAPACITY: ("Which work center sets lead time, and what do brake setups cost?",
+               "The press brakes are the constraint: 91% utilized against 97% uptime, a buffer of 6 points, and 53% of queue time. Brake setups ran 1,847 hours over standard in 2025, "
+               "36 hours a week or 10.4 points of brake utilization."),
+    OPTIONS: ("Which changes raise on-time delivery, and what do they cost and return?",
+              "Only changes that add brake capacity move on-time delivery materially; release and dispatch rules add at most 1.9 points. The operating package, a brake setup program "
+              "plus planned Saturdays on both brakes, raises 2025 on-time delivery 7.7 points to 87.9% for $60,000 once, with a 0.4-year payback. A robotic bending cell adds 2.2 "
+              "points on top, with an NPV of $1.52M and a 2.0-year payback. The model reproduces all ten validation measures within tolerance."),
+}
 CONTEXT = [
     "The shop is a custom sheet-metal fabricator: about 120 employees, ISO 9001, one plant, about 2,000 active part numbers, 450 customers, about 5,200 jobs a year in lots from 1 to 500 pieces. Laser "
     "cutting, CNC punching, press brake forming, hardware insertion, welding, powder coating and light assembly in house; plating, anodizing and heat treat at outside vendors. Two shifts on the "
     "lasers and brakes, one elsewhere, Saturdays when behind.",
-    "The shop quotes a fixed lead time by routing class, measures on-time delivery weekly, and records a late reason on each late job. In 2025 it delivered 76.6% on time. The late-reason codes did "
+    "The shop quotes a fixed lead time by routing class, measures on-time delivery weekly, and records a late reason on each late job. In 2025 it delivered 80.8% on time. The late-reason codes did "
     "not explain the misses: a large share (36%) of late reasons were blank, and the coded ones pointed at the operation where the job was found late rather than where it lost the time. A first-quarter decline that "
-    "year was felt on the floor as a brake-capacity problem, and the shop was weighing a second press brake with automatic tooling against a laser tower and a bending cell.",
+    "year was felt on the floor as a brake-capacity problem, and the shop was weighing three capital options: replacing a press brake with an automatic tool-changing model, an automated sheet tower on a laser, and a robotic bending cell.",
     "The engagement put the ERP order and quote records beside the MES operation timestamps for three years, every job and every operation, to answer what the reports could not: where lead time "
-    "goes, which stage each late job lost its days at, which work center sets the lead time and what variability at it costs, which indicators move before delivery slips, what lead time the shop "
-    "should quote at its current load, and which of the capital options pays back on measured hours. The studies below are the result, in the order they were built.",
+    "goes, which stage each late job lost its days at, which work center sets the lead time and what variability at it costs, what lead time the shop "
+    "should quote at its current load, and which of the capital options pays back on measured hours. The three reports below are the result.",
 ]
 METHODS = [
-    "Operations analysis: lead-time decomposition and Little's Law; utilization and queue-time curves on the shop's own data; late-job attribution by stage against the stage's own normal; setup "
-    "and standard variance by lot size and work center; a reproducible discrete-event model of the floor with 19 scenarios, replications and intervals; lead-time quoting from the actual "
-    "distribution by routing class and load, evaluated out of sample; leading-indicator tests against shuffled and shifted chance series; ROI with payback and break-even analysis on stated "
-    "assumptions.",
+    "Lead-time decomposition by stage and Little's Law; late-job attribution of lost days by stage against the stage's own normal, checked against the shop's reason codes; utilization and "
+    "queue-time curves by work center; setup against standard by lot size and work center; quote accuracy by condition at release, with a candidate quote evaluated out of sample; a discrete "
+    "event model of the floor validated against ten measures set before it was run, testing 16 changes and combinations over 30 runs each with 95% intervals; NPV, payback and break-even on "
+    "stated assumptions.",
     "Data engineering: raw system exports loaded to DuckDB; a dbt project with schema tests on every mart; one build command that regenerates every table, figure and page byte-identically from "
     "the committed inputs; fixed input ordering and per-scenario seeding so that the floor model reproduces to the digit.",
-    "Framing: the improvement projects are written as DMAIC projects. Every report describes the findings and what to do, in the form a client receives at the end of an engagement.",
 ]
 RECORD = ("The record carries what these systems carry in practice: blank and miscoded late reasons, operations closed in batches at the end of a shift, standards not updated after routing "
           "changes, and a 2024 year-end build that shows in every queue. The analyses work with the record as it stands and say so where it limits a finding.")
 AUTHOR = "Brian Davis. Data engineering and applied analytics/ML for manufacturers. Other work: [github.com/brimsystems](https://github.com/brimsystems?tab=repositories)."
 
 
-def current_week():
-    """The current week as the dashboard header states it."""
-    meta = (DOCS / "dashboard" / "index.html").read_text(encoding="utf8")
-    name, day, year = re.search(r"Week of (\w+) (\d+), (\d{4}) \(current week", meta).groups()
-    return f"{int(day)} {name} {year}"
+# the images at the top of the README, written by analytics.readme_image: file and chart title
+IMAGES = [("job_flow.png", "Job Flow, Release to Shipment"), ("lead_time_decomposition.png", "Lead Time Decomposition by Stage, 2025 and Q2-Q4"),
+          ("queue_by_work_center.png", "Queue Time per Operation by Work Center, 2025"),
+          ("scenario_results.png", "Scenario Results: Change in On-time Delivery vs. Status Quo, 2025"),
+          ("recommended_scenarios.png", "On-time Delivery, Status Quo vs. Recommended Scenarios, 2025")]
 
 
 def readme():
-    lines = ["# mfg-operations-analytics", "", INTRO, "", "![Operations dashboard](docs/readme/dashboard.png)", "", "## What is included", ""]
+    lines = ["# mfg-operations-analytics", "", INTRO, ""]
     lines += [f"- {x}" for x in INCLUDED]
-    lines += ["", "## Business context", ""]
+    lines += [""]
+    for name, title in IMAGES:
+        lines += [f"![{title}](docs/readme/{name})", ""]
+    lines += ["## Business context", ""]
     for x in CONTEXT:
         lines += [x, ""]
-    lines += ["## Studies", "", "| Report | Question | Finding | Deliverable |", "|---|---|---|---|"]
-    for stem, title, question, spec in REPORTS:
-        lines.append(f"| {title} | {question} | {spec()} | [report](docs/reports/{stem}.html) |")
-    lines += ["", "**Dashboard.** [docs/dashboard/index.html](docs/dashboard/index.html). Index of deliverables: [docs/index.html](docs/index.html). "
-              f"The week of {current_week()} is the current week; every panel carries a one-line definition in the reports' wording.", "", "## Methods", ""]
+    lines += ["## Reports", "", "| Report | Question | Finding | Deliverable |", "|---|---|---|---|"]
+    for stem, title, _, _ in REPORTS:
+        question, found = README_REPORTS[stem]
+        lines.append(f"| {title} | {question} | {found} | [report](docs/reports/{stem}.html) |")
+    lines += ["", "Index of deliverables: [docs/index.html](docs/index.html).", "", "## Methods", ""]
     for x in METHODS:
         lines += [x, ""]
     lines += ["## Data", "", RECORD, "", "| System | Export | Tables | Grain | Batch |", "|---|---|---|---|---|"]
