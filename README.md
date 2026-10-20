@@ -4,7 +4,7 @@ On-time delivery, lead time, and capacity analytics, built on the shop's complet
 
 **On-time delivery**
 - Root cause analysis: attributes each late job's lost days to a driver (constraint queue, late release, material, outside processing), measured against on-time jobs of the same routing class 
-- Chance-corrected agreement analysis: tests whether the shop's current late-reason codes adequately identify the root causes above
+- Chance-corrected agreement analysis: tests whether the shop's current late-reason codes adequately map to the root causes above
 - Distribution analysis: measures by how many days jobs ship early or late, revealing slack in the quoted dates as well as the extent of misses 
 - Discrete event simulation: tests release, dispatch and capacity changes for their effect on on-time delivery, and analyzes those changes' NPV and ROI
 
@@ -21,6 +21,8 @@ On-time delivery, lead time, and capacity analytics, built on the shop's complet
 - Lagged correlation analysis: separates load-driven from schedule-driven queue times
 - Segmentation analysis: finds the conditions where machine setup times overrun their standards (lot size, shift handover, operator familiarity, part family) and estimates the queue time recovered by removing setup overrun
 - Variance analysis (planned against actual): tests whether outdated standards understate the load
+
+<br> 
 
 Three reports were built: 
 
