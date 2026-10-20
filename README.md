@@ -32,6 +32,8 @@ Three reports were built:
 
 **[Discrete Event Simulation](https://brimsystems.github.io/mfg-operations-analytics/docs/reports/options_tested.html)** asks: which changes to release, dispatch, and capacity raise on-time delivery rates, and of those changes that work, which are the best investments to make?  
 
+<br> 
+
 ## Business context
 
 The shop is a custom sheet-metal fabricator: about $25 million revenue, ISO 9001. It has 25 machines across 10 work centers: laser cutting, CNC punching, press brake forming, hardware insertion, robotic and manual welding, grind and deburr, powder coating, assembly and inspection. It has about 2,000 different active part numbers and runs over 5,000 jobs a year in lots from 1 to 500 pieces.  
